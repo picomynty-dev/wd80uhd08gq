@@ -116,9 +116,10 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
       </div>
       <div class="premium-visual-panel active" data-exercise-visual-panel="motion">
         <div class="motion-video-shell">
-          <video data-motion-video muted loop playsinline preload="metadata" poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'} aria-label="Demostración animada de ${esc(exercise.name)}">
+          <video data-motion-video muted loop playsinline preload="auto" poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'} aria-label="Demostración animada de ${esc(exercise.name)}">
             <source src="${esc(media.video)}" type="video/mp4">
           </video>
+          <div class="motion-media-error" data-motion-error hidden><strong>No se pudo cargar la demostración</strong><small>Usa la pestaña Claves mientras recargas la ficha.</small></div>
           <div class="motion-video-overlay"><span>ANIMACIÓN TÉCNICA</span><small>Observa el recorrido y después revisa los pasos.</small></div>
         </div>
         <div class="motion-controls" aria-label="Controles de demostración">
@@ -130,8 +131,8 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
       </div>
       <div class="premium-visual-panel" data-exercise-visual-panel="muscles" hidden>
         <div class="anatomy-compare-grid anatomy-v2-grid">
-          <figure><img src="${esc(media.anatomyFront)}" alt="Vista frontal de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista frontal</figcaption></figure>
-          <figure><img src="${esc(media.anatomyBack)}" alt="Vista posterior de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista posterior</figcaption></figure>
+          <figure><img data-anatomy-image src="${esc(media.anatomyFront)}" alt="Vista frontal de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista frontal</figcaption></figure>
+          <figure><img data-anatomy-image src="${esc(media.anatomyBack)}" alt="Vista posterior de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista posterior</figcaption></figure>
         </div>
         <div class="anatomy-legend"><span><i class="primary"></i>Principal</span><span><i class="secondary"></i>Secundario</span><span><i class="neutral"></i>No prioritario</span></div>
       </div>

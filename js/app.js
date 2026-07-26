@@ -1944,10 +1944,31 @@ function openExerciseDetails(id) {
       const active = panel.dataset.exerciseVisualPanel === tab;
       panel.classList.toggle('active', active);
       panel.hidden = !active;
+      panel.style.display = active ? 'block' : 'none';
     });
   }));
   const motionVideo = wrapper.querySelector('[data-motion-video]');
   const motionToggle = wrapper.querySelector('[data-motion-toggle]');
+  const motionError = wrapper.querySelector('[data-motion-error]');
+  if (motionVideo) {
+    const showMotionError = () => {
+      if (motionError) motionError.hidden = false;
+      motionVideo.style.opacity = '0';
+      if (motionToggle) { motionToggle.disabled = true; motionToggle.innerHTML = 'No disponible'; }
+    };
+    motionVideo.addEventListener('error', showMotionError);
+    motionVideo.querySelector('source')?.addEventListener('error', showMotionError);
+    motionVideo.addEventListener('loadeddata', () => {
+      if (motionError) motionError.hidden = true;
+      motionVideo.style.opacity = '1';
+    });
+  }
+  wrapper.querySelectorAll('[data-anatomy-image]').forEach((image) => {
+    image.addEventListener('error', () => {
+      image.closest('figure')?.classList.add('media-load-failed');
+      image.alt = 'Mapa muscular no disponible. Recarga la ficha.';
+    });
+  });
   if (motionVideo && motionToggle) {
     const updateMotionToggle = () => {
       motionToggle.innerHTML = motionVideo.paused ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>';

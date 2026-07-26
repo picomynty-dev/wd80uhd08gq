@@ -1,10 +1,12 @@
 'use strict';
 
-const media = (id) => ({
-  video: `./assets/motion/${id}.mp4`,
-  poster: `./assets/posters/${id}.jpg`,
-  anatomyFront: `./assets/anatomy-v2/${id}-front.svg`,
-  anatomyBack: `./assets/anatomy-v2/${id}-back.svg`
+import { mediaAssets } from './media-bundle.js';
+
+const media = (id) => mediaAssets[id] || ({
+  video: new URL(`../assets/motion/${id}.mp4`, import.meta.url).href,
+  poster: new URL(`../assets/posters/${id}.jpg`, import.meta.url).href,
+  anatomyFront: new URL(`../assets/anatomy-v2/${id}-front.svg`, import.meta.url).href,
+  anatomyBack: new URL(`../assets/anatomy-v2/${id}-back.svg`, import.meta.url).href
 });
 
 const premium = (id, data) => ({
