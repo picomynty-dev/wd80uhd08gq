@@ -508,10 +508,6 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 }
 .button-plain { width: 100%; padding-inline: 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 
-/* My Fit Plan 2.1 */
-.version-badge::after { content: "2.1"; }
-.version-badge { font-size: 0; }
-.version-badge::after { font-size: .72rem; }
 
 .update-banner {
   position: sticky;
@@ -1246,21 +1242,45 @@ h2 { font-weight: 860; letter-spacing: -.035em; }
 .streak-orb { position: relative; overflow: hidden; }
 
 
+
+
 /* =========================================================
-   My Fit Plan 3.0A.1 · corrección de alineación y arranque
+   My Fit Plan 3.0A.2 · reparación definitiva de layout
    ========================================================= */
-html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
 .app-shell, #app, .page { min-width: 0; }
-.app-shell { position: relative; width: min(100%, 940px); margin-inline: auto; }
+.app-shell {
+  position: relative;
+  width: min(100%, 940px);
+  min-height: 100dvh;
+  margin-inline: auto;
+}
 #app { width: 100%; }
 
-/* La regla base usaba translateX(-50%). Al combinarla con left y right
-   en la navegación premium, la barra quedaba desplazada hacia la izquierda. */
+/* El texto real del HTML siempre manda. Elimina el pseudo-texto heredado 2.1. */
+.version-badge {
+  font-size: .72rem !important;
+}
+.version-badge::before,
+.version-badge::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Centrado respecto a la ventana y ancho alineado con el contenido. */
 .bottom-nav.premium-nav {
-  right: auto;
-  left: 50%;
-  width: min(calc(100% - 24px), 910px);
-  transform: translateX(-50%);
+  position: fixed !important;
+  right: auto !important;
+  bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  left: 50% !important;
+  width: min(calc(100vw - 24px), 910px) !important;
+  max-width: 910px !important;
+  margin: 0 !important;
+  transform: translate3d(-50%, 0, 0) !important;
 }
 
 .boot-help { width: 100%; max-width: 760px; margin: 0 auto; padding-top: 24px; }
@@ -1270,9 +1290,10 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 @media (max-width: 700px) {
   .app-shell { width: 100%; }
   .bottom-nav.premium-nav {
-    right: 8px;
-    left: 8px;
-    width: auto;
-    transform: none;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
   }
 }
