@@ -1,7 +1,7 @@
 'use strict';
 
 import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js';
-import { buildPlan, createPlanExercise, objectiveLabel, trainingRules, isTimedExercise } from './plans.js';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js';
 import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js';
 import {
   buildCalendar,
@@ -21,6 +21,7 @@ import {
 } from './stats.js';
 import {
   clamp,
+  clone,
   debounce,
   downloadJson,
   esc,
@@ -52,6 +53,8 @@ let libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', level: 'T
 let libraryPageSize = 36;
 let restInterval = null;
 let waitingServiceWorker = null;
+let onboardingStep = 1;
+let onboardingDraft = null;
 
 init();
 
@@ -62,7 +65,9 @@ function init() {
   bindGlobalEvents();
   registerServiceWorker();
   restoreRestTimer();
-  setView('home');
+  if (!state.profile) renderWelcome();
+  else if (!state.onboardingCompleted) renderOnboardingUpgrade();
+  else setView('home');
 }
 
 function bindGlobalEvents() {
@@ -93,7 +98,13 @@ function bindGlobalEvents() {
   });
 }
 
+
+function setOnboardingMode(enabled) {
+  document.body.classList.toggle('onboarding-mode', Boolean(enabled));
+}
+
 function setView(view) {
+  setOnboardingMode(false);
   currentView = view;
   document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === view));
   const renderers = {
@@ -109,6 +120,7 @@ function setView(view) {
 }
 
 function save() {
+  syncActiveRoutineFromPlan();
   state = persistState(state);
   applySettings();
   updateProfileShortcut();
@@ -262,24 +274,347 @@ function recentPersonalRecords(limit = 3) {
 }
 
 function renderWelcome() {
+  setOnboardingMode(true);
+  onboardingStep = 1;
+  onboardingDraft = onboardingDraftFromState();
   app.innerHTML = `
-    <section class="page">
-      <div class="hero">
-        <p class="eyebrow">My Fit Plan 3.0B</p>
-        <h1>Tu entrenamiento, serie a serie.</h1>
-        <p>Crea una rutina, registra cada serie, controla los descansos y recibe una orientación sencilla para progresar.</p>
-        <div class="hero-actions">
-          <button class="button button-primary" type="button" data-action="start-questionnaire">Crear mi plan</button>
-          <button class="button button-secondary" type="button" data-action="demo-plan">Ver una demo</button>
-        </div>
+    <section class="onboarding-shell onboarding-intro">
+      <div class="onboarding-brand-lockup">
+        <span class="onboarding-logo" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>MY FIT PLAN</strong><small>BUILD · TRAIN · PROGRESS</small></span>
       </div>
-      <section class="section grid grid-3">
-        <article class="card"><span class="pill">1</span><h3>Registra cada serie</h3><p class="muted small">Peso, repeticiones y esfuerzo percibido.</p></article>
-        <article class="card"><span class="pill">2</span><h3>Controla descansos</h3><p class="muted small">Temporizador integrado después de cada serie.</p></article>
-        <article class="card"><span class="pill">3</span><h3>Observa tu progreso</h3><p class="muted small">Historial, récords, calendario y peso corporal.</p></article>
-      </section>
-      <section class="section notice">Orientación general para adultos. No sustituye una valoración médica, fisioterapéutica, nutricional o de entrenamiento presencial.</section>
+      <div class="onboarding-hero-panel">
+        <span class="onboarding-kicker">Una experiencia creada para ti</span>
+        <h1>Entrena con un sistema que se adapta a tu forma de hacerlo.</h1>
+        <p>Recibe una recomendación profesional, parte de una plantilla o crea tus propias carpetas y rutinas desde cero.</p>
+        <div class="onboarding-proof-grid">
+          <article><b>01</b><span>Rutinas recomendadas con divisiones claras</span></article>
+          <article><b>02</b><span>Constructor libre para organizar tu entrenamiento</span></article>
+          <article><b>03</b><span>Progreso, técnica y registro serie a serie</span></article>
+        </div>
+        <button class="button button-primary onboarding-main-button" type="button" data-action="onboarding-start">Configurar My Fit Plan <b>→</b></button>
+        <button class="button button-ghost" type="button" data-action="demo-plan">Explorar una demo</button>
+      </div>
+      <p class="onboarding-legal">Para mayores de 18 años. La aplicación ofrece orientación general y no sustituye a profesionales sanitarios o del entrenamiento.</p>
     </section>`;
+}
+
+function renderOnboardingUpgrade() {
+  setOnboardingMode(true);
+  app.innerHTML = `
+    <section class="onboarding-shell onboarding-intro">
+      <div class="onboarding-brand-lockup">
+        <span class="onboarding-logo" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>MY FIT PLAN 3.1</strong><small>NUEVA CONFIGURACIÓN</small></span>
+      </div>
+      <div class="onboarding-hero-panel upgrade-panel">
+        <span class="onboarding-kicker">Tu progreso está a salvo</span>
+        <h1>Personaliza la nueva experiencia sin perder tu historial.</h1>
+        <p>Conservaremos entrenamientos, marcas y datos. Solo te haremos unas preguntas para organizar mejor tus planes y activar el nuevo sistema de carpetas.</p>
+        <div class="upgrade-summary">
+          <span><b>${state.history.length}</b> sesiones guardadas</span>
+          <span><b>${state.plan?.days?.length || 0}</b> entrenamientos en tu plan</span>
+        </div>
+        <button class="button button-primary onboarding-main-button" type="button" data-action="onboarding-start">Configurar versión 3.1 <b>→</b></button>
+        <button class="button button-secondary" type="button" data-action="onboarding-keep-current">Mantener mi configuración actual</button>
+      </div>
+    </section>`;
+}
+
+function onboardingDraftFromState() {
+  const p = state.profile || {};
+  return {
+    name: p.name || '',
+    age: p.age || '',
+    weight: p.weight || '',
+    height: p.height || '',
+    objective: p.objective || 'muscle',
+    experience: p.experience || 'beginner',
+    location: p.location || 'gym',
+    days: Number(p.days || 3),
+    minutes: Number(p.minutes || 45),
+    priorities: Array.isArray(p.priorities) ? [...p.priorities] : [],
+    avoidedExercises: p.avoidedExercises || '',
+    equipment: Array.isArray(p.equipment) && p.equipment.length ? [...p.equipment] : ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal'],
+    path: p.trainingPath || 'recommended',
+    templateId: state.plan?.templateId && state.plan.templateId !== 'legacy' ? state.plan.templateId : null,
+    adultConsent: Boolean(state.profile)
+  };
+}
+
+function startOnboarding() {
+  onboardingDraft = onboardingDraftFromState();
+  onboardingStep = 1;
+  renderOnboarding();
+}
+
+function renderQuestionnaire() {
+  startOnboarding();
+}
+
+function renderOnboarding() {
+  setOnboardingMode(true);
+  onboardingDraft ||= onboardingDraftFromState();
+  const totalSteps = 6;
+  const progress = Math.round((onboardingStep / totalSteps) * 100);
+  const stepContent = {
+    1: onboardingIdentityStep,
+    2: onboardingGoalStep,
+    3: onboardingAvailabilityStep,
+    4: onboardingPreferencesStep,
+    5: onboardingPathStep,
+    6: onboardingFinishStep
+  }[onboardingStep]();
+
+  app.innerHTML = `
+    <section class="onboarding-shell onboarding-wizard">
+      <header class="onboarding-progress-header">
+        <button class="onboarding-back ${onboardingStep === 1 ? 'is-hidden' : ''}" type="button" data-action="onboarding-back" aria-label="Volver">←</button>
+        <div class="onboarding-progress-copy"><small>PASO ${onboardingStep} DE ${totalSteps}</small><strong>${onboardingStepTitle(onboardingStep)}</strong></div>
+        <span class="onboarding-progress-number">${progress}%</span>
+      </header>
+      <div class="onboarding-progress-track"><span style="width:${progress}%"></span></div>
+      <div class="onboarding-step-card">${stepContent}</div>
+      <footer class="onboarding-footer">
+        ${onboardingStep < totalSteps
+          ? '<button class="button button-primary button-block" type="button" data-action="onboarding-next">Continuar <b>→</b></button>'
+          : '<button class="button button-primary button-block" type="button" data-action="onboarding-finish">Crear mi espacio de entrenamiento <b>→</b></button>'}
+        <small>Tus datos permanecen en este dispositivo.</small>
+      </footer>
+    </section>`;
+}
+
+function onboardingStepTitle(step) {
+  return ({ 1: 'Tu perfil', 2: 'Tu experiencia', 3: 'Tu semana', 4: 'Tus preferencias', 5: 'Cómo quieres entrenar', 6: 'Tu punto de partida' })[step] || '';
+}
+
+function onboardingIdentityStep() {
+  const d = onboardingDraft;
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">01</span><div><p class="eyebrow">Empecemos por ti</p><h1>Construiremos una experiencia personal, no un plan genérico.</h1><p>Estos datos ayudan a ajustar tiempos, volumen y seguimiento.</p></div></div>
+    <div class="onboarding-form-grid">
+      <label class="premium-field field-wide"><span>¿Cómo quieres que te llamemos?</span><input id="obName" maxlength="30" value="${esc(d.name)}" placeholder="Tu nombre o apodo" autocomplete="nickname"></label>
+      <label class="premium-field"><span>Edad</span><input id="obAge" type="number" min="18" max="100" value="${esc(d.age)}" placeholder="20"></label>
+      <label class="premium-field"><span>Peso actual <small>kg</small></span><input id="obWeight" type="number" inputmode="decimal" min="30" max="350" step="0.1" value="${esc(d.weight)}" placeholder="75"></label>
+      <label class="premium-field"><span>Estatura <small>cm</small></span><input id="obHeight" type="number" inputmode="numeric" min="120" max="230" value="${esc(d.height)}" placeholder="178"></label>
+    </div>
+    <label class="consent-row onboarding-consent">
+      <input id="obAdult" type="checkbox" ${d.adultConsent ? 'checked' : ''}>
+      <span class="visible-check" aria-hidden="true">✓</span>
+      <span><strong>Confirmo que soy mayor de 18 años.</strong><small>Esta primera versión está diseñada únicamente para adultos.</small></span>
+    </label>`;
+}
+
+function onboardingGoalStep() {
+  const d = onboardingDraft;
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">02</span><div><p class="eyebrow">Objetivo y experiencia</p><h1>¿Qué quieres conseguir y desde dónde empiezas?</h1><p>No buscamos etiquetarte: solo adaptar mejor el punto de partida.</p></div></div>
+    <h3 class="onboarding-question">Objetivo principal</h3>
+    <div class="choice-card-grid three">
+      ${choiceCard('objective', 'muscle', 'Ganar músculo', 'Fuerza, hipertrofia y progresión de cargas.', '↗', d.objective)}
+      ${choiceCard('objective', 'fitness', 'Mejorar mi forma', 'Más fuerza, energía y capacidad general.', '◎', d.objective)}
+      ${choiceCard('objective', 'fat', 'Reducir grasa', 'Entrenamiento de fuerza y constancia.', '◇', d.objective)}
+    </div>
+    <h3 class="onboarding-question">Experiencia entrenando</h3>
+    <div class="choice-card-grid three compact-choices">
+      ${choiceCard('experience', 'beginner', 'Principiante', 'Menos de 6 meses o vuelvo después de un tiempo.', '01', d.experience)}
+      ${choiceCard('experience', 'intermediate', 'Intermedio', 'Entreno con regularidad y conozco lo básico.', '02', d.experience)}
+      ${choiceCard('experience', 'advanced', 'Avanzado', 'Planifico volumen, intensidad y progresión.', '03', d.experience)}
+    </div>
+    <h3 class="onboarding-question">Lugar habitual</h3>
+    <div class="choice-card-grid two compact-choices">
+      ${choiceCard('location', 'gym', 'Gimnasio', 'Máquinas, poleas, barras y mancuernas.', '▦', d.location)}
+      ${choiceCard('location', 'home', 'Casa', 'Material limitado o peso corporal.', '⌂', d.location)}
+    </div>`;
+}
+
+function onboardingAvailabilityStep() {
+  const d = onboardingDraft;
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">03</span><div><p class="eyebrow">Tu semana real</p><h1>Un buen plan debe caber en tu vida.</h1><p>Es mejor cumplir tres días de verdad que prometer cinco y abandonar.</p></div></div>
+    <h3 class="onboarding-question">¿Cuántos días puedes entrenar?</h3>
+    <div class="number-choice-row">
+      ${[2,3,4,5].map((value) => `<label class="number-choice"><input type="radio" name="obDays" value="${value}" ${Number(d.days) === value ? 'checked' : ''}><span><b>${value}</b><small>días</small></span></label>`).join('')}
+    </div>
+    <h3 class="onboarding-question">Tiempo habitual por sesión</h3>
+    <div class="duration-choice-row">
+      ${[[30,'Directo al grano'],[45,'Equilibrado'],[60,'Sesión completa'],[75,'Más volumen']].map(([value,label]) => `<label class="duration-choice"><input type="radio" name="obMinutes" value="${value}" ${Number(d.minutes) === value ? 'checked' : ''}><span><b>${value} min</b><small>${label}</small></span></label>`).join('')}
+    </div>
+    <div class="onboarding-insight"><span>⌁</span><p><strong>Recomendación provisional</strong> Con ${d.days} días y ${d.minutes} minutos podemos construir una división clara sin sesiones interminables.</p></div>`;
+}
+
+function onboardingPreferencesStep() {
+  const d = onboardingDraft;
+  const equipment = ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio', 'Bandas'];
+  const priorities = ['Pecho', 'Espalda', 'Hombros', 'Brazos', 'Pierna', 'Glúteos', 'Core'];
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">04</span><div><p class="eyebrow">Material y preferencias</p><h1>Haz que el plan encaje con tu gimnasio y tus prioridades.</h1><p>Podrás cambiar todo más adelante desde tu perfil.</p></div></div>
+    <h3 class="onboarding-question">Material disponible</h3>
+    <div class="chip-choice-grid">
+      ${equipment.map((item) => `<label class="select-chip"><input type="checkbox" name="obEquipment" value="${esc(item)}" ${d.equipment.includes(item) ? 'checked' : ''}><span>${esc(item)}</span></label>`).join('')}
+    </div>
+    <h3 class="onboarding-question">Zonas que quieres priorizar <small>elige hasta 3</small></h3>
+    <div class="chip-choice-grid priorities-grid">
+      ${priorities.map((item) => `<label class="select-chip priority-chip"><input type="checkbox" name="obPriority" value="${esc(item)}" ${d.priorities.includes(item) ? 'checked' : ''}><span>${esc(item)}</span></label>`).join('')}
+    </div>
+    <label class="premium-field field-wide onboarding-textarea"><span>Ejercicios o movimientos que prefieres evitar <small>opcional</small></span><textarea id="obAvoid" rows="3" placeholder="Ej. sentadilla con barra, fondos…">${esc(d.avoidedExercises)}</textarea></label>`;
+}
+
+function onboardingPathStep() {
+  const d = onboardingDraft;
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">05</span><div><p class="eyebrow">Elige cómo empezar</p><h1>My Fit Plan se adapta a ti, no al revés.</h1><p>Podrás combinar las tres opciones después.</p></div></div>
+    <div class="path-choice-list">
+      ${pathCard('recommended', 'Recomiéndame un plan', 'Analizamos tus respuestas y elegimos una división coherente que podrás editar.', 'RECOMENDADO', 'spark', d.path)}
+      ${pathCard('template', 'Quiero partir de una plantilla', 'Explora divisiones profesionales como Push/Pull/Legs o Upper/Lower.', 'MÁS CONTROL', 'layers', d.path)}
+      ${pathCard('custom', 'Quiero crear mis propias rutinas', 'Empieza con carpetas y un constructor vacío. Tú decides cada entrenamiento.', 'LIBERTAD TOTAL', 'edit', d.path)}
+    </div>`;
+}
+
+function onboardingFinishStep() {
+  const d = onboardingDraft;
+  const templates = templatesForProfile(d);
+  if (d.path === 'template') {
+    if (!d.templateId || !templates.some((item) => item.id === d.templateId)) d.templateId = templates[0]?.id || 'ppl_3';
+    return `
+      <div class="onboarding-step-heading"><span class="step-symbol">06</span><div><p class="eyebrow">Elige tu plantilla</p><h1>Una estructura profesional que podrás modificar por completo.</h1><p>Las plantillas se filtran según tus días, objetivo y experiencia.</p></div></div>
+      <div class="template-choice-list">${templates.map((template) => onboardingTemplateCard(template, d.templateId)).join('')}</div>`;
+  }
+  if (d.path === 'custom') {
+    return `
+      <div class="onboarding-step-heading"><span class="step-symbol">06</span><div><p class="eyebrow">Tu espacio personal</p><h1>Empezarás con una carpeta y una rutina vacía.</h1><p>Podrás crear tantas carpetas como quieras: Brazo, Pierna, Viajes, Rutinas rápidas…</p></div></div>
+      <div class="custom-path-preview">
+        <div class="fake-folder"><span>▰</span><div><strong>Mis rutinas</strong><small>1 rutina</small></div></div>
+        <div class="fake-routine"><span>01</span><div><strong>Mi primera rutina</strong><small>Añade días, ejercicios, series y descansos</small></div><b>→</b></div>
+      </div>
+      <div class="onboarding-insight"><span>✦</span><p><strong>No estarás bloqueado.</strong> Desde el constructor podrás importar una plantilla en cualquier momento.</p></div>`;
+  }
+  const recommendedId = d.templateId || programTemplates.find((item) => item.id === (Number(d.days) === 4 ? 'classic_4' : Number(d.days) >= 5 ? 'aesthetic_5' : Number(d.days) <= 2 ? 'starter_2' : 'ppl_3'))?.id || 'ppl_3';
+  d.templateId = recommendedId;
+  const template = programTemplates.find((item) => item.id === recommendedId) || programTemplates[1];
+  return `
+    <div class="onboarding-step-heading"><span class="step-symbol">06</span><div><p class="eyebrow">Plan recomendado</p><h1>Esta es la estructura que mejor encaja con tus respuestas.</h1><p>Nada queda cerrado: cada día, nombre y ejercicio será editable.</p></div></div>
+    ${onboardingTemplateCard(template, template.id, true)}
+    <div class="recommendation-reasons">
+      <article><span>✓</span><p><strong>${template.days} días reales</strong><small>Ajustado a tu disponibilidad semanal.</small></p></article>
+      <article><span>✓</span><p><strong>${experienceLabel(d.experience)}</strong><small>Volumen inicial adaptado a tu experiencia.</small></p></article>
+      <article><span>✓</span><p><strong>${d.minutes} minutos</strong><small>Número de ejercicios limitado para que puedas cumplirlo.</small></p></article>
+    </div>`;
+}
+
+function choiceCard(name, value, title, subtitle, icon, selected) {
+  return `<label class="choice-card"><input type="radio" name="ob-${name}" value="${esc(value)}" ${selected === value ? 'checked' : ''}><span class="choice-card-inner"><i>${esc(icon)}</i><strong>${esc(title)}</strong><small>${esc(subtitle)}</small><b>✓</b></span></label>`;
+}
+
+function pathCard(value, title, subtitle, badge, icon, selected) {
+  const icons = { spark: '✦', layers: '▱', edit: '✎' };
+  return `<label class="path-choice"><input type="radio" name="obPath" value="${value}" ${selected === value ? 'checked' : ''}><span class="path-choice-inner"><i>${icons[icon]}</i><span><em>${badge}</em><strong>${title}</strong><small>${subtitle}</small></span><b>→</b></span></label>`;
+}
+
+function onboardingTemplateCard(template, selectedId, staticCard = false) {
+  const dayNames = template.dayKeys.map((key) => {
+    const map = {
+      fullBodyBase: 'Fuerza total · Base', fullBodyProgress: 'Fuerza total · Progresión', push: 'Pecho, hombros y tríceps', pull: 'Espalda y bíceps', legs: 'Pierna completa',
+      chestTriceps: 'Pecho y tríceps', backBiceps: 'Espalda y bíceps', legsGlutes: 'Pierna y glúteos', shouldersArms: 'Hombros y brazos', chest: 'Pecho', back: 'Espalda', legStrength: 'Pierna', gluteHam: 'Glúteos e isquios',
+      upperStrength: 'Tren superior · Fuerza', lowerStrength: 'Tren inferior · Fuerza', upperVolume: 'Tren superior · Volumen', lowerVolume: 'Tren inferior · Volumen'
+    };
+    return map[key] || key;
+  });
+  const inner = `<span class="template-card-top"><em>${esc(template.badge)}</em><b>${template.days} días</b></span><h3>${esc(template.name)}</h3><p>${esc(template.subtitle)}</p><div class="template-day-list">${dayNames.map((name, index) => `<span><b>${String(index + 1).padStart(2, '0')}</b>${esc(name)}</span>`).join('')}</div><small>${esc(template.description)}</small>`;
+  if (staticCard) return `<article class="onboarding-template-card selected static">${inner}</article>`;
+  return `<label class="onboarding-template-card ${selectedId === template.id ? 'selected' : ''}"><input type="radio" name="obTemplate" value="${esc(template.id)}" ${selectedId === template.id ? 'checked' : ''}>${inner}<i>✓</i></label>`;
+}
+
+function captureOnboardingStep() {
+  onboardingDraft ||= onboardingDraftFromState();
+  if (onboardingStep === 1) {
+    onboardingDraft.name = document.querySelector('#obName')?.value.trim() || '';
+    onboardingDraft.age = numberValue(document.querySelector('#obAge')?.value) || '';
+    onboardingDraft.weight = numberValue(document.querySelector('#obWeight')?.value) || '';
+    onboardingDraft.height = numberValue(document.querySelector('#obHeight')?.value) || '';
+    onboardingDraft.adultConsent = Boolean(document.querySelector('#obAdult')?.checked);
+  } else if (onboardingStep === 2) {
+    onboardingDraft.objective = document.querySelector('input[name="ob-objective"]:checked')?.value || onboardingDraft.objective;
+    onboardingDraft.experience = document.querySelector('input[name="ob-experience"]:checked')?.value || onboardingDraft.experience;
+    onboardingDraft.location = document.querySelector('input[name="ob-location"]:checked')?.value || onboardingDraft.location;
+  } else if (onboardingStep === 3) {
+    onboardingDraft.days = numberValue(document.querySelector('input[name="obDays"]:checked')?.value, onboardingDraft.days);
+    onboardingDraft.minutes = numberValue(document.querySelector('input[name="obMinutes"]:checked')?.value, onboardingDraft.minutes);
+  } else if (onboardingStep === 4) {
+    onboardingDraft.equipment = [...document.querySelectorAll('input[name="obEquipment"]:checked')].map((input) => input.value);
+    onboardingDraft.priorities = [...document.querySelectorAll('input[name="obPriority"]:checked')].slice(0, 3).map((input) => input.value);
+    onboardingDraft.avoidedExercises = document.querySelector('#obAvoid')?.value.trim() || '';
+  } else if (onboardingStep === 5) {
+    onboardingDraft.path = document.querySelector('input[name="obPath"]:checked')?.value || onboardingDraft.path;
+    if (onboardingDraft.path !== 'template') onboardingDraft.templateId = null;
+  } else if (onboardingStep === 6 && onboardingDraft.path === 'template') {
+    onboardingDraft.templateId = document.querySelector('input[name="obTemplate"]:checked')?.value || onboardingDraft.templateId;
+  }
+}
+
+function validateOnboardingStep() {
+  if (onboardingStep === 1) {
+    if (!onboardingDraft.name) { showToast('Escribe un nombre o apodo.', 'danger'); return false; }
+    if (!onboardingDraft.adultConsent || (onboardingDraft.age && onboardingDraft.age < 18)) { showToast('Debes confirmar que eres mayor de 18 años.', 'danger'); return false; }
+  }
+  if (onboardingStep === 4 && !onboardingDraft.equipment.length) { showToast('Selecciona al menos un tipo de material.', 'danger'); return false; }
+  return true;
+}
+
+function finishOnboarding() {
+  captureOnboardingStep();
+  if (!validateOnboardingStep()) return;
+  const d = onboardingDraft;
+  const profile = {
+    ...(state.profile || {}),
+    name: d.name,
+    age: d.age,
+    weight: d.weight,
+    height: d.height,
+    objective: d.objective,
+    experience: d.experience,
+    location: d.location,
+    days: d.days,
+    minutes: d.minutes,
+    priorities: d.priorities,
+    avoidedExercises: d.avoidedExercises,
+    trainingPath: d.path,
+    equipment: d.equipment,
+    setupVersion: '3.1'
+  };
+  let plan;
+  let folderName;
+  if (d.path === 'custom') {
+    plan = createBlankPlan('Mi primera rutina');
+    folderName = 'Mis rutinas';
+  } else {
+    plan = buildPlanFromTemplate(d.templateId || null, profile);
+    folderName = d.path === 'template' ? 'Plantillas elegidas' : 'Plan recomendado';
+  }
+  const folder = { id: uid('folder'), name: folderName, icon: 'folder', createdAt: new Date().toISOString(), routines: [clone(plan)] };
+  state.profile = profile;
+  state.plan = plan;
+  state.routineFolders = [folder, ...(state.routineFolders || []).filter((item) => item.routines?.some((routine) => routine.id !== state.plan?.id))];
+  state.activeFolderId = folder.id;
+  state.activeRoutineId = plan.id;
+  state.nextWorkoutIndex = 0;
+  state.activeWorkout = null;
+  state.onboardingCompleted = true;
+  state.onboardingChoice = d.path;
+  state.createdAt ||= new Date().toISOString();
+  recordProfileWeight(profile.weight);
+  save();
+  showToast(d.path === 'custom' ? 'Tu espacio de rutinas está listo.' : 'Tu nuevo plan está listo para personalizar.', 'success');
+  setView('plan');
+}
+
+function keepCurrentConfiguration() {
+  state.profile = { ...state.profile, setupVersion: '3.1', trainingPath: state.profile?.trainingPath || 'recommended' };
+  state.onboardingCompleted = true;
+  ensureRoutineLibrary();
+  save();
+  setView('home');
+  showToast('Configuración actual conservada.', 'success');
 }
 
 function weeklyMessage(completed, goal) {
@@ -310,46 +645,6 @@ function findLatestProgress() {
   return null;
 }
 
-function renderQuestionnaire() {
-  const p = state.profile || {};
-  const selectedEquipment = new Set(p.equipment || ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio']);
-  app.innerHTML = `
-    <section class="page">
-      <p class="eyebrow">Configuración inicial</p>
-      <h1>${state.profile ? 'Actualizar mi plan' : 'Crear mi plan'}</h1>
-      <p class="muted">Podrás editar cada día y ejercicio después. Los datos se guardan solo en este dispositivo.</p>
-      <form id="planForm" class="card form-card form-grid">
-        <div class="form-fields">
-          <label class="field field-full"><span>Nombre o apodo</span><input name="name" maxlength="30" value="${esc(p.name || '')}" placeholder="Ej. Raúl"></label>
-          <label class="field"><span>Edad</span><input name="age" type="number" min="18" max="100" value="${esc(p.age || '')}" placeholder="Ej. 20"></label>
-          <label class="field"><span>Peso actual (kg)</span><input name="weight" inputmode="decimal" type="number" min="30" max="350" step="0.1" value="${esc(p.weight || '')}" placeholder="Ej. 75"></label>
-          <label class="field"><span>Estatura (cm)</span><input name="height" inputmode="numeric" type="number" min="120" max="230" value="${esc(p.height || '')}" placeholder="Ej. 178"></label>
-        </div>
-
-        ${radioGroup('objective', '1. Objetivo principal', [
-          ['muscle', 'Fuerza y músculo'], ['fitness', 'Ponerme en forma'], ['fat', 'Mejorar condición']
-        ], p.objective || 'muscle')}
-        ${radioGroup('days', '2. Días disponibles', [['2', '2 días'], ['3', '3 días'], ['4', '4 días'], ['5', '5 días']], String(p.days || 3))}
-        ${radioGroup('minutes', '3. Tiempo por sesión', [['30', '30 minutos'], ['45', '45 minutos'], ['60', '60 minutos']], String(p.minutes || 45))}
-
-        <fieldset class="fieldset">
-          <legend>4. Material disponible</legend>
-          <div class="check-grid">
-            ${['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio'].map((equipment) => checkboxOption('equipment', equipment, equipment, selectedEquipment.has(equipment))).join('')}
-          </div>
-        </fieldset>
-
-        <label class="consent-row">
-          <input id="adultConsent" name="adultConsent" type="checkbox" ${state.profile ? 'checked' : ''}>
-          <span class="visible-check" aria-hidden="true">✓</span>
-          <span><strong>Confirmo que soy mayor de 18 años.</strong><small>My Fit Plan está planteada inicialmente para usuarios adultos.</small></span>
-        </label>
-
-        <button class="button button-primary button-block" type="submit">${state.profile ? 'Guardar y regenerar plan' : 'Generar mi rutina'}</button>
-      </form>
-    </section>`;
-}
-
 function radioGroup(name, legend, options, selected) {
   return `<fieldset class="fieldset"><legend>${esc(legend)}</legend><div class="option-grid">${options.map(([value, label]) => `<label class="option"><input type="radio" name="${esc(name)}" value="${esc(value)}" ${String(value) === String(selected) ? 'checked' : ''}><span>${esc(label)}</span></label>`).join('')}</div></fieldset>`;
 }
@@ -360,41 +655,137 @@ function checkboxOption(name, value, label, checked) {
 
 function createDemoPlan() {
   state.profile = {
-    name: 'Demo', age: 25, weight: 75, height: 178, objective: 'muscle', days: 3, minutes: 45,
+    name: 'Demo', age: 25, weight: 75, height: 178, objective: 'muscle', experience: 'beginner', location: 'gym', days: 3, minutes: 45,
+    priorities: ['Pecho', 'Espalda'], avoidedExercises: '', trainingPath: 'recommended', setupVersion: '3.1',
     equipment: ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio']
   };
-  state.plan = buildPlan(state.profile);
+  state.plan = buildPlan(state.profile, 'ppl_3');
+  const folder = { id: uid('folder'), name: 'Plan recomendado', icon: 'folder', createdAt: new Date().toISOString(), routines: [clone(state.plan)] };
+  state.routineFolders = [folder];
+  state.activeFolderId = folder.id;
+  state.activeRoutineId = state.plan.id;
+  state.onboardingCompleted = true;
+  state.onboardingChoice = 'recommended';
   state.createdAt = new Date().toISOString();
   state.weightHistory = [{ id: uid('weight'), date: isoDay(), weight: 75 }];
   save();
-  showToast('Plan de demostración creado.', 'success');
+  showToast('Espacio de demostración creado.', 'success');
   setView('home');
 }
 
+function ensureRoutineLibrary() {
+  state.routineFolders ||= [];
+  if (!state.routineFolders.length && state.plan) {
+    const folder = { id: uid('folder'), name: 'Mis rutinas', icon: 'folder', createdAt: new Date().toISOString(), routines: [clone(state.plan)] };
+    state.routineFolders = [folder];
+    state.activeFolderId = folder.id;
+    state.activeRoutineId = state.plan.id;
+  }
+  let activeFolder = state.routineFolders.find((folder) => folder.id === state.activeFolderId);
+  let activeRoutine = activeFolder?.routines?.find((routine) => routine.id === state.activeRoutineId);
+  if (!activeRoutine) {
+    for (const folder of state.routineFolders) {
+      const routine = folder.routines?.find((item) => item.id === state.activeRoutineId);
+      if (routine) { activeFolder = folder; activeRoutine = routine; break; }
+    }
+  }
+  if (!activeRoutine) {
+    activeFolder = state.routineFolders.find((folder) => folder.routines?.length) || state.routineFolders[0];
+    activeRoutine = activeFolder?.routines?.[0] || null;
+  }
+  if (activeRoutine) {
+    state.activeFolderId = activeFolder.id;
+    state.activeRoutineId = activeRoutine.id;
+    if (!state.plan || state.plan.id !== activeRoutine.id) state.plan = clone(activeRoutine);
+  }
+}
+
+function syncActiveRoutineFromPlan() {
+  if (!state.plan || !state.activeRoutineId || !Array.isArray(state.routineFolders)) return;
+  for (const folder of state.routineFolders) {
+    const index = folder.routines?.findIndex((routine) => routine.id === state.activeRoutineId) ?? -1;
+    if (index >= 0) {
+      state.plan.updatedAt = new Date().toISOString();
+      folder.routines[index] = clone(state.plan);
+      return;
+    }
+  }
+}
+
+function activeFolder() {
+  return state.routineFolders?.find((folder) => folder.id === state.activeFolderId) || state.routineFolders?.[0] || null;
+}
+
 function renderPlan() {
-  if (!state.profile || !state.plan) return renderLocked('Primero crea tu plan.', 'Completa el cuestionario inicial para obtener una rutina editable.');
-  const days = state.plan.days || [];
+  if (!state.profile) return renderLocked('Primero configura My Fit Plan.', 'Completa el onboarding para crear o importar tus primeras rutinas.');
+  ensureRoutineLibrary();
+  const folders = state.routineFolders || [];
+  const folder = activeFolder();
+  const routines = folder?.routines || [];
+  const days = state.plan?.days || [];
   app.innerHTML = `
-    <section class="page">
-      <div class="section-title-row">
-        <div><p class="eyebrow">Rutina editable</p><h1>Mi plan</h1></div>
-        <button class="button button-primary button-small" type="button" data-action="add-day">＋ Día</button>
-      </div>
-      <p class="muted">Modifica nombres, orden, ejercicios, series, repeticiones y descansos. Los cambios se aplicarán a las próximas sesiones.</p>
+    <section class="page routines-page">
+      <header class="routines-header">
+        <div><p class="eyebrow">Tu espacio de entrenamiento</p><h1>Planes y rutinas</h1><p class="muted">Organiza carpetas, combina plantillas y construye entrenamientos completamente tuyos.</p></div>
+        <button class="button button-primary" type="button" data-action="create-folder">＋ Carpeta</button>
+      </header>
 
-      <div class="plan-toolbar card">
-        <span><strong>${days.length}</strong> días · <strong>${days.reduce((sum, day) => sum + day.exercises.length, 0)}</strong> ejercicios</span>
-        <div class="inline-actions">
-          <button class="button button-secondary button-small" type="button" data-action="open-questionnaire">Ajustar objetivo</button>
-          <button class="button button-danger button-small" type="button" data-action="restore-plan">Restaurar recomendada</button>
+      <section class="routine-folder-rail" aria-label="Carpetas de rutinas">
+        ${folders.map((item) => `<button type="button" class="routine-folder-tab ${item.id === folder?.id ? 'active' : ''}" data-action="select-folder" data-id="${esc(item.id)}"><span>▰</span><strong>${esc(item.name)}</strong><small>${item.routines?.length || 0}</small></button>`).join('')}
+      </section>
+
+      ${folder ? `<section class="folder-workspace">
+        <div class="folder-title-row">
+          <div><span class="folder-label">CARPETA ACTIVA</span><h2>${esc(folder.name)}</h2></div>
+          <div class="inline-actions">
+            <button class="icon-button" type="button" data-action="rename-folder" data-id="${esc(folder.id)}" aria-label="Renombrar carpeta">✎</button>
+            <button class="icon-button danger-icon" type="button" data-action="delete-folder" data-id="${esc(folder.id)}" aria-label="Eliminar carpeta">×</button>
+            <button class="button button-primary button-small" type="button" data-action="create-routine" data-folder="${esc(folder.id)}">＋ Rutina</button>
+          </div>
         </div>
-      </div>
+        <div class="routine-card-grid">
+          ${routines.length ? routines.map((routine) => routineLibraryCard(routine)).join('') : emptyState('Carpeta vacía', 'Crea una rutina desde cero o parte de una plantilla profesional.', `<button class="button button-primary" type="button" data-action="create-routine" data-folder="${esc(folder.id)}">Crear rutina</button>`)}
+        </div>
+      </section>` : emptyState('No hay carpetas', 'Crea una carpeta para organizar tus primeras rutinas.', '<button class="button button-primary" type="button" data-action="create-folder">Crear carpeta</button>')}
 
-      <div class="plan-days section">
-        ${days.map((day, dayIndex) => renderPlanDay(day, dayIndex)).join('')}
-      </div>
-      <section class="section notice">Los cambios del plan no alteran una sesión que ya esté empezada. Para aplicar el nuevo plan a una sesión activa, cancela esa sesión y vuelve a iniciarla.</section>
+      ${state.plan ? `<section class="active-routine-editor">
+        <div class="active-routine-heading">
+          <div><span class="active-indicator"><i></i> RUTINA ACTIVA</span><h2>${esc(state.plan.name || 'Mi rutina')}</h2><p>${esc(state.plan.description || 'Rutina personalizada.')}</p></div>
+          <div class="routine-heading-actions">
+            <button class="button button-secondary button-small" type="button" data-action="rename-routine" data-id="${esc(state.activeRoutineId)}">Renombrar</button>
+            <button class="button button-secondary button-small" type="button" data-action="duplicate-routine" data-id="${esc(state.activeRoutineId)}">Duplicar</button>
+            <button class="button button-primary button-small" type="button" data-action="add-day">＋ Entrenamiento</button>
+          </div>
+        </div>
+        <div class="plan-toolbar card premium-plan-toolbar">
+          <span><strong>${days.length}</strong> entrenamientos · <strong>${days.reduce((sum, day) => sum + day.exercises.length, 0)}</strong> ejercicios</span>
+          <div class="inline-actions">
+            <button class="button button-secondary button-small" type="button" data-action="onboarding-start">Reconfigurar</button>
+            ${state.plan.templateId !== 'custom' ? '<button class="button button-danger button-small" type="button" data-action="restore-plan">Restaurar plantilla</button>' : ''}
+          </div>
+        </div>
+        <div class="plan-days section">${days.map((day, dayIndex) => renderPlanDay(day, dayIndex)).join('')}</div>
+        <section class="section notice">Los cambios se guardan dentro de esta rutina. Puedes cambiar de rutina sin perder el resto de tu biblioteca.</section>
+      </section>` : ''}
     </section>`;
+}
+
+function routineLibraryCard(routine) {
+  const active = routine.id === state.activeRoutineId;
+  const exerciseCount = routine.days?.reduce((sum, day) => sum + (day.exercises?.length || 0), 0) || 0;
+  return `<article class="routine-library-card ${active ? 'active' : ''}">
+    <button class="routine-card-main" type="button" data-action="select-routine" data-id="${esc(routine.id)}">
+      <span class="routine-card-badge">${active ? 'ACTIVA' : (routine.templateId === 'custom' ? 'PERSONAL' : 'PLANTILLA')}</span>
+      <h3>${esc(routine.name || 'Mi rutina')}</h3>
+      <p>${esc(routine.description || 'Rutina personalizada.')}</p>
+      <div class="routine-card-stats"><span><b>${routine.days?.length || 0}</b> días</span><span><b>${exerciseCount}</b> ejercicios</span></div>
+    </button>
+    <div class="routine-card-actions">
+      <button type="button" data-action="rename-routine" data-id="${esc(routine.id)}">✎</button>
+      <button type="button" data-action="duplicate-routine" data-id="${esc(routine.id)}">⧉</button>
+      <button class="danger" type="button" data-action="delete-routine" data-id="${esc(routine.id)}">×</button>
+    </div>
+  </article>`;
 }
 
 function renderPlanDay(day, dayIndex) {
@@ -599,7 +990,7 @@ function renderLibrary() {
     <section class="page library-page">
       <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
       <button class="premium-pilot-banner" type="button" data-action="exercise-details" data-id="barbell_bench_press">
-        <span class="pilot-banner-badge">NUEVO · 3.0B</span>
+        <span class="pilot-banner-badge">FICHA PREMIUM</span>
         <span><strong>Prueba la nueva ficha premium</strong><small>Press banca con barra · movimiento, anatomía y técnica</small></span>
         <b>→</b>
       </button>
@@ -750,7 +1141,7 @@ function profileDataHtml() {
       <fieldset class="fieldset"><legend>Material disponible</legend><div class="check-grid">${['Máquina','Mancuernas','Polea','Banco','Barra','Peso corporal','Cardio'].map((equipment) => checkboxOption('equipment', equipment, equipment, selectedEquipment.has(equipment))).join('')}</div></fieldset>
       <p class="muted small">Cambiar el material no elimina ejercicios del plan. La biblioteca te avisará cuando un ejercicio use material no marcado.</p>
     </form>
-    <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Plan actual</p><h2>${state.profile.days} días · ${state.profile.minutes} min</h2></div><button class="button button-secondary button-small" type="button" data-action="open-questionnaire">Cambiar plan base</button></div><p class="muted">${esc(objectiveLabel(state.profile.objective))}</p></section>
+    <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Configuración de entrenamiento</p><h2>${state.profile.days} días · ${state.profile.minutes} min</h2></div><button class="button button-secondary button-small" type="button" data-action="onboarding-start">Rehacer configuración</button></div><p class="muted">${esc(objectiveLabel(state.profile.objective))} · ${esc(experienceLabel(state.profile.experience))} · ${state.profile.trainingPath === 'custom' ? 'Rutinas propias' : state.profile.trainingPath === 'template' ? 'Plantillas' : 'Plan recomendado'}</p></section>
   </section>`;
 }
 
@@ -833,11 +1224,25 @@ async function handleAppClick(event) {
   const action = target.dataset.action;
 
   const actions = {
-    'start-questionnaire': renderQuestionnaire,
-    'open-questionnaire': renderQuestionnaire,
+    'start-questionnaire': startOnboarding,
+    'open-questionnaire': startOnboarding,
+    'onboarding-start': startOnboarding,
+    'onboarding-keep-current': keepCurrentConfiguration,
+    'onboarding-next': () => { captureOnboardingStep(); if (!validateOnboardingStep()) return; onboardingStep = Math.min(6, onboardingStep + 1); renderOnboarding(); },
+    'onboarding-back': () => { captureOnboardingStep(); onboardingStep = Math.max(1, onboardingStep - 1); renderOnboarding(); },
+    'onboarding-finish': finishOnboarding,
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
     'quick-weight': openWeightModal,
+    'create-folder': createRoutineFolder,
+    'select-folder': () => selectRoutineFolder(target.dataset.id),
+    'rename-folder': () => renameRoutineFolder(target.dataset.id),
+    'delete-folder': () => deleteRoutineFolder(target.dataset.id),
+    'create-routine': () => openCreateRoutineModal(target.dataset.folder),
+    'select-routine': () => activateRoutine(target.dataset.id),
+    'rename-routine': () => renameRoutine(target.dataset.id),
+    'duplicate-routine': () => duplicateRoutine(target.dataset.id),
+    'delete-routine': () => deleteRoutine(target.dataset.id),
     'add-day': addPlanDay,
     'rename-day': () => renamePlanDay(Number(target.dataset.day)),
     'delete-day': () => deletePlanDay(Number(target.dataset.day)),
@@ -881,6 +1286,10 @@ async function handleAppClick(event) {
 
 function handleAppChange(event) {
   const target = event.target;
+  if (target.name === 'obPriority' && target.checked) {
+    const checked = [...document.querySelectorAll('input[name="obPriority"]:checked')];
+    if (checked.length > 3) { target.checked = false; showToast('Puedes priorizar hasta 3 zonas.', 'danger'); return; }
+  }
   if (target.matches('[data-action="plan-target"]')) updatePlanTarget(target);
   if (target.matches('[data-action="set-field"]')) updateSetField(target);
   if (target.id === 'libraryMuscle') { libraryFilters.muscle = target.value; libraryPageSize = 36; refreshLibraryResults(); }
@@ -955,8 +1364,195 @@ function submitPlanForm(form) {
   } else replacePlan();
 }
 
+function findRoutineById(routineId) {
+  for (const folder of state.routineFolders || []) {
+    const routine = folder.routines?.find((item) => item.id === routineId);
+    if (routine) return { folder, routine };
+  }
+  return null;
+}
+
+function selectRoutineFolder(folderId) {
+  syncActiveRoutineFromPlan();
+  const folder = state.routineFolders?.find((item) => item.id === folderId);
+  if (!folder) return;
+  state.activeFolderId = folder.id;
+  if (folder.routines?.length) {
+    const currentInFolder = folder.routines.find((routine) => routine.id === state.activeRoutineId);
+    if (!currentInFolder) {
+      state.activeRoutineId = folder.routines[0].id;
+      state.plan = clone(folder.routines[0]);
+      state.nextWorkoutIndex = 0;
+    }
+  }
+  save();
+  renderPlan();
+}
+
+function activateRoutine(routineId) {
+  const match = findRoutineById(routineId);
+  if (!match) return;
+  const switchNow = () => {
+    syncActiveRoutineFromPlan();
+    state.activeFolderId = match.folder.id;
+    state.activeRoutineId = match.routine.id;
+    state.plan = clone(match.routine);
+    state.nextWorkoutIndex = 0;
+    state.activeWorkout = null;
+    save();
+    renderPlan();
+    showToast(`Rutina activa: ${match.routine.name}`, 'success');
+  };
+  if (state.activeWorkout) {
+    return confirmAction({ title: 'Cambiar de rutina', message: 'Hay una sesión en curso. Al cambiar de rutina se descartará esa sesión.', confirmLabel: 'Cambiar rutina', danger: true, onConfirm: switchNow });
+  }
+  switchNow();
+}
+
+function createRoutineFolder() {
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Organización</p><h2>Nueva carpeta</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><form id="folderForm" class="form-grid"><label class="field"><span>Nombre de la carpeta</span><input name="name" maxlength="35" placeholder="Ej. Brazo, Viajes, Mis planes…" required></label><div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Crear carpeta</button></div></form>`);
+  wrapper.querySelector('#folderForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = String(new FormData(event.target).get('name') || '').trim();
+    if (!name) return;
+    const folder = { id: uid('folder'), name, icon: 'folder', createdAt: new Date().toISOString(), routines: [] };
+    state.routineFolders.push(folder);
+    state.activeFolderId = folder.id;
+    save();
+    wrapper._closeModal();
+    renderPlan();
+    showToast('Carpeta creada.', 'success');
+  });
+}
+
+function renameRoutineFolder(folderId) {
+  const folder = state.routineFolders?.find((item) => item.id === folderId);
+  if (!folder) return;
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Carpeta</p><h2>Cambiar nombre</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><form id="renameFolderForm" class="form-grid"><label class="field"><span>Nombre</span><input name="name" maxlength="35" value="${esc(folder.name)}" required></label><div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Guardar</button></div></form>`);
+  wrapper.querySelector('#renameFolderForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = String(new FormData(event.target).get('name') || '').trim();
+    if (!name) return;
+    folder.name = name;
+    save();
+    wrapper._closeModal();
+    renderPlan();
+  });
+}
+
+function deleteRoutineFolder(folderId) {
+  const folder = state.routineFolders?.find((item) => item.id === folderId);
+  if (!folder) return;
+  if (state.routineFolders.length <= 1) return showToast('Debes conservar al menos una carpeta.', 'danger');
+  confirmAction({
+    title: `Eliminar ${folder.name}`,
+    message: `Se eliminarán ${folder.routines?.length || 0} rutinas de esta carpeta. El historial de entrenamientos se conservará.`,
+    confirmLabel: 'Eliminar carpeta',
+    danger: true,
+    onConfirm: () => {
+      state.routineFolders = state.routineFolders.filter((item) => item.id !== folderId);
+      const nextFolder = state.routineFolders.find((item) => item.routines?.length) || state.routineFolders[0];
+      state.activeFolderId = nextFolder.id;
+      if (!findRoutineById(state.activeRoutineId)) {
+        const nextRoutine = nextFolder.routines?.[0] || null;
+        state.activeRoutineId = nextRoutine?.id || null;
+        state.plan = nextRoutine ? clone(nextRoutine) : null;
+        state.nextWorkoutIndex = 0;
+      }
+      save();
+      renderPlan();
+    }
+  });
+}
+
+function openCreateRoutineModal(folderId = state.activeFolderId) {
+  const folder = state.routineFolders?.find((item) => item.id === folderId) || activeFolder();
+  if (!folder) return createRoutineFolder();
+  const templates = templatesForProfile(state.profile).slice(0, 6);
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Nueva rutina</p><h2>¿Cómo quieres empezar?</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <div class="create-routine-options">
+      <button type="button" class="create-routine-option" data-create-type="blank"><span>✎</span><div><strong>Desde cero</strong><small>Crea una rutina vacía y añade tus propios entrenamientos.</small></div><b>→</b></button>
+      <button type="button" class="create-routine-option" data-create-type="recommended"><span>✦</span><div><strong>Recomendación automática</strong><small>Usa tus datos actuales para elegir una estructura equilibrada.</small></div><b>→</b></button>
+    </div>
+    <p class="eyebrow modal-section-label">O ELIGE UNA PLANTILLA</p>
+    <div class="modal-template-grid">${templates.map((template) => `<button type="button" class="modal-template-card" data-create-template="${esc(template.id)}"><span>${template.days} DÍAS</span><strong>${esc(template.name)}</strong><small>${esc(template.subtitle)}</small></button>`).join('')}</div>`, { wide: true });
+  wrapper.addEventListener('click', (event) => {
+    const typeButton = event.target.closest('[data-create-type]');
+    const templateButton = event.target.closest('[data-create-template]');
+    if (!typeButton && !templateButton) return;
+    let routine;
+    if (typeButton?.dataset.createType === 'blank') routine = createBlankPlan(`Rutina ${folder.routines.length + 1}`);
+    else if (typeButton?.dataset.createType === 'recommended') routine = buildPlan(state.profile);
+    else routine = buildPlanFromTemplate(templateButton.dataset.createTemplate, state.profile);
+    folder.routines.push(clone(routine));
+    state.activeFolderId = folder.id;
+    state.activeRoutineId = routine.id;
+    state.plan = routine;
+    state.nextWorkoutIndex = 0;
+    save();
+    wrapper._closeModal();
+    renderPlan();
+    showToast('Rutina creada.', 'success');
+  });
+}
+
+function renameRoutine(routineId) {
+  const match = findRoutineById(routineId);
+  if (!match) return;
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Rutina</p><h2>Nombre y descripción</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><form id="renameRoutineForm" class="form-grid"><label class="field"><span>Nombre</span><input name="name" maxlength="50" value="${esc(match.routine.name || '')}" required></label><label class="field"><span>Descripción</span><textarea name="description" rows="3" maxlength="180">${esc(match.routine.description || '')}</textarea></label><div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Guardar</button></div></form>`);
+  wrapper.querySelector('#renameRoutineForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(event.target);
+    match.routine.name = String(data.get('name') || '').trim();
+    match.routine.description = String(data.get('description') || '').trim();
+    match.routine.updatedAt = new Date().toISOString();
+    if (state.activeRoutineId === routineId) state.plan = clone(match.routine);
+    save();
+    wrapper._closeModal();
+    renderPlan();
+  });
+}
+
+function duplicateRoutine(routineId) {
+  const match = findRoutineById(routineId);
+  if (!match) return;
+  syncActiveRoutineFromPlan();
+  const duplicate = clone(match.routine);
+  duplicate.id = uid('routine');
+  duplicate.name = `${match.routine.name} · Copia`;
+  duplicate.createdAt = new Date().toISOString();
+  duplicate.updatedAt = duplicate.createdAt;
+  duplicate.days = (duplicate.days || []).map((day) => ({ ...day, id: uid('day'), exercises: (day.exercises || []).map((item) => ({ ...item, slotId: uid('slot') })) }));
+  match.folder.routines.push(duplicate);
+  save();
+  renderPlan();
+  showToast('Rutina duplicada.', 'success');
+}
+
+function deleteRoutine(routineId) {
+  const match = findRoutineById(routineId);
+  if (!match) return;
+  const totalRoutines = state.routineFolders.reduce((sum, folder) => sum + (folder.routines?.length || 0), 0);
+  if (totalRoutines <= 1) return showToast('Debes conservar al menos una rutina.', 'danger');
+  confirmAction({ title: `Eliminar ${match.routine.name}`, message: 'La rutina se eliminará, pero los entrenamientos ya registrados seguirán en tu historial.', confirmLabel: 'Eliminar rutina', danger: true, onConfirm: () => {
+    match.folder.routines = match.folder.routines.filter((routine) => routine.id !== routineId);
+    if (state.activeRoutineId === routineId) {
+      const nextMatch = match.folder.routines[0] ? { folder: match.folder, routine: match.folder.routines[0] } : (() => {
+        for (const folder of state.routineFolders) if (folder.routines?.[0]) return { folder, routine: folder.routines[0] };
+        return null;
+      })();
+      state.activeFolderId = nextMatch?.folder.id || state.activeFolderId;
+      state.activeRoutineId = nextMatch?.routine.id || null;
+      state.plan = nextMatch?.routine ? clone(nextMatch.routine) : null;
+      state.nextWorkoutIndex = 0;
+    }
+    save();
+    renderPlan();
+  }});
+}
+
 function addPlanDay() {
-  state.plan.days.push({ id: uid('day'), name: `Día ${state.plan.days.length + 1}`, exercises: [] });
+  state.plan.days.push({ id: uid('day'), name: `Nuevo entrenamiento ${state.plan.days.length + 1}`, focus: 'Personalizado', exercises: [] });
   state.profile.days = state.plan.days.length;
   save();
   renderPlan();
@@ -1014,8 +1610,17 @@ function updatePlanTarget(target) {
 }
 
 function restoreRecommendedPlan() {
-  confirmAction({ title: 'Restaurar rutina recomendada', message: 'Se perderán los cambios hechos en tu plan. El historial se conservará.', confirmLabel: 'Restaurar', danger: true, onConfirm: () => {
-    state.plan = buildPlan(state.profile); state.nextWorkoutIndex = 0; save(); renderPlan(); showToast('Rutina recomendada restaurada.');
+  confirmAction({ title: 'Restaurar plantilla', message: 'Se perderán los cambios hechos en esta rutina. El historial y las demás rutinas se conservarán.', confirmLabel: 'Restaurar', danger: true, onConfirm: () => {
+    const currentId = state.activeRoutineId || state.plan?.id;
+    const currentName = state.plan?.name;
+    const templateId = state.plan?.templateId && state.plan.templateId !== 'legacy' ? state.plan.templateId : null;
+    const restored = buildPlan(state.profile, templateId);
+    restored.id = currentId || restored.id;
+    if (currentName) restored.name = currentName;
+    state.plan = restored;
+    state.activeRoutineId = restored.id;
+    state.nextWorkoutIndex = 0;
+    save(); renderPlan(); showToast('Plantilla restaurada.');
   }});
 }
 
@@ -1098,7 +1703,7 @@ function openExerciseDetails(id) {
       <header class="premium-detail-header">
         <button class="premium-detail-back" type="button" data-close-modal aria-label="Volver">←</button>
         <div class="premium-detail-title">
-          <p class="eyebrow">${isPilot ? 'FICHA PREMIUM · PILOTO 3.0B' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`}</p>
+          <p class="eyebrow">${isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`}</p>
           <h2>${esc(exercise.name)}</h2>
           ${exercise.englishName ? `<p>${esc(exercise.englishName)}</p>` : ''}
         </div>

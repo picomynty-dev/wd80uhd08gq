@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV30B1';
-export const LEGACY_KEYS = ['myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.0.0-beta.1';
+export const STORAGE_KEY = 'myFitPlanStateV31';
+export const LEGACY_KEYS = ['myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.1.0';
 
 export const defaultSettings = {
   accent: 'orange',
@@ -18,11 +18,16 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 30,
+  schemaVersion: 31,
   appVersion: APP_VERSION,
   profile: null,
+  onboardingCompleted: false,
+  onboardingChoice: null,
   settings: clone(defaultSettings),
   plan: null,
+  routineFolders: [],
+  activeFolderId: null,
+  activeRoutineId: null,
   nextWorkoutIndex: 0,
   activeWorkout: null,
   history: [],
@@ -69,19 +74,59 @@ export function normalizeState(saved = {}) {
     weight: '',
     height: '',
     objective: 'muscle',
+    experience: 'beginner',
+    location: 'gym',
     days: 3,
     minutes: 45,
+    priorities: [],
+    avoidedExercises: '',
+    trainingPath: 'recommended',
+    setupVersion: saved.profile?.setupVersion || null,
     equipment: ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio'],
     ...saved.profile
   } : null;
 
+  const basePlan = normalizePlan(saved.plan, profile || {});
+  const normalizedFolders = normalizeRoutineFolders(saved.routineFolders, basePlan, profile || {});
+  let activeRoutineId = saved.activeRoutineId || basePlan?.id || normalizedFolders[0]?.routines?.[0]?.id || null;
+  let activeFolderId = normalizedFolders.some((folder) => folder.id === saved.activeFolderId) ? saved.activeFolderId : (findFolderForRoutine(normalizedFolders, activeRoutineId)?.id || normalizedFolders[0]?.id || null);
+  let activeRoutine = findRoutine(normalizedFolders, activeRoutineId);
+
+  if (basePlan) {
+    const baseFolder = findFolderForRoutine(normalizedFolders, basePlan.id);
+    if (baseFolder) {
+      const index = baseFolder.routines.findIndex((routine) => routine.id === basePlan.id);
+      baseFolder.routines[index] = clone(basePlan);
+      activeRoutine = basePlan;
+      activeRoutineId = basePlan.id;
+      if (!activeFolderId) activeFolderId = baseFolder.id;
+    } else if (normalizedFolders.length) {
+      normalizedFolders[0].routines.unshift(clone(basePlan));
+      activeRoutine = basePlan;
+      activeRoutineId = basePlan.id;
+      if (!activeFolderId) activeFolderId = normalizedFolders[0].id;
+    }
+  }
+
+  if (!activeRoutine && normalizedFolders[0]?.routines?.[0]) {
+    activeRoutine = normalizedFolders[0].routines[0];
+    activeRoutineId = activeRoutine.id;
+    activeFolderId = normalizedFolders[0].id;
+  }
+
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 30,
+    schemaVersion: 31,
     appVersion: APP_VERSION,
     profile,
+    onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
+    onboardingChoice: saved.onboardingChoice || profile?.trainingPath || null,
     settings: { ...clone(defaultSettings), ...(saved.settings || {}) },
+    plan: activeRoutine ? normalizePlan(activeRoutine, profile || {}) : basePlan,
+    routineFolders: normalizedFolders,
+    activeFolderId,
+    activeRoutineId,
     history: Array.isArray(saved.history) ? saved.history.map(normalizeHistorySession).filter(Boolean) : [],
     customExercises: Array.isArray(saved.customExercises) ? saved.customExercises.map(normalizeCustomExercise) : [],
     favorites: Array.isArray(saved.favorites) ? [...new Set(saved.favorites)] : [],
@@ -92,16 +137,42 @@ export function normalizeState(saved = {}) {
     updatedAt: saved.updatedAt || new Date().toISOString()
   };
 
-  normalized.plan = normalizePlan(saved.plan, profile || {});
-  if (profile && !normalized.plan) normalized.plan = buildPlan(profile);
+  if (profile && !normalized.plan && normalized.onboardingCompleted) normalized.plan = buildPlan(profile);
   normalized.activeWorkout = normalizeActiveWorkout(saved.activeWorkout, normalized.plan, profile || {});
 
-  if (normalized.plan?.days?.length) {
-    normalized.nextWorkoutIndex %= normalized.plan.days.length;
-  } else {
-    normalized.nextWorkoutIndex = 0;
-  }
+  if (normalized.plan?.days?.length) normalized.nextWorkoutIndex %= normalized.plan.days.length;
+  else normalized.nextWorkoutIndex = 0;
   return normalized;
+}
+
+function normalizeRoutineFolders(folders, fallbackPlan, profile) {
+  if (Array.isArray(folders) && folders.length) {
+    return folders.map((folder, folderIndex) => ({
+      id: folder.id || uid(`folder-${folderIndex + 1}`),
+      name: folder.name || `Carpeta ${folderIndex + 1}`,
+      icon: folder.icon || 'folder',
+      createdAt: folder.createdAt || new Date().toISOString(),
+      routines: Array.isArray(folder.routines)
+        ? folder.routines.map((routine) => normalizePlan(routine, profile)).filter(Boolean)
+        : []
+    }));
+  }
+  if (fallbackPlan) {
+    return [{ id: uid('folder'), name: 'Mis rutinas', icon: 'folder', createdAt: new Date().toISOString(), routines: [clone(fallbackPlan)] }];
+  }
+  return [];
+}
+
+function findRoutine(folders, routineId) {
+  for (const folder of folders || []) {
+    const routine = folder.routines?.find((item) => item.id === routineId);
+    if (routine) return routine;
+  }
+  return null;
+}
+
+function findFolderForRoutine(folders, routineId) {
+  return (folders || []).find((folder) => folder.routines?.some((routine) => routine.id === routineId)) || null;
 }
 
 function normalizeWeightHistory(history, profile) {
@@ -112,10 +183,7 @@ function normalizeWeightHistory(history, profile) {
       weight: numberValue(item.weight)
     })).filter((item) => item.weight > 0)
     : [];
-
-  if (!clean.length && numberValue(profile?.weight) > 0) {
-    clean.push({ id: uid('weight'), date: isoDay(new Date()), weight: numberValue(profile.weight) });
-  }
+  if (!clean.length && numberValue(profile?.weight) > 0) clean.push({ id: uid('weight'), date: isoDay(new Date()), weight: numberValue(profile.weight) });
   return clean.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
@@ -170,17 +238,9 @@ function normalizeWorkoutExercise(item = {}, rules, exerciseIndex = 0) {
   const repRange = parseLegacyRepRange(item.reps, rules);
   const restSeconds = parseLegacyRest(item.restSeconds ?? item.rest, rules.restSeconds);
   let sets = Array.isArray(item.setsData) ? item.setsData : (Array.isArray(item.sets) ? item.sets : null);
-
   if (!sets) {
-    sets = Array.from({ length: targetSets }, (_, index) => ({
-      id: uid(`set-${exerciseIndex}-${index}`),
-      weight: item.weight || '',
-      reps: item.actualReps || '',
-      rir: '',
-      completed: Boolean(item.completed)
-    }));
+    sets = Array.from({ length: targetSets }, (_, index) => ({ id: uid(`set-${exerciseIndex}-${index}`), weight: item.weight || '', reps: item.actualReps || '', rir: '', completed: Boolean(item.completed) }));
   }
-
   return {
     instanceId: item.instanceId || item.slotId || uid('instance'),
     slotId: item.slotId || uid('slot'),
@@ -191,14 +251,7 @@ function normalizeWorkoutExercise(item = {}, rules, exerciseIndex = 0) {
     unit: item.unit || repRange.unit || 'reps',
     restSeconds,
     notes: item.notes || '',
-    sets: sets.map((set, index) => ({
-      id: set.id || uid(`set-${exerciseIndex}-${index}`),
-      weight: set.weight ?? '',
-      reps: set.reps ?? set.actualReps ?? '',
-      rir: set.rir ?? '',
-      completed: Boolean(set.completed),
-      completedAt: set.completedAt || null
-    }))
+    sets: sets.map((set, index) => ({ id: set.id || uid(`set-${exerciseIndex}-${index}`), weight: set.weight ?? '', reps: set.reps ?? set.actualReps ?? '', rir: set.rir ?? '', completed: Boolean(set.completed), completedAt: set.completedAt || null }))
   };
 }
 
@@ -221,13 +274,7 @@ function normalizeHistorySession(session) {
   const startedAt = session.startedAt || session.finishedAt || session.date || new Date().toISOString();
   const finishedAt = session.finishedAt || session.endedAt || startedAt;
   const exercises = Array.isArray(session.exercises) ? session.exercises.map((item, index) => {
-    const legacySets = Array.isArray(item.sets) ? item.sets : [{
-      id: uid(`history-set-${index}`),
-      weight: item.weight ?? '',
-      reps: item.actualReps ?? item.reps ?? '',
-      rir: item.rir ?? '',
-      completed: true
-    }];
+    const legacySets = Array.isArray(item.sets) ? item.sets : [{ id: uid(`history-set-${index}`), weight: item.weight ?? '', reps: item.actualReps ?? item.reps ?? '', rir: item.rir ?? '', completed: true }];
     return {
       instanceId: item.instanceId || uid('history-exercise'),
       exerciseId: item.exerciseId,
@@ -238,16 +285,9 @@ function normalizeHistorySession(session) {
       unit: item.unit || 'reps',
       restSeconds: Number(item.restSeconds || 0),
       notes: item.notes || '',
-      sets: legacySets.map((set) => ({
-        id: set.id || uid('history-set'),
-        weight: set.weight ?? '',
-        reps: set.reps ?? '',
-        rir: set.rir ?? '',
-        completed: set.completed !== false
-      }))
+      sets: legacySets.map((set) => ({ id: set.id || uid('history-set'), weight: set.weight ?? '', reps: set.reps ?? '', rir: set.rir ?? '', completed: set.completed !== false }))
     };
   }) : [];
-
   return {
     id: session.id || uid('session'),
     name: session.name || 'Entrenamiento',
@@ -267,8 +307,6 @@ export function validateImportedState(payload) {
   const candidate = payload?.data || payload?.state || payload;
   if (!candidate || typeof candidate !== 'object') throw new Error('La copia no contiene datos válidos.');
   const normalized = normalizeState(candidate);
-  if (!normalized.profile && !normalized.plan && !normalized.history.length) {
-    throw new Error('La copia está vacía o no pertenece a My Fit Plan.');
-  }
+  if (!normalized.profile && !normalized.plan && !normalized.history.length) throw new Error('La copia está vacía o no pertenece a My Fit Plan.');
   return normalized;
 }
