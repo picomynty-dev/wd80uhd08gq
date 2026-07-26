@@ -1,14 +1,14 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV21';
-export const LEGACY_KEYS = ['myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '2.1.0';
+export const STORAGE_KEY = 'myFitPlanStateV22';
+export const LEGACY_KEYS = ['myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '2.2.0';
 
 export const defaultSettings = {
   accent: 'orange',
   appearance: 'system',
-  compact: false,
+  compact: true,
   showTips: true,
   reduceMotion: false,
   restSound: true,
@@ -18,7 +18,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 21,
+  schemaVersion: 22,
   appVersion: APP_VERSION,
   profile: null,
   settings: clone(defaultSettings),
@@ -28,6 +28,7 @@ export const defaultState = {
   history: [],
   customExercises: [],
   favorites: [],
+  searchHistory: [],
   weightHistory: [],
   createdAt: null,
   updatedAt: null
@@ -77,13 +78,14 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 21,
+    schemaVersion: 22,
     appVersion: APP_VERSION,
     profile,
     settings: { ...clone(defaultSettings), ...(saved.settings || {}) },
     history: Array.isArray(saved.history) ? saved.history.map(normalizeHistorySession).filter(Boolean) : [],
     customExercises: Array.isArray(saved.customExercises) ? saved.customExercises.map(normalizeCustomExercise) : [],
     favorites: Array.isArray(saved.favorites) ? [...new Set(saved.favorites)] : [],
+    searchHistory: Array.isArray(saved.searchHistory) ? [...new Set(saved.searchHistory.map((item) => String(item).trim()).filter(Boolean))].slice(0, 8) : [],
     weightHistory: normalizeWeightHistory(saved.weightHistory, profile),
     nextWorkoutIndex: Number(saved.nextWorkoutIndex) || 0,
     createdAt: saved.createdAt || (profile ? new Date().toISOString() : null),
@@ -128,6 +130,11 @@ function normalizeCustomExercise(item = {}) {
     mistakes: Array.isArray(item.mistakes) ? item.mistakes : splitLines(item.mistakes),
     alternatives: Array.isArray(item.alternatives) ? item.alternatives : [],
     synonyms: Array.isArray(item.synonyms) ? item.synonyms : splitCsv(item.synonyms),
+    level: item.level || 'Intermedio',
+    movement: item.movement || 'full_body',
+    visualType: item.visualType || item.movement || 'full_body',
+    primaryMuscles: Array.isArray(item.primaryMuscles) && item.primaryMuscles.length ? item.primaryMuscles : [item.muscle || 'Otros'],
+    secondaryMuscles: Array.isArray(item.secondaryMuscles) ? item.secondaryMuscles : [],
     custom: true
   };
 }

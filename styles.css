@@ -749,3 +749,176 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 @media (max-width: 620px) {
   .filter-select { display: block; }
 }
+
+/* =========================================================
+   My Fit Plan 2.2 · interfaz compacta, inicio y biblioteca
+   ========================================================= */
+:root {
+  --radius: 16px;
+  --shadow: 0 10px 28px rgba(15, 23, 42, 0.075);
+}
+
+.app-shell { padding-bottom: 82px; }
+.topbar { min-height: 58px; padding: 9px 14px; }
+.brand-mark { height: 26px; }
+.brand-mark span:nth-child(1) { height: 9px; }
+.brand-mark span:nth-child(2) { height: 16px; }
+.brand-mark span:nth-child(3) { height: 24px; }
+.avatar-button { width: 35px; height: 35px; border-radius: 11px; }
+main { padding: 14px; }
+.section { margin-top: 16px; }
+.card { padding: 14px; border-radius: var(--radius); }
+h1 { font-size: clamp(1.55rem, 5.2vw, 2.15rem); }
+h2 { margin-bottom: 9px; font-size: 1.16rem; }
+h3 { font-size: .98rem; }
+p { line-height: 1.45; }
+.hero { padding: 20px; border-radius: 21px; }
+.hero h1 { font-size: clamp(1.75rem, 6vw, 2.65rem); }
+.hero p { margin-bottom: 16px; line-height: 1.45; }
+.button { min-height: 40px; padding: 8px 13px; border-radius: 11px; }
+.button-small { min-height: 33px; padding: 6px 9px; }
+.metric { font-size: 1.55rem; }
+.metric-card { min-height: 88px; }
+.grid { gap: 10px; }
+.bottom-nav { min-height: 66px; }
+.nav-item { min-height: 54px; }
+
+.compact-hero { padding: 18px; }
+.compact-hero h1 { margin: 6px 0 8px; }
+.home-week-card { padding: 12px 14px; }
+.home-percent { color: var(--accent-dark); font-size: 1.1rem; }
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 10px 0; }
+.week-day { position: relative; display: grid; min-height: 48px; place-items: center; gap: 1px; padding: 5px 2px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+.week-day small { color: var(--muted); font-size: .64rem; font-weight: 850; }
+.week-day strong { font-size: .82rem; }
+.week-day i { position: absolute; right: 3px; bottom: 2px; color: var(--success); font-size: .62rem; font-style: normal; }
+.week-day.trained { border-color: color-mix(in srgb, var(--success) 40%, var(--line)); background: var(--success-soft); }
+.week-day.today { box-shadow: inset 0 0 0 2px var(--accent); }
+.home-two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-calendar-card, .recent-records-card { min-width: 0; }
+.last-workout-card { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; }
+.last-workout-card h2 { margin: 3px 0; }
+.compact-record { padding: 8px 0; }
+.compact-quick-actions { grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.compact-quick-actions .quick-action { min-height: 60px; padding: 8px 5px; }
+.compact-quick-actions .quick-action span { font-size: 1rem; }
+
+.calendar-grid > button,
+.calendar-grid > span { position: relative; display: grid; min-height: 35px; place-items: center; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2); color: var(--ink); font-size: .76rem; }
+.calendar-grid > button.trained,
+.calendar-grid > span.trained { background: var(--accent-soft); color: var(--accent-dark); font-weight: 900; }
+.calendar-grid > button.today,
+.calendar-grid > span.today { box-shadow: inset 0 0 0 2px var(--accent); }
+.calendar-grid button i,
+.calendar-grid span i { position: absolute; right: 3px; bottom: 2px; font-size: .5rem; font-style: normal; }
+
+/* Series sin desplazamiento horizontal */
+.sets-table { overflow: visible; }
+.set-row { grid-template-columns: 42px minmax(68px, .8fr) minmax(68px, .8fr) minmax(70px, .8fr) 48px 34px; min-width: 0; padding: 7px 12px; }
+.set-number { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 9px; background: var(--surface-2); color: var(--ink); font-size: .82rem; }
+.set-field { display: grid; min-width: 0; gap: 3px; }
+.set-field small { display: none; color: var(--muted); font-size: .56rem; font-weight: 850; text-align: center; text-transform: uppercase; }
+.set-row input, .set-row select { min-height: 35px; padding: 5px 4px; background: color-mix(in srgb, var(--surface-2) 74%, var(--surface)); color: var(--ink); }
+.set-completed { border-left: 4px solid var(--success); background: color-mix(in srgb, var(--success-soft) 68%, var(--surface)); }
+.set-completed .set-number { background: var(--success); color: #fff; }
+.set-completed input, .set-completed select { border-color: color-mix(in srgb, var(--success) 28%, var(--line)); background: color-mix(in srgb, var(--success-soft) 70%, var(--surface)); color: var(--ink); }
+.set-check { width: 35px; height: 35px; border-radius: 9px; }
+.set-delete { width: 29px; height: 29px; opacity: .62; }
+.exercise-title-row { padding: 13px 14px 8px; }
+.target-line { padding: 0 14px 8px; }
+.exercise-note { padding: 0 14px 9px; }
+.last-session-box { margin: 0 14px 8px; padding: 8px 10px; }
+.recommendation { margin: 0 14px 9px; padding: 9px 10px; }
+.exercise-card-actions { padding: 9px 14px 6px; }
+.exercise-notes { padding: 0 14px 13px; }
+.workout-list { gap: 11px; }
+
+/* Búsqueda y tarjetas visuales */
+.library-controls { gap: 8px; margin-top: 12px; padding: 11px; }
+.search-shell { display: grid; grid-template-columns: 30px 1fr; align-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.search-shell > span { color: var(--muted); text-align: center; }
+.search-shell .search-input { min-height: 42px; padding-left: 0; border: 0; box-shadow: none; }
+.search-shell:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .1); }
+.search-suggestions { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.search-suggestions::-webkit-scrollbar { display: none; }
+.search-suggestions button { flex: 0 0 auto; min-height: 30px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .7rem; font-weight: 750; }
+.filter-row-3 { grid-template-columns: repeat(3, 1fr); }
+.filter-select { min-height: 40px; padding: 7px 9px; }
+.results-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.results-count { margin: 0; }
+.exercise-grid { gap: 10px; }
+.library-card { gap: 0; padding: 0; overflow: hidden; }
+.library-card-body { display: grid; flex: 1; gap: 8px; padding: 12px; }
+.library-card h3 { margin-top: 5px; }
+.clamp-2 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.load-more { margin-top: 12px; }
+
+.exercise-visual { display: grid; grid-template-columns: 1fr 1.25fr; gap: 1px; min-height: 122px; background: var(--line); border-bottom: 1px solid var(--line); }
+.exercise-visual > div { display: grid; align-content: center; justify-items: center; min-width: 0; padding: 6px; background: linear-gradient(180deg, var(--surface-2), var(--surface)); }
+.exercise-visual svg { width: 100%; max-height: 90px; }
+.exercise-visual small { color: var(--muted); font-size: .56rem; font-weight: 800; text-align: center; }
+.movement-panel svg { max-width: 95px; }
+.body-map-svg { max-width: 145px; }
+.muscle-panel small { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+.muscle-panel i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.legend-primary { background: #ef4444; }
+.legend-secondary { background: #fb923c; }
+.exercise-visual-large { min-height: 205px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 15px; overflow: hidden; }
+.exercise-visual-large svg { max-height: 165px; }
+.exercise-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+
+/* Plan y perfil más densos */
+.plan-days { gap: 12px; }
+.plan-day-header { padding: 13px 14px; }
+.plan-exercise-list { padding: 4px 14px; }
+.plan-exercise-row { padding: 10px 0; }
+.plan-day-actions { padding: 11px 14px 14px; }
+.profile-hero { padding: 13px; }
+.profile-avatar { width: 60px; height: 60px; border-radius: 19px; }
+.profile-tabs { margin-top: 14px; }
+.profile-tab-panel { gap: 11px; margin-top: 11px; }
+
+@media (max-width: 700px) {
+  main { padding: 10px; }
+  .topbar { min-height: 54px; padding: 7px 11px; }
+  .section { margin-top: 12px; }
+  .card { padding: 11px; border-radius: 14px; }
+  .hero { padding: 16px; border-radius: 18px; }
+  .hero h1 { font-size: 1.72rem; }
+  .hero p { font-size: .88rem; }
+  .section-heading { margin-bottom: 8px; }
+  .home-two-columns { grid-template-columns: 1fr; }
+  .last-workout-card { grid-template-columns: 1fr auto; }
+  .last-workout-card .history-summary { grid-column: 1 / -1; grid-row: 2; }
+  .filter-row-3 { grid-template-columns: 1fr 1fr; }
+  .filter-row-3 select:last-child { grid-column: 1 / -1; }
+  .exercise-grid { grid-template-columns: 1fr; }
+  .exercise-visual { min-height: 112px; }
+  .exercise-visual svg { max-height: 82px; }
+  .set-header { display: none; }
+  .set-row { grid-template-columns: 30px minmax(55px, 1fr) minmax(55px, 1fr) minmax(55px, .88fr) 35px 25px; gap: 4px; padding: 7px 7px; }
+  .set-field small { display: block; }
+  .set-number { width: 28px; height: 36px; align-self: end; }
+  .set-row input, .set-row select { min-height: 36px; font-size: .78rem; }
+  .set-check { width: 34px; height: 36px; align-self: end; }
+  .set-delete { width: 25px; height: 36px; align-self: end; }
+  .workout-summary { margin: 10px 0 8px; }
+  .exercise-title-row { padding: 11px 10px 7px; }
+  .target-line, .exercise-note { padding-inline: 10px; }
+  .last-session-box, .recommendation { margin-inline: 10px; }
+  .exercise-card-actions { padding-inline: 10px; }
+  .exercise-notes { padding-inline: 10px; }
+  .plan-exercise-row { grid-template-columns: 1fr; gap: 8px; }
+  .plan-targets { grid-template-columns: repeat(4, 1fr); }
+  .row-actions { justify-content: flex-end; }
+}
+
+@media (max-width: 390px) {
+  .set-row { grid-template-columns: 27px minmax(48px, 1fr) minmax(48px, 1fr) minmax(48px, .82fr) 32px 22px; gap: 3px; padding-inline: 5px; }
+  .set-number { width: 26px; }
+  .set-row input, .set-row select { padding-inline: 2px; }
+  .set-check { width: 31px; }
+  .set-delete { width: 22px; }
+  .week-strip { gap: 3px; }
+  .week-day { min-height: 45px; }
+}

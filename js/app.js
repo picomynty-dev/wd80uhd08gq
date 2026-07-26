@@ -35,6 +35,8 @@ import {
   uid
 } from './utils.js';
 import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js';
+import { searchExerciseEntries, suggestedSearches } from './search.js';
+import { exerciseVisual } from './visuals.js';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -46,7 +48,8 @@ const root = document.documentElement;
 let state = loadState();
 let currentView = 'home';
 let deferredInstallPrompt = null;
-let libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', mode: 'all' };
+let libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', level: 'Todos', mode: 'all' };
+let libraryPageSize = 36;
 let restInterval = null;
 let waitingServiceWorker = null;
 
@@ -151,67 +154,90 @@ function renderHome() {
   const goal = Number(state.profile.days || days.length || 3);
   const percentage = clamp(Math.round((weekly.length / Math.max(1, goal)) * 100), 0, 100);
   const lastSession = state.history[0];
-  const lastPr = lastSession?.prs?.[0];
-  const latestProgress = findLatestProgress();
-  const bmi = calculateBMI();
-  const bmiData = bmi ? bmiInfo(bmi) : null;
+  const calendar = buildCalendar(state.history);
+  const recentRecords = recentPersonalRecords(3);
   const firstName = state.profile.name?.trim().split(/\s+/)[0];
 
   app.innerHTML = `
-    <section class="page">
-      <div class="hero dashboard-hero">
+    <section class="page home-page">
+      <div class="hero dashboard-hero compact-hero">
         <p class="eyebrow">${firstName ? `Hola, ${esc(firstName)}` : 'Tu entrenamiento de hoy'}</p>
         <h1>${esc(state.activeWorkout?.name || nextDay?.name || 'Crea tu siguiente rutina')}</h1>
-        <p>${state.activeWorkout ? 'Tienes una sesión en curso. Tus series y tiempos están guardados.' : nextDay ? `${nextDay.exercises.length} ejercicios · aproximadamente ${esc(state.profile.minutes || 45)} minutos.` : 'Añade días y ejercicios a tu plan.'}</p>
+        <p>${state.activeWorkout ? 'Tienes una sesión en curso y todo está guardado.' : nextDay ? `${nextDay.exercises.length} ejercicios · ${esc(state.profile.minutes || 45)} min aproximadamente.` : 'Añade días y ejercicios a tu plan.'}</p>
         <div class="hero-actions">
-          <button class="button button-primary" type="button" data-action="home-workout">${state.activeWorkout ? 'Continuar entrenamiento' : 'Empezar entrenamiento'}</button>
+          <button class="button button-primary" type="button" data-action="home-workout">${state.activeWorkout ? 'Continuar' : 'Empezar entrenamiento'}</button>
           <button class="button button-secondary" type="button" data-nav-local="plan">Editar plan</button>
         </div>
       </div>
 
-      <section class="section card weekly-card">
-        <div class="section-heading">
-          <div><p class="eyebrow">Esta semana</p><h2>${weekly.length} de ${goal} sesiones</h2></div>
-          <strong>${percentage}%</strong>
-        </div>
+      <section class="section card home-week-card">
+        <div class="section-title-row"><div><p class="eyebrow">Esta semana</p><h2>${weekly.length} de ${goal} sesiones</h2></div><strong class="home-percent">${percentage}%</strong></div>
+        ${weekStripHtml()}
         <div class="progress-track"><div class="progress-bar" style="width:${percentage}%"></div></div>
-        <p class="muted small">${weeklyMessage(weekly.length, goal)}</p>
       </section>
 
-      <section class="section grid grid-3">
-        <article class="card metric-card"><span class="metric-icon">✓</span><div class="metric">${state.history.length}</div><div class="metric-label">Entrenamientos</div></article>
-        <article class="card metric-card"><span class="metric-icon">↗</span><div class="metric">${calculateStreak(state.history)}</div><div class="metric-label">Días de racha</div></article>
-        <article class="card metric-card"><span class="metric-icon">◷</span><div class="metric">${formatDuration(averageDuration())}</div><div class="metric-label">Duración media</div></article>
-      </section>
-
-      <section class="section grid grid-2">
-        <article class="card card-accent">
-          <p class="eyebrow">Último progreso</p>
-          ${lastPr ? `<h2>${esc(lastPr.name)}</h2><p class="progress-highlight">${lastPr.type === 'weight' ? `${formatWeight(lastPr.value)} kg` : `${lastPr.value} reps con ${formatWeight(lastPr.weight)} kg`}</p><span class="pill pill-success">Nuevo récord</span>` : latestProgress ? `<h2>${esc(latestProgress.name)}</h2><p class="progress-highlight">${esc(latestProgress.text)}</p>` : '<h2>Tu primera mejora aparecerá aquí</h2><p class="muted">Registra al menos dos sesiones de un mismo ejercicio.</p>'}
+      <section class="section home-two-columns">
+        <article class="card home-calendar-card">
+          <div class="section-title-row"><div><p class="eyebrow">Calendario</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2></div><span class="pill">${sessionsThisMonth(state.history).length}</span></div>
+          ${homeCalendarHtml(calendar)}
         </article>
-        <article class="card">
-          <p class="eyebrow">Medidas</p><h2>${bmi ? `IMC ${bmi.toFixed(1)}` : 'Completa tus medidas'}</h2>
-          ${bmiData ? `<span class="pill pill-${bmiData.tone}">${esc(bmiData.label)}</span><p class="muted small">${esc(bmiData.text)}</p>` : '<p class="muted small">Añade peso y estatura desde tu perfil para obtener una referencia.</p>'}
-          <button class="button button-secondary button-small" type="button" data-nav-local="profile">Ver perfil</button>
+        <article class="card recent-records-card">
+          <div class="section-title-row"><div><p class="eyebrow">Marcas recientes</p><h2>Últimos récords</h2></div><button class="button button-ghost button-small" type="button" data-nav-local="profile">Ver todos</button></div>
+          ${recentRecords.length ? `<div class="records-list">${recentRecords.map((record) => `<div class="record-row compact-record"><span><strong>${esc(record.name)}</strong><small>${formatDate(record.date)}</small></span><strong>${record.type === 'weight' ? `${formatWeight(record.value)} kg` : `${record.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted small">Tus nuevas marcas aparecerán aquí al repetir ejercicios.</p>'}
         </article>
       </section>
 
-      <section class="section quick-actions">
-        <button class="quick-action" type="button" data-nav-local="plan"><span>▤</span><small>Editar plan</small></button>
-        <button class="quick-action" type="button" data-nav-local="library"><span>⌕</span><small>Ejercicios</small></button>
-        <button class="quick-action" type="button" data-nav-local="profile"><span>▥</span><small>Progreso</small></button>
-        <button class="quick-action" type="button" data-action="quick-weight"><span>⚖</span><small>Registrar peso</small></button>
-      </section>
+      ${lastSession ? `<section class="section card last-workout-card"><div><p class="eyebrow">Último entrenamiento</p><h2>${esc(lastSession.name)}</h2><p class="muted small">${formatDateTime(lastSession.finishedAt)} · ${formatDuration(lastSession.durationSeconds)}</p></div><div class="history-summary"><span>${lastSession.exercises.length} ejercicios</span><span>${formatWeight(lastSession.volume || sessionVolume(lastSession))} kg</span>${lastSession.prs?.length ? `<span class="pill pill-success">${lastSession.prs.length} récord</span>` : ''}</div><button class="button button-secondary button-small" type="button" data-action="history-detail" data-id="${esc(lastSession.id)}">Abrir</button></section>` : ''}
 
-      ${state.settings.showTips ? `<section class="section card"><p class="eyebrow">Consejo</p><h2>Progresar no siempre es subir peso</h2><p class="muted">También progresas cuando haces una repetición más, mejoras la técnica o completas la misma sesión con menor esfuerzo.</p></section>` : ''}
+      <section class="section quick-actions compact-quick-actions">
+        <button class="quick-action" type="button" data-action="quick-weight"><span>⚖</span><small>Peso</small></button>
+        <button class="quick-action" type="button" data-nav-local="library"><span>⌕</span><small>Biblioteca</small></button>
+        <button class="quick-action" type="button" data-nav-local="plan"><span>▤</span><small>Plan</small></button>
+        <button class="quick-action" type="button" data-action="go-history"><span>◷</span><small>Historial</small></button>
+      </section>
     </section>`;
+}
+
+function weekStripHtml() {
+  const trained = new Set(state.history.map((session) => isoDay(session.finishedAt || session.startedAt)));
+  const now = new Date();
+  const monday = new Date(now);
+  const day = (monday.getDay() + 6) % 7;
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - day);
+  return `<div class="week-strip">${['L','M','X','J','V','S','D'].map((label, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    const iso = isoDay(date);
+    const done = trained.has(iso);
+    const today = iso === isoDay(now);
+    return `<div class="week-day ${done ? 'trained' : ''} ${today ? 'today' : ''}"><small>${label}</small><strong>${date.getDate()}</strong><i>${done ? '✓' : ''}</i></div>`;
+  }).join('')}</div>`;
+}
+
+function homeCalendarHtml(calendar) {
+  return `<div class="calendar home-calendar"><div class="calendar-weekdays">${['L','M','X','J','V','S','D'].map((day) => `<span>${day}</span>`).join('')}</div><div class="calendar-grid">${calendar.cells.map((cell) => cell ? (cell.trained ? `<button type="button" class="trained ${cell.today ? 'today' : ''}" data-action="calendar-day" data-date="${cell.iso}">${cell.day}<i>✓</i></button>` : `<span class="${cell.today ? 'today' : ''}">${cell.day}</span>`) : '<span></span>').join('')}</div></div>`;
+}
+
+function recentPersonalRecords(limit = 3) {
+  const records = [];
+  const seen = new Set();
+  for (const session of state.history) {
+    for (const record of session.prs || []) {
+      if (seen.has(record.exerciseId)) continue;
+      seen.add(record.exerciseId);
+      records.push({ ...record, date: session.finishedAt || session.startedAt });
+      if (records.length >= limit) return records;
+    }
+  }
+  return records;
 }
 
 function renderWelcome() {
   app.innerHTML = `
     <section class="page">
       <div class="hero">
-        <p class="eyebrow">My Fit Plan 2.1</p>
+        <p class="eyebrow">My Fit Plan 2.2</p>
         <h1>Tu entrenamiento, serie a serie.</h1>
         <p>Crea una rutina, registra cada serie, controla los descansos y recibe una orientación sencilla para progresar.</p>
         <div class="hero-actions">
@@ -507,16 +533,16 @@ function renderLastSets(exercise) {
 
 function renderSetRow(set, exerciseIndex, setIndex, item) {
   return `<div class="set-row ${set.completed ? 'set-completed' : ''}" role="row">
-    <strong>${setIndex + 1}</strong>
-    <input aria-label="Peso de la serie ${setIndex + 1}" inputmode="decimal" type="number" min="0" step="0.5" value="${esc(set.weight)}" data-action="set-field" data-field="weight" data-exercise="${exerciseIndex}" data-set="${setIndex}" placeholder="0">
-    <input aria-label="${item.unit === 'sec' ? 'Segundos' : 'Repeticiones'} de la serie ${setIndex + 1}" inputmode="numeric" type="number" min="0" step="1" value="${esc(set.reps)}" data-action="set-field" data-field="reps" data-exercise="${exerciseIndex}" data-set="${setIndex}" placeholder="${item.repMin}">
-    <select aria-label="Repeticiones en reserva" data-action="set-field" data-field="rir" data-exercise="${exerciseIndex}" data-set="${setIndex}">
+    <strong class="set-number" aria-label="Serie ${setIndex + 1}">${setIndex + 1}</strong>
+    <label class="set-field"><small>Peso</small><input aria-label="Peso de la serie ${setIndex + 1}" inputmode="decimal" type="number" min="0" step="0.5" value="${esc(set.weight)}" data-action="set-field" data-field="weight" data-exercise="${exerciseIndex}" data-set="${setIndex}" placeholder="0"></label>
+    <label class="set-field"><small>${item.unit === 'sec' ? 'Seg.' : 'Reps'}</small><input aria-label="${item.unit === 'sec' ? 'Segundos' : 'Repeticiones'} de la serie ${setIndex + 1}" inputmode="numeric" type="number" min="0" step="1" value="${esc(set.reps)}" data-action="set-field" data-field="reps" data-exercise="${exerciseIndex}" data-set="${setIndex}" placeholder="${item.repMin}"></label>
+    <label class="set-field"><small>Reserva</small><select aria-label="Repeticiones en reserva" data-action="set-field" data-field="rir" data-exercise="${exerciseIndex}" data-set="${setIndex}">
       <option value="" ${set.rir === '' ? 'selected' : ''}>—</option>
       <option value="0" ${String(set.rir) === '0' ? 'selected' : ''}>0</option>
       <option value="1" ${String(set.rir) === '1' ? 'selected' : ''}>1</option>
       <option value="2" ${String(set.rir) === '2' ? 'selected' : ''}>2</option>
       <option value="3" ${String(set.rir) === '3' ? 'selected' : ''}>3+</option>
-    </select>
+    </select></label>
     <button class="set-check ${set.completed ? 'checked' : ''}" type="button" data-action="toggle-set" data-exercise="${exerciseIndex}" data-set="${setIndex}" aria-label="${set.completed ? 'Desmarcar' : 'Completar'} serie">✓</button>
     <button class="set-delete" type="button" data-action="remove-set" data-exercise="${exerciseIndex}" data-set="${setIndex}" ${item.sets.length <= 1 ? 'disabled' : ''} aria-label="Eliminar serie">×</button>
   </div>`;
@@ -524,20 +550,23 @@ function renderSetRow(set, exerciseIndex, setIndex, item) {
 
 function renderLibrary() {
   const all = getAllExercises(state.customExercises);
-  const muscles = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.muscle).sort())];
-  const equipment = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.equipment).sort())];
+  const muscles = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.muscle).sort((a,b) => a.localeCompare(b,'es')))];
+  const equipment = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.equipment).sort((a,b) => a.localeCompare(b,'es')))];
+  const levels = ['Todos', 'Principiante', 'Intermedio', 'Avanzado'];
+  const suggestions = [...new Set([...(state.searchHistory || []).slice(0, 4), ...suggestedSearches(libraryFilters.query)])].slice(0, 6);
   app.innerHTML = `
-    <section class="page">
-      <div class="section-title-row"><div><p class="eyebrow">Biblioteca completa</p><h1>Ejercicios</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
-      <p class="muted">Busca por nombre, músculo, material o términos como “jalón”, “polea alta” o “dorsal”.</p>
+    <section class="page library-page">
+      <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
       <section class="card library-controls">
-        <input class="search-input" id="librarySearch" type="search" placeholder="Buscar ejercicio…" value="${esc(libraryFilters.query)}">
-        <div class="filter-row">
-          <select id="libraryMuscle" class="filter-select">${muscles.map((value) => `<option ${value === libraryFilters.muscle ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
-          <select id="libraryEquipment" class="filter-select">${equipment.map((value) => `<option ${value === libraryFilters.equipment ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
+        <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" type="search" placeholder="Ej. espalda con polea, sentadiya…" value="${esc(libraryFilters.query)}"></div>
+        ${suggestions.length ? `<div class="search-suggestions">${suggestions.map((value) => `<button type="button" data-action="library-query" data-query="${esc(value)}">${esc(value)}</button>`).join('')}</div>` : ''}
+        <div class="filter-row filter-row-3">
+          <select id="libraryMuscle" class="filter-select" aria-label="Músculo">${muscles.map((value) => `<option ${value === libraryFilters.muscle ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
+          <select id="libraryEquipment" class="filter-select" aria-label="Material">${equipment.map((value) => `<option ${value === libraryFilters.equipment ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
+          <select id="libraryLevel" class="filter-select" aria-label="Nivel">${levels.map((value) => `<option ${value === libraryFilters.level ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
         </div>
         <div class="segmented-control">
-          ${[['all','Todos'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados por mí']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
+          ${[['all','Todos'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
         </div>
       </section>
       <div id="libraryResults" class="library-results section">${libraryResultsHtml()}</div>
@@ -546,36 +575,42 @@ function renderLibrary() {
 
 function libraryResultsHtml() {
   const all = getAllExercises(state.customExercises);
-  const query = normalizeText(libraryFilters.query);
+  const query = libraryFilters.query.trim();
   const recent = new Set(recentExerciseIds(state));
   const profileEquipment = new Set(state.profile?.equipment || []);
   let entries = Object.entries(all).filter(([id, exercise]) => {
     if (libraryFilters.muscle !== 'Todos' && exercise.muscle !== libraryFilters.muscle) return false;
     if (libraryFilters.equipment !== 'Todos' && exercise.equipment !== libraryFilters.equipment) return false;
+    if (libraryFilters.level !== 'Todos' && exercise.level !== libraryFilters.level) return false;
     if (libraryFilters.mode === 'favorites' && !state.favorites.includes(id)) return false;
     if (libraryFilters.mode === 'recent' && !recent.has(id)) return false;
     if (libraryFilters.mode === 'custom' && !exercise.custom) return false;
-    if (query && !normalizeText(searchableExerciseText(id, exercise)).includes(query)) return false;
     return true;
   });
-  entries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'es'));
-  if (!entries.length) return emptyState('No hay coincidencias', 'Prueba otro nombre, músculo, material o crea tu propio ejercicio.', '<button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
+  entries = query
+    ? searchExerciseEntries(entries, query, searchableExerciseText)
+    : entries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'es'));
+  if (!entries.length) return emptyState('No hay coincidencias', 'La búsqueda admite errores de escritura. Prueba por músculo, material o movimiento.', '<button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
 
-  return `<p class="results-count">${entries.length} resultados</p><div class="exercise-grid">${entries.map(([id, exercise]) => {
+  const visible = entries.slice(0, libraryPageSize);
+  return `<div class="results-header"><p class="results-count"><strong>${entries.length}</strong> resultados${entries.length > visible.length ? ` · mostrando ${visible.length}` : ''}</p>${query ? `<button class="button button-ghost button-small" type="button" data-action="remember-search" data-query="${esc(query)}">Guardar búsqueda</button>` : ''}</div><div class="exercise-grid">${visible.map(([id, exercise]) => {
     const favorite = state.favorites.includes(id);
     const unavailable = profileEquipment.size && !profileEquipment.has(exercise.equipment) && !['Peso corporal', 'Sin especificar'].includes(exercise.equipment);
     return `<article class="card library-card">
-      <div class="card-header"><div><span class="pill">${esc(exercise.muscle)}</span><h3>${esc(exercise.name)}</h3></div><button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button></div>
-      <p class="muted small">${esc(exercise.summary)}</p>
-      <div class="exercise-meta"><span>${esc(exercise.equipment)}</span>${exercise.custom ? '<span>Personalizado</span>' : ''}${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}</div>
-      <div class="library-card-actions">
-        <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Ver técnica</button>
-        <button class="button button-primary button-small" type="button" data-action="library-add-workout" data-id="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Entreno</button>
-        <button class="button button-secondary button-small" type="button" data-action="library-add-plan" data-id="${esc(id)}" ${state.plan?.days?.length ? '' : 'disabled'}>＋ Plan</button>
-        ${exercise.custom ? `<button class="button button-ghost button-small" type="button" data-action="custom-edit" data-id="${esc(id)}">Editar</button>` : ''}
+      ${exerciseVisual(exercise)}
+      <div class="library-card-body">
+        <div class="card-header"><div><div class="exercise-meta"><span>${esc(exercise.muscle)}</span><span>${esc(exercise.level)}</span></div><h3>${esc(exercise.name)}</h3></div><button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button></div>
+        <p class="muted small clamp-2">${esc(exercise.summary)}</p>
+        <div class="exercise-meta"><span>${esc(exercise.equipment)}</span>${exercise.custom ? '<span>Personalizado</span>' : ''}${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}</div>
+        <div class="library-card-actions">
+          <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Técnica</button>
+          <button class="button button-primary button-small" type="button" data-action="library-add-workout" data-id="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Entreno</button>
+          <button class="button button-secondary button-small" type="button" data-action="library-add-plan" data-id="${esc(id)}" ${state.plan?.days?.length ? '' : 'disabled'}>＋ Plan</button>
+          ${exercise.custom ? `<button class="button button-ghost button-small" type="button" data-action="custom-edit" data-id="${esc(id)}">Editar</button>` : ''}
+        </div>
       </div>
     </article>`;
-  }).join('')}</div>`;
+  }).join('')}</div>${entries.length > visible.length ? `<button class="button button-secondary button-block load-more" type="button" data-action="library-more">Mostrar ${Math.min(36, entries.length - visible.length)} más</button>` : ''}`;
 }
 
 function renderProfile() {
@@ -633,7 +668,6 @@ function profileProgressHtml(summary, bmi, bmiData, records, calendar) {
         ${bmiData ? `<span class="pill pill-${bmiData.tone}">${esc(bmiData.label)}</span><p class="muted small">${esc(bmiData.text)}</p>` : '<p class="muted">Añade peso y estatura en la pestaña Datos.</p>'}
       </article>
     </div>
-    <section class="section card"><p class="eyebrow">Calendario</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2>${calendarHtml(calendar)}</section>
     <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Récords personales</p><h2>Tus mejores marcas</h2></div><span class="pill">${records.length}</span></div>${records.length ? `<div class="records-list">${records.slice(0, 12).map((record) => `<button type="button" class="record-row" data-action="filter-history-exercise" data-id="${esc(record.exerciseId)}"><span><strong>${esc(record.name)}</strong><small>Mejor volumen: ${formatWeight(record.bestVolume)} kg</small></span><strong>${record.bestWeight ? `${formatWeight(record.bestWeight)} kg` : '—'}</strong></button>`).join('')}</div>` : emptyState('Todavía no hay récords', 'Completa series con peso y repeticiones para crear tus primeras marcas.')}</section>
   </section>`;
 }
@@ -779,7 +813,12 @@ async function handleAppClick(event) {
     'save-exit-workout': () => { save(); showToast('Entrenamiento guardado.'); setView('home'); },
     'cancel-workout': cancelWorkout,
     'finish-workout': finishWorkout,
-    'library-mode': () => { libraryFilters.mode = target.dataset.mode; renderLibrary(); },
+    'library-mode': () => { libraryFilters.mode = target.dataset.mode; libraryPageSize = 36; renderLibrary(); },
+    'library-query': () => applyLibraryQuery(target.dataset.query),
+    'remember-search': () => rememberSearch(target.dataset.query),
+    'library-more': () => { libraryPageSize += 36; refreshLibraryResults(); },
+    'calendar-day': () => openCalendarDay(target.dataset.date),
+    'go-history': () => { setView('profile'); showProfileTab('history'); },
     'toggle-favorite': () => toggleFavorite(target.dataset.id),
     'library-add-workout': () => addLibraryExerciseToWorkout(target.dataset.id),
     'library-add-plan': () => choosePlanDayForExercise(target.dataset.id),
@@ -798,8 +837,9 @@ function handleAppChange(event) {
   const target = event.target;
   if (target.matches('[data-action="plan-target"]')) updatePlanTarget(target);
   if (target.matches('[data-action="set-field"]')) updateSetField(target);
-  if (target.id === 'libraryMuscle') { libraryFilters.muscle = target.value; refreshLibraryResults(); }
-  if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; refreshLibraryResults(); }
+  if (target.id === 'libraryMuscle') { libraryFilters.muscle = target.value; libraryPageSize = 36; refreshLibraryResults(); }
+  if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; libraryPageSize = 36; refreshLibraryResults(); }
+  if (target.id === 'libraryLevel') { libraryFilters.level = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'backupFile') importBackup(target.files?.[0]);
   if (target.matches('[data-profile-tab]')) showProfileTab(target.dataset.profileTab);
 }
@@ -814,6 +854,7 @@ function handleAppInput(event) {
   const target = event.target;
   if (target.id === 'librarySearch') {
     libraryFilters.query = target.value;
+    libraryPageSize = 36;
     debounceRefreshLibrary();
   }
   if (['set-field','workout-notes','exercise-notes'].includes(target.dataset.action)) delayedSaveField(target);
@@ -995,7 +1036,7 @@ function applyPickedExercise(id, context) {
 function openExerciseDetails(id) {
   const exercise = getExercise(id, state.customExercises);
   const alternatives = (exercise.alternatives || []).map((altId) => ({ id: altId, ...getExercise(altId, state.customExercises) }));
-  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</p><h2>${esc(exercise.name)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><p>${esc(exercise.summary)}</p><h3>Cómo hacerlo</h3><ol class="detail-list">${(exercise.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol><h3>Errores frecuentes</h3><ul class="detail-list warning-list">${(exercise.mistakes || []).map((mistake) => `<li>${esc(mistake)}</li>`).join('')}</ul>${alternatives.length ? `<h3>Alternativas</h3><div class="alternative-list">${alternatives.map((item) => `<button type="button" class="alternative-button" data-alt-details="${esc(item.id)}"><span><strong>${esc(item.name)}</strong><small>${esc(item.muscle)} · ${esc(item.equipment)}</small></span><span>›</span></button>`).join('')}</div>` : ''}<section class="notice">Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. La explicación es general y no sustituye una corrección presencial.</section>`, { wide: true });
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</p><h2>${esc(exercise.name)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>${exerciseVisual(exercise, { large: true })}<div class="exercise-detail-tags"><span class="pill">${esc(exercise.level)}</span><span class="pill">Principal: ${esc((exercise.primaryMuscles || []).join(', '))}</span>${exercise.secondaryMuscles?.length ? `<span class="pill">Secundario: ${esc(exercise.secondaryMuscles.join(', '))}</span>` : ''}</div><p>${esc(exercise.summary)}</p><h3>Cómo hacerlo</h3><ol class="detail-list">${(exercise.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol><h3>Errores frecuentes</h3><ul class="detail-list warning-list">${(exercise.mistakes || []).map((mistake) => `<li>${esc(mistake)}</li>`).join('')}</ul>${alternatives.length ? `<h3>Alternativas</h3><div class="alternative-list">${alternatives.map((item) => `<button type="button" class="alternative-button" data-alt-details="${esc(item.id)}"><span><strong>${esc(item.name)}</strong><small>${esc(item.muscle)} · ${esc(item.equipment)}</small></span><span>›</span></button>`).join('')}</div>` : ''}<section class="notice">Las ilustraciones son orientativas. Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. La explicación no sustituye una corrección presencial.</section>`, { wide: true });
   wrapper.querySelectorAll('[data-alt-details]').forEach((button) => button.addEventListener('click', () => { wrapper._closeModal(); openExerciseDetails(button.dataset.altDetails); }));
 }
 
@@ -1118,6 +1159,27 @@ function choosePlanDayForExercise(id) {
     state.plan.days[Number(button.dataset.dayChoice)].exercises.push(createPlanExercise(id, trainingRules(state.profile)));
     save(); wrapper._closeModal(); showToast('Ejercicio añadido al plan.', 'success');
   }));
+}
+
+function applyLibraryQuery(query) {
+  libraryFilters.query = String(query || '');
+  libraryPageSize = 36;
+  rememberSearch(query, false);
+  renderLibrary();
+}
+
+function rememberSearch(query, notify = true) {
+  const clean = String(query || '').trim();
+  if (clean.length < 2) return;
+  state.searchHistory = [clean, ...(state.searchHistory || []).filter((item) => normalizeText(item) !== normalizeText(clean))].slice(0, 8);
+  save();
+  if (notify) showToast('Búsqueda guardada.');
+}
+
+function openCalendarDay(date) {
+  const sessions = state.history.filter((session) => isoDay(session.finishedAt || session.startedAt) === date);
+  if (!sessions.length) return;
+  openModal(`<div class="modal-header"><div><p class="eyebrow">Entrenamientos</p><h2>${formatDate(date)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="history-detail-list">${sessions.map((session) => `<article class="history-exercise"><strong>${esc(session.name)}</strong><p class="muted small">${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume || sessionVolume(session))} kg</p>${session.prs?.length ? `<span class="pill pill-success">${session.prs.length} récord</span>` : ''}</article>`).join('')}</div>`);
 }
 
 function toggleFavorite(id) {

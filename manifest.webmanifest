@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Registra tus entrenamientos serie a serie y observa tu progreso.",
+  "description": "Planifica, registra y mejora tus entrenamientos con una biblioteca visual de más de 280 ejercicios.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

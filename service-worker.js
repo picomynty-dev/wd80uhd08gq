@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-fit-plan-v21-20260726-1';
+const CACHE_NAME = 'my-fit-plan-v22-20260726-1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,6 +8,9 @@ const APP_SHELL = [
   './icons/icon-512.png',
   './js/app.js',
   './js/exercises.js',
+  './js/exercises-extra.js',
+  './js/search.js',
+  './js/visuals.js',
   './js/plans.js',
   './js/storage.js',
   './js/stats.js',

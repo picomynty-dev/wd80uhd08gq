@@ -1,3 +1,5 @@
+import { extraExerciseLibrary } from './exercises-extra.js';
+
 'use strict';
 
 const ex = (name, muscle, equipment, summary, steps, mistakes, alternatives = []) => ({
@@ -129,36 +131,113 @@ export const exerciseSynonyms = {
   rowing_machine: ['remo cardio', 'ergometro']
 };
 
+const movementByName = [
+  [/press|flexion|fondo/, 'press_horizontal'],
+  [/militar|hombro|sobre la cabeza/, 'press_vertical'],
+  [/apertura|pajaro|peck|cruce/, 'fly'],
+  [/remo/, 'row'],
+  [/jalon|dominada|pullover/, 'pull_vertical'],
+  [/sentadilla|prensa|extension de cuadriceps/, 'squat'],
+  [/zancada|subida al banco/, 'lunge'],
+  [/peso muerto|buenos dias|hiperextension/, 'hinge'],
+  [/curl femoral/, 'knee_flexion'],
+  [/hip thrust|puente de gluteos|patada de gluteo/, 'hip_extension'],
+  [/abduccion/, 'abduction'],
+  [/aduccion/, 'adduction'],
+  [/gemelo|pantorrilla|tibial/, 'calf'],
+  [/curl/, 'curl'],
+  [/triceps|extension de triceps/, 'triceps_extension'],
+  [/plancha|dead bug|bird dog|pallof/, 'core_anti_extension'],
+  [/crunch/, 'core_flexion'],
+  [/cinta|bicicleta|eliptica|remo ergometro/, 'cardio'],
+  [/elevacion|frontal|lateral/, 'raise']
+];
+
+function inferMovement(exercise = {}) {
+  const text = `${exercise.name || ''} ${exercise.summary || ''}`.toLowerCase();
+  return movementByName.find(([pattern]) => pattern.test(text))?.[1] || 'full_body';
+}
+
+function inferPrimaryMuscles(exercise = {}) {
+  const muscle = exercise.muscle || 'Otros';
+  const map = {
+    'Hombro posterior': ['Hombro posterior'],
+    'Espalda': ['Dorsales', 'Espalda media'],
+    'Core': ['Abdominales'],
+    'Cardio': ['Cardio']
+  };
+  return map[muscle] || [muscle];
+}
+
+function inferSecondaryMuscles(exercise = {}) {
+  const movement = exercise.movement || inferMovement(exercise);
+  const map = {
+    press_horizontal: ['Tríceps', 'Hombro anterior'],
+    press_vertical: ['Tríceps'],
+    row: ['Bíceps'],
+    pull_vertical: ['Bíceps'],
+    squat: ['Glúteos'],
+    lunge: ['Glúteos'],
+    hinge: ['Glúteos', 'Espalda'],
+    curl: ['Antebrazos'],
+    core_anti_extension: [],
+    cardio: ['Piernas']
+  };
+  return map[movement] || [];
+}
+
+function normalizeExerciseData(id, exercise = {}) {
+  const movement = exercise.movement || exercise.visualType || inferMovement(exercise);
+  return {
+    name: exercise.name || 'Ejercicio sin nombre',
+    muscle: exercise.muscle || 'Otros',
+    equipment: exercise.equipment || 'Sin especificar',
+    summary: exercise.summary || 'Ejercicio para trabajar de forma controlada el grupo muscular indicado.',
+    steps: Array.isArray(exercise.steps) ? exercise.steps : [],
+    mistakes: Array.isArray(exercise.mistakes) ? exercise.mistakes : [],
+    alternatives: Array.isArray(exercise.alternatives) ? exercise.alternatives : [],
+    synonyms: [
+      ...(exerciseSynonyms[id] || []),
+      ...(Array.isArray(exercise.synonyms) ? exercise.synonyms : [])
+    ],
+    level: exercise.level || 'Principiante',
+    movement,
+    visualType: exercise.visualType || movement,
+    primaryMuscles: Array.isArray(exercise.primaryMuscles) && exercise.primaryMuscles.length ? exercise.primaryMuscles : inferPrimaryMuscles(exercise),
+    secondaryMuscles: Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : inferSecondaryMuscles({ ...exercise, movement }),
+    custom: Boolean(exercise.custom)
+  };
+}
+
 export function getAllExercises(customExercises = []) {
   const custom = Object.fromEntries(
     customExercises.map((item) => [item.id, { ...item, custom: true }])
   );
-  return { ...baseExerciseLibrary, ...custom };
+  const merged = { ...baseExerciseLibrary, ...extraExerciseLibrary, ...custom };
+  return Object.fromEntries(Object.entries(merged).map(([id, exercise]) => [id, normalizeExerciseData(id, exercise)]));
 }
 
 export function getExercise(id, customExercises = []) {
-  return getAllExercises(customExercises)[id] || {
+  return getAllExercises(customExercises)[id] || normalizeExerciseData(id, {
     name: 'Ejercicio no disponible',
     muscle: 'Otros',
     equipment: 'Sin especificar',
-    summary: 'Este ejercicio ya no está disponible en la biblioteca.',
-    steps: [],
-    mistakes: [],
-    alternatives: [],
-    synonyms: []
-  };
+    summary: 'Este ejercicio ya no está disponible en la biblioteca.'
+  });
 }
 
 export function searchableExerciseText(id, exercise) {
-  const extras = [
-    ...(exerciseSynonyms[id] || []),
-    ...(Array.isArray(exercise.synonyms) ? exercise.synonyms : [])
-  ];
   return [
+    id,
     exercise.name,
     exercise.muscle,
     exercise.equipment,
     exercise.summary,
-    ...extras
+    exercise.level,
+    exercise.movement,
+    ...(exercise.primaryMuscles || []),
+    ...(exercise.secondaryMuscles || []),
+    ...(exerciseSynonyms[id] || []),
+    ...(Array.isArray(exercise.synonyms) ? exercise.synonyms : [])
   ].join(' ');
 }
