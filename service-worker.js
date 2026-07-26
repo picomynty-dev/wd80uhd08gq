@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-fit-plan-v312-20260726-1';
+const CACHE_NAME = 'my-fit-plan-v32-20260726-1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './js/app.js',
   './js/exercises.js',
   './js/exercises-extra.js',
+  './js/premium-data.js',
   './js/search.js',
   './js/visuals.js',
   './js/plans.js',
@@ -36,6 +37,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (event.request.destination === 'video' || event.request.headers.has('range')) return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {

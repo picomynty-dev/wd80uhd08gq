@@ -2046,3 +2046,111 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
   .workout-header-actions { display: grid; justify-items: end; }
   .workout-accordion-all { order: 2; }
 }
+
+/* =========================================================
+   My Fit Plan 3.2 · biblioteca multimedia
+   ========================================================= */
+.multimedia-visual .premium-visual-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.motion-video-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 19px;
+  background: #080e1b;
+  aspect-ratio: 1 / 1;
+}
+.motion-video-shell video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #080e1b;
+}
+.motion-video-overlay {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 13px;
+  background: rgba(5,10,20,.76);
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+.motion-video-overlay span { color: #fb923c; font-size: .55rem; font-weight: 950; letter-spacing: .1em; }
+.motion-video-overlay small { color: #aab5c7; font-size: .56rem; text-align: right; }
+.motion-controls {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+}
+.motion-controls > button,
+.motion-speed button {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 11px;
+  background: rgba(255,255,255,.045);
+  color: #e5e7eb;
+  font-size: .65rem;
+  font-weight: 850;
+}
+.motion-controls > button { display: inline-flex; align-items: center; gap: 5px; }
+.motion-speed { display: flex; justify-content: flex-end; gap: 4px; }
+.motion-speed button { min-width: 48px; color: #8795aa; }
+.motion-speed button.active { border-color: rgba(var(--accent-rgb),.34); background: rgba(var(--accent-rgb),.14); color: #ff9a56; }
+.anatomy-v2-grid figure { background: #0b1220; }
+.anatomy-v2-grid img { padding: 4px; }
+.movement-key-grid { display: grid; gap: 8px; }
+.movement-key-grid article {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 15px;
+  background: rgba(255,255,255,.035);
+}
+.movement-key-grid article > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb),.13);
+  color: #fb923c;
+  font-size: .59rem;
+  font-weight: 950;
+}
+.movement-key-grid strong { color: #f8fafc; font-size: .77rem; }
+.movement-key-grid p { margin: 3px 0 0; color: #96a3b7; font-size: .67rem; line-height: 1.45; }
+.movement-cue-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+.movement-cue-strip span { display: grid; gap: 4px; padding: 11px; border-radius: 13px; background: rgba(255,255,255,.035); }
+.movement-cue-strip small { color: #fb923c; font-size: .53rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.movement-cue-strip strong { color: #dbe3ef; font-size: .66rem; line-height: 1.4; }
+.motion-badge { border-color: rgba(249,115,22,.24) !important; background: rgba(249,115,22,.09) !important; color: #f97316 !important; }
+.media-banner { background: linear-gradient(118deg,rgba(var(--accent-rgb),.18),rgba(37,99,235,.08),var(--surface)); }
+.media-banner .pilot-banner-badge { white-space: nowrap; }
+
+@media (min-width: 701px) {
+  .motion-video-shell { max-height: 610px; aspect-ratio: 16 / 11; }
+  .motion-video-shell video { object-fit: contain; }
+}
+@media (max-width: 500px) {
+  .motion-video-overlay { align-items: flex-start; flex-direction: column; }
+  .motion-video-overlay small { text-align: left; }
+  .motion-controls { grid-template-columns: 1fr 1fr; }
+  .motion-controls > button { justify-content: center; }
+  .motion-speed { grid-column: 1 / -1; justify-content: stretch; }
+  .motion-speed button { flex: 1; }
+  .movement-cue-strip { grid-template-columns: 1fr; }
+}

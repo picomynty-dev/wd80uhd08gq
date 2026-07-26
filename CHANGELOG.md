@@ -1,17 +1,22 @@
-# My Fit Plan 3.1.2
+# My Fit Plan 3.2
 
-## Cambios principales
+## Biblioteca multimedia
 
-- Los entrenamientos del apartado **Entrenar** ahora se pueden desplegar y recoger individualmente.
-- Al entrar en una sesión queda abierto el primer ejercicio pendiente y el resto aparece recogido para reducir desplazamientos.
-- Cuando completas todas las series de un ejercicio, se recoge automáticamente y se abre el siguiente ejercicio pendiente.
-- Nuevo botón **Abrir todos / Recoger todos** en la sesión.
-- Los días del apartado **Plan** funcionan ahora como acordeones.
-- Cada día muestra un resumen compacto con número de ejercicios y duración aproximada.
-- Nuevo botón **Abrir todos / Recoger todos** dentro del editor de la rutina.
-- Se conserva toda la información de la versión 3.1.1 mediante migración automática.
-- Nueva caché de aplicación para asegurar la actualización en iPhone.
+- 20 ejercicios principales con demostración animada en vídeo MP4.
+- Vídeos cortos, silenciosos, en bucle y optimizados para iPhone.
+- Controles de reproducción, repetición y velocidad 0,75× / 1× / 1,25×.
+- Nueva pestaña de claves técnicas con posición, control, respiración y ritmo.
+- Anatomía frontal y posterior rediseñada para los 20 ejercicios.
+- Músculo principal en rojo y músculos secundarios en naranja.
+- Fichas técnicas ampliadas en español con nombre en inglés, pasos, errores y consejos.
+- Filtro «Animados» dentro de la biblioteca.
+- Etiqueta visual para localizar ejercicios con demostración.
+- Todos los datos de la versión 3.1.2 se migran automáticamente.
 
-## Próxima fase
+## Ejercicios incluidos
 
-La siguiente versión mayor será My Fit Plan 3.2, centrada en fichas multimedia de ejercicios, vídeos cortos de ejecución y una biblioteca visual más profesional.
+Press banca con barra, press plano con mancuernas, press inclinado con mancuernas, press de pecho en máquina, jalón al pecho, dominada asistida, remo sentado, remo a una mano, sentadilla goblet, sentadilla en multipower, prensa de piernas, peso muerto rumano, hip thrust, extensión de cuádriceps, curl femoral tumbado, press de hombros con mancuernas, elevaciones laterales, curl de bíceps, curl martillo y extensión de tríceps en polea.
+
+## Nota
+
+Las demostraciones son animaciones técnicas orientativas. No sustituyen una corrección presencial ni una adaptación médica o fisioterapéutica.
