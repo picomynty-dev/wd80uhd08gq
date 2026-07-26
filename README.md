@@ -1,12 +1,9 @@
-# My Fit Plan 3.0A
+# My Fit Plan 3.0A.1
 
-Primera entrega del rediseño premium **Dark Energy**. Es una PWA sin servidor: se publica en GitHub Pages y guarda el progreso en el dispositivo.
+Corrección estable del sprint visual Dark Energy.
 
 ## Publicación
-Sube a la raíz del repositorio `index.html`, `styles.css`, `manifest.webmanifest`, `service-worker.js`, las carpetas `js` e `icons`, y confirma el commit. No cambies la configuración de Pages.
 
-## Actualización en iPhone
-No elimines la app instalada. Abre el enlace en Safari, recarga, acepta la actualización y vuelve a abrir el icono. La cabecera debe mostrar **v3.0A**.
+Sube a la raíz de GitHub Pages `index.html`, `styles.css`, `manifest.webmanifest`, `service-worker.js` y las carpetas completas `js` e `icons`.
 
-## Datos
-La versión migra los datos locales de v2.2 y anteriores. Aun así, es recomendable exportar una copia desde Perfil antes de actualizar.
+No abras `index.html` directamente desde una carpeta: abre la dirección pública de GitHub Pages.

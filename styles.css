@@ -1244,3 +1244,35 @@ h2 { font-weight: 860; letter-spacing: -.035em; }
   .premium-exercise-actions > div { justify-content: start; }
 }
 .streak-orb { position: relative; overflow: hidden; }
+
+
+/* =========================================================
+   My Fit Plan 3.0A.1 · corrección de alineación y arranque
+   ========================================================= */
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+.app-shell, #app, .page { min-width: 0; }
+.app-shell { position: relative; width: min(100%, 940px); margin-inline: auto; }
+#app { width: 100%; }
+
+/* La regla base usaba translateX(-50%). Al combinarla con left y right
+   en la navegación premium, la barra quedaba desplazada hacia la izquierda. */
+.bottom-nav.premium-nav {
+  right: auto;
+  left: 50%;
+  width: min(calc(100% - 24px), 910px);
+  transform: translateX(-50%);
+}
+
+.boot-help { width: 100%; max-width: 760px; margin: 0 auto; padding-top: 24px; }
+.boot-help .hero { min-height: 0; }
+.boot-help .notice { display: block; margin-top: 18px; color: #f8fafc; }
+
+@media (max-width: 700px) {
+  .app-shell { width: 100%; }
+  .bottom-nav.premium-nav {
+    right: 8px;
+    left: 8px;
+    width: auto;
+    transform: none;
+  }
+}

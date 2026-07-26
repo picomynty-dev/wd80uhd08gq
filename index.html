@@ -1,46 +1,82 @@
-<!doctype html>
-<html lang="es" data-accent="orange" data-theme="system">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0f1c">
-  <meta name="description" content="My Fit Plan: registra tus entrenamientos serie a serie, controla descansos y observa tu progreso.">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="My Fit Plan">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css">
-  <title>My Fit Plan</title>
-</head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <button class="brand" type="button" data-nav="home" aria-label="Ir al inicio">
-        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span><strong>MY FIT</strong><small>PLAN · TRAIN SMART</small></span>
-      </button>
-      <div class="topbar-actions">
-        <span class="version-badge" aria-label="Versión 3.0A">v3.0A</span>
-        <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
-        <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
-      </div>
-    </header>
+'use strict';
 
-    <button id="updateBanner" class="update-banner" type="button" hidden></button>
-    <main id="app" tabindex="-1" aria-live="polite"></main>
+import { normalizeText } from './utils.js';
 
-    <nav class="bottom-nav premium-nav" aria-label="Navegación principal">
-      <button type="button" data-nav="home" class="nav-item active"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><small>Inicio</small></button>
-      <button type="button" data-nav="plan" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><small>Plan</small></button>
-      <button type="button" data-nav="workout" class="nav-item nav-train"><span class="nav-icon train-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><small>Entrenar</small></button>
-      <button type="button" data-nav="library" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><small>Ejercicios</small></button>
-      <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><small>Perfil</small></button>
-    </nav>
-  </div>
+function tokens(value) {
+  return normalizeText(value).split(/[^a-z0-9]+/).filter(Boolean);
+}
 
-  <aside id="restTimerDock" class="rest-timer-dock" aria-live="polite" hidden></aside>
-  <script type="module" src="./js/app.js"></script>
-</body>
-</html>
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const temp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = temp;
+    }
+  }
+  return row[b.length];
+}
+
+function tokenScore(queryToken, candidateToken) {
+  if (queryToken === candidateToken) return 28;
+  if (candidateToken.startsWith(queryToken)) return 21;
+  if (candidateToken.includes(queryToken)) return 15;
+  if (queryToken.length >= 4) {
+    const distance = levenshtein(queryToken, candidateToken);
+    if (distance === 1) return 13;
+    if (distance === 2 && queryToken.length >= 6) return 8;
+  }
+  return 0;
+}
+
+export function scoreExercise(id, exercise, query, searchableText = '') {
+  const normalizedQuery = normalizeText(query);
+  if (!normalizedQuery) return 1;
+  const name = normalizeText(exercise.name || '');
+  const muscle = normalizeText([exercise.muscle, ...(exercise.primaryMuscles || []), ...(exercise.secondaryMuscles || [])].join(' '));
+  const equipment = normalizeText(exercise.equipment || '');
+  const movement = normalizeText([exercise.movement, exercise.level].join(' '));
+  const haystack = normalizeText(searchableText || [id, name, muscle, equipment, movement].join(' '));
+  let score = 0;
+  if (name === normalizedQuery) score += 160;
+  else if (name.startsWith(normalizedQuery)) score += 105;
+  else if (name.includes(normalizedQuery)) score += 75;
+  if (muscle.includes(normalizedQuery)) score += 42;
+  if (equipment.includes(normalizedQuery)) score += 30;
+  if (haystack.includes(normalizedQuery)) score += 24;
+
+  const queryTokens = tokens(normalizedQuery);
+  const nameTokens = [...new Set(tokens(name))];
+  const candidateTokens = [...new Set(tokens(haystack))];
+  let matched = 0;
+  for (const queryToken of queryTokens) {
+    const bestName = nameTokens.reduce((max, token) => Math.max(max, tokenScore(queryToken, token)), 0);
+    const best = candidateTokens.reduce((max, token) => Math.max(max, tokenScore(queryToken, token)), 0);
+    score += best + Math.round(bestName * 1.15);
+    if (best > 0) matched += 1;
+  }
+  if (matched === queryTokens.length) score += 28;
+  if (!matched) return 0;
+  return score;
+}
+
+export function searchExerciseEntries(entries, query, searchableTextBuilder) {
+  return entries
+    .map(([id, exercise]) => ({ id, exercise, score: scoreExercise(id, exercise, query, searchableTextBuilder(id, exercise)) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name, 'es'))
+    .map(({ id, exercise }) => [id, exercise]);
+}
+
+export function suggestedSearches(query = '') {
+  const base = ['pecho con mancuernas', 'espalda en polea', 'piernas en máquina', 'core sin material', 'glúteos con banda', 'movilidad de hombros'];
+  const normalized = normalizeText(query);
+  if (!normalized) return base;
+  return base.filter((item) => normalizeText(item).includes(normalized) || normalized.split(' ').some((token) => normalizeText(item).includes(token))).slice(0, 4);
+}

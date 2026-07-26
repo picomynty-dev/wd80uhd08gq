@@ -1,267 +1,105 @@
-import { clone, isoDay, numberValue, uid } from './utils.js';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js';
+'use strict';
 
-export const STORAGE_KEY = 'myFitPlanStateV21';
-export const LEGACY_KEYS = ['myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '2.1.0';
+import { esc, normalizeText } from './utils.js';
 
-export const defaultSettings = {
-  accent: 'orange',
-  appearance: 'system',
-  compact: false,
-  showTips: true,
-  reduceMotion: false,
-  restSound: true,
-  restVibrate: true,
-  autoStartRest: true,
-  defaultRestSeconds: 75
+const PRIMARY = '#ef4444';
+const SECONDARY = '#fb923c';
+const NEUTRAL = '#cbd5e1';
+const OUTLINE = '#475569';
+
+const regionTerms = {
+  chest: ['pecho', 'pectoral'],
+  back: ['espalda', 'dorsal', 'trapecio', 'erector', 'columna', 'lumbar'],
+  shoulders: ['hombro', 'deltoid', 'manguito'],
+  biceps: ['biceps'],
+  triceps: ['triceps'],
+  forearms: ['antebrazo', 'agarre', 'muneca'],
+  core: ['core', 'abdominal', 'oblicuo', 'serrato'],
+  glutes: ['gluteo', 'cadera'],
+  quads: ['cuadriceps'],
+  hamstrings: ['isquiotibial', 'femoral'],
+  adductors: ['aductor'],
+  calves: ['gemelo', 'soleo', 'tibial', 'pantorrilla'],
+  full: ['cuerpo completo', 'cardio']
 };
 
-export const defaultState = {
-  schemaVersion: 21,
-  appVersion: APP_VERSION,
-  profile: null,
-  settings: clone(defaultSettings),
-  plan: null,
-  nextWorkoutIndex: 0,
-  activeWorkout: null,
-  history: [],
-  customExercises: [],
-  favorites: [],
-  weightHistory: [],
-  createdAt: null,
-  updatedAt: null
-};
-
-export function createEmptyState() {
-  return clone(defaultState);
+function muscleText(list = []) {
+  return normalizeText((Array.isArray(list) ? list : [list]).join(' '));
 }
 
-export function loadState() {
-  try {
-    const current = localStorage.getItem(STORAGE_KEY);
-    if (current) return normalizeState(JSON.parse(current));
-
-    for (const key of LEGACY_KEYS) {
-      const legacy = localStorage.getItem(key);
-      if (!legacy) continue;
-      const migrated = normalizeState(JSON.parse(legacy));
-      saveState(migrated);
-      return migrated;
-    }
-  } catch (error) {
-    console.warn('No se pudo cargar el progreso:', error);
-  }
-  return createEmptyState();
+function regionTone(exercise, region) {
+  const primary = muscleText(exercise.primaryMuscles || [exercise.muscle]);
+  const secondary = muscleText(exercise.secondaryMuscles || []);
+  const terms = regionTerms[region] || [];
+  if (terms.some((term) => primary.includes(normalizeText(term)))) return PRIMARY;
+  if (terms.some((term) => secondary.includes(normalizeText(term)))) return SECONDARY;
+  if (primary.includes('cuerpo completo') || primary.includes('cardio')) return SECONDARY;
+  return NEUTRAL;
 }
 
-export function saveState(state) {
-  const ready = normalizeState({ ...state, updatedAt: new Date().toISOString() });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ready));
-  return ready;
-}
-
-export function normalizeState(saved = {}) {
-  const profile = saved.profile ? {
-    name: '',
-    age: '',
-    weight: '',
-    height: '',
-    objective: 'muscle',
-    days: 3,
-    minutes: 45,
-    equipment: ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal', 'Cardio'],
-    ...saved.profile
-  } : null;
-
-  const normalized = {
-    ...createEmptyState(),
-    ...saved,
-    schemaVersion: 21,
-    appVersion: APP_VERSION,
-    profile,
-    settings: { ...clone(defaultSettings), ...(saved.settings || {}) },
-    history: Array.isArray(saved.history) ? saved.history.map(normalizeHistorySession).filter(Boolean) : [],
-    customExercises: Array.isArray(saved.customExercises) ? saved.customExercises.map(normalizeCustomExercise) : [],
-    favorites: Array.isArray(saved.favorites) ? [...new Set(saved.favorites)] : [],
-    weightHistory: normalizeWeightHistory(saved.weightHistory, profile),
-    nextWorkoutIndex: Number(saved.nextWorkoutIndex) || 0,
-    createdAt: saved.createdAt || (profile ? new Date().toISOString() : null),
-    updatedAt: saved.updatedAt || new Date().toISOString()
+function movementPose(type = 'full_body') {
+  const stroke = `stroke="${OUTLINE}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+  const weight = `<circle cx="24" cy="53" r="4" fill="#64748b"/><circle cx="76" cy="53" r="4" fill="#64748b"/>`;
+  const poses = {
+    press_horizontal: `<line x1="18" y1="72" x2="82" y2="72" ${stroke}/><circle cx="32" cy="56" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="38" y1="59" x2="62" y2="67" ${stroke}/><line x1="47" y1="62" x2="35" y2="44" ${stroke}/><line x1="47" y1="62" x2="59" y2="44" ${stroke}/><line x1="35" y1="44" x2="25" y2="48" ${stroke}/><line x1="59" y1="44" x2="73" y2="48" ${stroke}/>${weight}`,
+    press_vertical: `<circle cx="50" cy="20" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="28" x2="50" y2="58" ${stroke}/><line x1="50" y1="36" x2="33" y2="18" ${stroke}/><line x1="50" y1="36" x2="67" y2="18" ${stroke}/><circle cx="30" cy="15" r="4" fill="#64748b"/><circle cx="70" cy="15" r="4" fill="#64748b"/><line x1="50" y1="58" x2="38" y2="82" ${stroke}/><line x1="50" y1="58" x2="62" y2="82" ${stroke}/>` ,
+    row: `<circle cx="34" cy="24" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="39" y1="30" x2="58" y2="48" ${stroke}/><line x1="58" y1="48" x2="72" y2="40" ${stroke}/><line x1="58" y1="48" x2="72" y2="58" ${stroke}/><circle cx="78" cy="39" r="4" fill="#64748b"/><circle cx="78" cy="59" r="4" fill="#64748b"/><line x1="52" y1="45" x2="38" y2="76" ${stroke}/><line x1="58" y1="49" x2="62" y2="79" ${stroke}/>` ,
+    pull_vertical: `<circle cx="50" cy="28" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="36" x2="50" y2="65" ${stroke}/><line x1="50" y1="43" x2="30" y2="25" ${stroke}/><line x1="50" y1="43" x2="70" y2="25" ${stroke}/><line x1="22" y1="16" x2="78" y2="16" ${stroke}/><line x1="50" y1="65" x2="40" y2="84" ${stroke}/><line x1="50" y1="65" x2="60" y2="84" ${stroke}/>` ,
+    squat: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="48" y2="53" ${stroke}/><line x1="48" y1="53" x2="32" y2="67" ${stroke}/><line x1="48" y1="53" x2="68" y2="67" ${stroke}/><line x1="32" y1="67" x2="38" y2="84" ${stroke}/><line x1="68" y1="67" x2="62" y2="84" ${stroke}/><line x1="35" y1="36" x2="65" y2="36" ${stroke}/><circle cx="31" cy="36" r="4" fill="#64748b"/><circle cx="69" cy="36" r="4" fill="#64748b"/>` ,
+    lunge: `<circle cx="45" cy="17" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="45" y1="25" x2="47" y2="53" ${stroke}/><line x1="47" y1="53" x2="26" y2="68" ${stroke}/><line x1="47" y1="53" x2="68" y2="67" ${stroke}/><line x1="26" y1="68" x2="18" y2="84" ${stroke}/><line x1="68" y1="67" x2="78" y2="82" ${stroke}/><line x1="31" y1="37" x2="61" y2="37" ${stroke}/>` ,
+    hinge: `<circle cx="36" cy="25" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="41" y1="31" x2="64" y2="49" ${stroke}/><line x1="64" y1="49" x2="56" y2="78" ${stroke}/><line x1="64" y1="49" x2="76" y2="78" ${stroke}/><line x1="51" y1="40" x2="35" y2="58" ${stroke}/><line x1="56" y1="44" x2="73" y2="59" ${stroke}/><circle cx="31" cy="62" r="4" fill="#64748b"/><circle cx="77" cy="63" r="4" fill="#64748b"/>` ,
+    curl: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="50" y2="59" ${stroke}/><line x1="50" y1="38" x2="34" y2="51" ${stroke}/><line x1="50" y1="38" x2="66" y2="51" ${stroke}/><line x1="34" y1="51" x2="27" y2="38" ${stroke}/><line x1="66" y1="51" x2="73" y2="38" ${stroke}/><circle cx="25" cy="34" r="4" fill="#64748b"/><circle cx="75" cy="34" r="4" fill="#64748b"/><line x1="50" y1="59" x2="39" y2="84" ${stroke}/><line x1="50" y1="59" x2="61" y2="84" ${stroke}/>` ,
+    triceps_extension: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="50" y2="60" ${stroke}/><line x1="50" y1="35" x2="36" y2="25" ${stroke}/><line x1="50" y1="35" x2="64" y2="25" ${stroke}/><line x1="36" y1="25" x2="42" y2="8" ${stroke}/><line x1="64" y1="25" x2="58" y2="8" ${stroke}/><circle cx="42" cy="6" r="4" fill="#64748b"/><circle cx="58" cy="6" r="4" fill="#64748b"/><line x1="50" y1="60" x2="39" y2="84" ${stroke}/><line x1="50" y1="60" x2="61" y2="84" ${stroke}/>` ,
+    raise: `<circle cx="50" cy="20" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="28" x2="50" y2="61" ${stroke}/><line x1="50" y1="38" x2="22" y2="38" ${stroke}/><line x1="50" y1="38" x2="78" y2="38" ${stroke}/><circle cx="18" cy="38" r="4" fill="#64748b"/><circle cx="82" cy="38" r="4" fill="#64748b"/><line x1="50" y1="61" x2="39" y2="84" ${stroke}/><line x1="50" y1="61" x2="61" y2="84" ${stroke}/>` ,
+    fly: `<circle cx="50" cy="20" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="28" x2="50" y2="61" ${stroke}/><path d="M50 38 Q35 25 20 38" ${stroke}/><path d="M50 38 Q65 25 80 38" ${stroke}/><circle cx="17" cy="39" r="4" fill="#64748b"/><circle cx="83" cy="39" r="4" fill="#64748b"/><line x1="50" y1="61" x2="39" y2="84" ${stroke}/><line x1="50" y1="61" x2="61" y2="84" ${stroke}/>` ,
+    core_flexion: `<circle cx="34" cy="55" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><path d="M40 55 Q54 45 62 60" ${stroke}/><line x1="62" y1="60" x2="77" y2="75" ${stroke}/><line x1="62" y1="60" x2="55" y2="80" ${stroke}/><line x1="16" y1="82" x2="86" y2="82" ${stroke}/>` ,
+    core_rotation: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="50" y2="61" ${stroke}/><line x1="50" y1="38" x2="24" y2="48" ${stroke}/><line x1="50" y1="38" x2="70" y2="25" ${stroke}/><circle cx="20" cy="50" r="4" fill="#64748b"/><line x1="50" y1="61" x2="39" y2="84" ${stroke}/><line x1="50" y1="61" x2="61" y2="84" ${stroke}/>` ,
+    core_anti_extension: `<circle cx="28" cy="45" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="35" y1="48" x2="67" y2="55" ${stroke}/><line x1="67" y1="55" x2="82" y2="72" ${stroke}/><line x1="39" y1="49" x2="26" y2="69" ${stroke}/><line x1="67" y1="55" x2="61" y2="78" ${stroke}/>` ,
+    core_anti_rotation: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="50" y2="61" ${stroke}/><line x1="50" y1="38" x2="78" y2="38" ${stroke}/><circle cx="83" cy="38" r="4" fill="#64748b"/><line x1="50" y1="61" x2="39" y2="84" ${stroke}/><line x1="50" y1="61" x2="61" y2="84" ${stroke}/><line x1="88" y1="18" x2="88" y2="70" stroke="#f97316" stroke-width="2" stroke-dasharray="4 4"/>` ,
+    core_lateral: `<circle cx="26" cy="45" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="33" y1="48" x2="67" y2="58" ${stroke}/><line x1="67" y1="58" x2="84" y2="68" ${stroke}/><line x1="35" y1="49" x2="25" y2="72" ${stroke}/><line x1="67" y1="58" x2="60" y2="78" ${stroke}/>` ,
+    core_extension: `<circle cx="30" cy="50" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><path d="M37 52 Q54 35 69 50" ${stroke}/><line x1="69" y1="50" x2="84" y2="63" ${stroke}/><line x1="45" y1="45" x2="31" y2="29" ${stroke}/>` ,
+    carry: `<circle cx="50" cy="18" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="26" x2="50" y2="60" ${stroke}/><line x1="50" y1="37" x2="31" y2="58" ${stroke}/><line x1="50" y1="37" x2="69" y2="58" ${stroke}/><circle cx="27" cy="63" r="6" fill="#64748b"/><circle cx="73" cy="63" r="6" fill="#64748b"/><line x1="50" y1="60" x2="39" y2="84" ${stroke}/><line x1="50" y1="60" x2="61" y2="84" ${stroke}/>` ,
+    cardio: `<circle cx="52" cy="16" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="24" x2="43" y2="49" ${stroke}/><line x1="44" y1="34" x2="25" y2="43" ${stroke}/><line x1="45" y1="35" x2="63" y2="45" ${stroke}/><line x1="43" y1="49" x2="24" y2="75" ${stroke}/><line x1="43" y1="49" x2="70" y2="71" ${stroke}/><path d="M12 82 H88" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>` ,
+    mobility: `<circle cx="50" cy="17" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><path d="M50 25 Q37 42 49 58" ${stroke}/><line x1="44" y1="36" x2="24" y2="25" ${stroke}/><line x1="44" y1="36" x2="69" y2="28" ${stroke}/><line x1="49" y1="58" x2="29" y2="80" ${stroke}/><line x1="49" y1="58" x2="71" y2="80" ${stroke}/>` ,
+    full_body: `<circle cx="50" cy="15" r="7" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="23" x2="50" y2="55" ${stroke}/><line x1="50" y1="32" x2="26" y2="16" ${stroke}/><line x1="50" y1="32" x2="74" y2="16" ${stroke}/><line x1="50" y1="55" x2="30" y2="80" ${stroke}/><line x1="50" y1="55" x2="70" y2="80" ${stroke}/><circle cx="23" cy="13" r="4" fill="#64748b"/><circle cx="77" cy="13" r="4" fill="#64748b"/>` ,
+    plyometric: `<circle cx="50" cy="17" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="50" y1="25" x2="50" y2="52" ${stroke}/><line x1="50" y1="34" x2="29" y2="20" ${stroke}/><line x1="50" y1="34" x2="71" y2="20" ${stroke}/><line x1="50" y1="52" x2="31" y2="69" ${stroke}/><line x1="50" y1="52" x2="69" y2="69" ${stroke}/><path d="M20 83 H80" stroke="#f97316" stroke-width="3" stroke-dasharray="5 5"/>` ,
+    wrist: `<circle cx="47" cy="19" r="8" fill="#f8fafc" stroke="${OUTLINE}" stroke-width="3"/><line x1="47" y1="27" x2="47" y2="58" ${stroke}/><line x1="47" y1="36" x2="70" y2="52" ${stroke}/><line x1="70" y1="52" x2="79" y2="40" ${stroke}/><circle cx="82" cy="37" r="4" fill="#64748b"/><line x1="47" y1="58" x2="37" y2="84" ${stroke}/><line x1="47" y1="58" x2="58" y2="84" ${stroke}/>`
   };
-
-  normalized.plan = normalizePlan(saved.plan, profile || {});
-  if (profile && !normalized.plan) normalized.plan = buildPlan(profile);
-  normalized.activeWorkout = normalizeActiveWorkout(saved.activeWorkout, normalized.plan, profile || {});
-
-  if (normalized.plan?.days?.length) {
-    normalized.nextWorkoutIndex %= normalized.plan.days.length;
-  } else {
-    normalized.nextWorkoutIndex = 0;
-  }
-  return normalized;
+  return poses[type] || poses.full_body;
 }
 
-function normalizeWeightHistory(history, profile) {
-  const clean = Array.isArray(history)
-    ? history.map((item) => ({
-      id: item.id || uid('weight'),
-      date: item.date || isoDay(item.createdAt || new Date()),
-      weight: numberValue(item.weight)
-    })).filter((item) => item.weight > 0)
-    : [];
-
-  if (!clean.length && numberValue(profile?.weight) > 0) {
-    clean.push({ id: uid('weight'), date: isoDay(new Date()), weight: numberValue(profile.weight) });
-  }
-  return clean.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+function bodyMap(exercise) {
+  const c = (region) => regionTone(exercise, region);
+  return `<svg class="body-map-svg" viewBox="0 0 150 100" role="img" aria-label="Mapa de músculos trabajados">
+    <g transform="translate(8,2)">
+      <circle cx="31" cy="10" r="7" fill="${NEUTRAL}"/>
+      <path d="M22 19 Q31 15 40 19 L43 47 Q36 55 31 55 Q26 55 19 47Z" fill="${NEUTRAL}"/>
+      <ellipse cx="20" cy="25" rx="6" ry="7" fill="${c('shoulders')}"/><ellipse cx="42" cy="25" rx="6" ry="7" fill="${c('shoulders')}"/>
+      <rect x="14" y="29" width="7" height="20" rx="4" fill="${c('biceps')}"/><rect x="41" y="29" width="7" height="20" rx="4" fill="${c('biceps')}"/>
+      <rect x="12" y="48" width="7" height="19" rx="4" fill="${c('forearms')}"/><rect x="43" y="48" width="7" height="19" rx="4" fill="${c('forearms')}"/>
+      <path d="M23 21 H39 V35 Q31 41 23 35Z" fill="${c('chest')}"/>
+      <rect x="25" y="36" width="12" height="18" rx="4" fill="${c('core')}"/>
+      <rect x="21" y="54" width="10" height="24" rx="5" fill="${c('quads')}"/><rect x="32" y="54" width="10" height="24" rx="5" fill="${c('quads')}"/>
+      <rect x="22" y="77" width="8" height="18" rx="4" fill="${c('calves')}"/><rect x="33" y="77" width="8" height="18" rx="4" fill="${c('calves')}"/>
+    </g>
+    <g transform="translate(78,2)">
+      <circle cx="31" cy="10" r="7" fill="${NEUTRAL}"/>
+      <path d="M22 19 Q31 15 40 19 L43 47 Q36 55 31 55 Q26 55 19 47Z" fill="${c('back')}"/>
+      <ellipse cx="20" cy="25" rx="6" ry="7" fill="${c('shoulders')}"/><ellipse cx="42" cy="25" rx="6" ry="7" fill="${c('shoulders')}"/>
+      <rect x="14" y="29" width="7" height="20" rx="4" fill="${c('triceps')}"/><rect x="41" y="29" width="7" height="20" rx="4" fill="${c('triceps')}"/>
+      <rect x="12" y="48" width="7" height="19" rx="4" fill="${c('forearms')}"/><rect x="43" y="48" width="7" height="19" rx="4" fill="${c('forearms')}"/>
+      <ellipse cx="31" cy="54" rx="13" ry="8" fill="${c('glutes')}"/>
+      <rect x="21" y="59" width="10" height="20" rx="5" fill="${c('hamstrings')}"/><rect x="32" y="59" width="10" height="20" rx="5" fill="${c('hamstrings')}"/>
+      <path d="M28 56 Q31 60 34 56" stroke="${c('adductors')}" stroke-width="5" stroke-linecap="round"/>
+      <rect x="22" y="78" width="8" height="17" rx="4" fill="${c('calves')}"/><rect x="33" y="78" width="8" height="17" rx="4" fill="${c('calves')}"/>
+    </g>
+  </svg>`;
 }
 
-function normalizeCustomExercise(item = {}) {
-  return {
-    id: item.id || uid('custom'),
-    name: item.name || 'Ejercicio personalizado',
-    muscle: item.muscle || 'Otros',
-    equipment: item.equipment || 'Sin especificar',
-    summary: item.summary || item.description || '',
-    steps: Array.isArray(item.steps) ? item.steps : splitLines(item.steps),
-    mistakes: Array.isArray(item.mistakes) ? item.mistakes : splitLines(item.mistakes),
-    alternatives: Array.isArray(item.alternatives) ? item.alternatives : [],
-    synonyms: Array.isArray(item.synonyms) ? item.synonyms : splitCsv(item.synonyms),
-    custom: true
-  };
-}
-
-function splitLines(value) {
-  return String(value || '').split(/\n+/).map((part) => part.trim()).filter(Boolean);
-}
-
-function splitCsv(value) {
-  return String(value || '').split(',').map((part) => part.trim()).filter(Boolean);
-}
-
-function normalizeActiveWorkout(workout, plan, profile) {
-  if (!workout) return null;
-  const rules = trainingRules(profile);
-  const planDayIndex = Number(workout.planDayIndex ?? 0);
-  const planDay = plan?.days?.[planDayIndex];
-  const exercises = Array.isArray(workout.exercises) ? workout.exercises : [];
-  return {
-    id: workout.id || uid('session'),
-    planDayIndex,
-    planDayId: workout.planDayId || planDay?.id || null,
-    name: workout.name || planDay?.name || 'Entrenamiento',
-    startedAt: workout.startedAt || new Date().toISOString(),
-    notes: workout.notes || '',
-    restTimer: workout.restTimer || null,
-    exercises: exercises.map((item, exerciseIndex) => normalizeWorkoutExercise(item, rules, exerciseIndex))
-  };
-}
-
-function normalizeWorkoutExercise(item = {}, rules, exerciseIndex = 0) {
-  const targetSets = Number(item.targetSets ?? item.sets ?? 3) || 3;
-  const repRange = parseLegacyRepRange(item.reps, rules);
-  const restSeconds = parseLegacyRest(item.restSeconds ?? item.rest, rules.restSeconds);
-  let sets = Array.isArray(item.setsData) ? item.setsData : (Array.isArray(item.sets) ? item.sets : null);
-
-  if (!sets) {
-    sets = Array.from({ length: targetSets }, (_, index) => ({
-      id: uid(`set-${exerciseIndex}-${index}`),
-      weight: item.weight || '',
-      reps: item.actualReps || '',
-      rir: '',
-      completed: Boolean(item.completed)
-    }));
-  }
-
-  return {
-    instanceId: item.instanceId || item.slotId || uid('instance'),
-    slotId: item.slotId || uid('slot'),
-    exerciseId: item.exerciseId,
-    targetSets,
-    repMin: Number(item.repMin ?? repRange.repMin) || rules.repMin,
-    repMax: Number(item.repMax ?? repRange.repMax) || rules.repMax,
-    unit: item.unit || repRange.unit || 'reps',
-    restSeconds,
-    notes: item.notes || '',
-    sets: sets.map((set, index) => ({
-      id: set.id || uid(`set-${exerciseIndex}-${index}`),
-      weight: set.weight ?? '',
-      reps: set.reps ?? set.actualReps ?? '',
-      rir: set.rir ?? '',
-      completed: Boolean(set.completed),
-      completedAt: set.completedAt || null
-    }))
-  };
-}
-
-function parseLegacyRepRange(value, rules) {
-  const text = String(value || '');
-  const numbers = text.match(/\d+/g)?.map(Number) || [];
-  const timed = /s|seg/i.test(text);
-  if (!numbers.length) return { repMin: rules.repMin, repMax: rules.repMax, unit: 'reps' };
-  return { repMin: numbers[0], repMax: numbers[1] || numbers[0], unit: timed ? 'sec' : 'reps' };
-}
-
-function parseLegacyRest(value, fallback) {
-  if (typeof value === 'number') return value;
-  const numbers = String(value || '').match(/\d+/g)?.map(Number) || [];
-  return numbers.length ? Math.max(...numbers) : fallback;
-}
-
-function normalizeHistorySession(session) {
-  if (!session) return null;
-  const startedAt = session.startedAt || session.finishedAt || session.date || new Date().toISOString();
-  const finishedAt = session.finishedAt || session.endedAt || startedAt;
-  const exercises = Array.isArray(session.exercises) ? session.exercises.map((item, index) => {
-    const legacySets = Array.isArray(item.sets) ? item.sets : [{
-      id: uid(`history-set-${index}`),
-      weight: item.weight ?? '',
-      reps: item.actualReps ?? item.reps ?? '',
-      rir: item.rir ?? '',
-      completed: true
-    }];
-    return {
-      instanceId: item.instanceId || uid('history-exercise'),
-      exerciseId: item.exerciseId,
-      exerciseName: item.exerciseName || '',
-      targetSets: Number(item.targetSets || legacySets.length || 1),
-      repMin: Number(item.repMin || 0),
-      repMax: Number(item.repMax || 0),
-      unit: item.unit || 'reps',
-      restSeconds: Number(item.restSeconds || 0),
-      notes: item.notes || '',
-      sets: legacySets.map((set) => ({
-        id: set.id || uid('history-set'),
-        weight: set.weight ?? '',
-        reps: set.reps ?? '',
-        rir: set.rir ?? '',
-        completed: set.completed !== false
-      }))
-    };
-  }) : [];
-
-  return {
-    id: session.id || uid('session'),
-    name: session.name || 'Entrenamiento',
-    startedAt,
-    finishedAt,
-    durationSeconds: Number(session.durationSeconds || Math.max(0, (new Date(finishedAt) - new Date(startedAt)) / 1000)) || 0,
-    completedCount: Number(session.completedCount || exercises.length),
-    totalCount: Number(session.totalCount || exercises.length),
-    notes: session.notes || '',
-    exercises,
-    volume: Number(session.volume || 0),
-    prs: Array.isArray(session.prs) ? session.prs : []
-  };
-}
-
-export function validateImportedState(payload) {
-  const candidate = payload?.data || payload?.state || payload;
-  if (!candidate || typeof candidate !== 'object') throw new Error('La copia no contiene datos válidos.');
-  const normalized = normalizeState(candidate);
-  if (!normalized.profile && !normalized.plan && !normalized.history.length) {
-    throw new Error('La copia está vacía o no pertenece a My Fit Plan.');
-  }
-  return normalized;
+export function exerciseVisual(exercise, { large = false } = {}) {
+  const type = exercise.visualType || exercise.movement || 'full_body';
+  return `<div class="exercise-visual ${large ? 'exercise-visual-large' : ''}">
+    <div class="movement-panel"><svg viewBox="0 0 100 100" role="img" aria-label="Ilustración orientativa de ${esc(exercise.name || 'ejercicio')}">${movementPose(type)}</svg><small>Movimiento</small></div>
+    <div class="muscle-panel">${bodyMap(exercise)}<small><i class="legend-primary"></i> Principal <i class="legend-secondary"></i> Secundario</small></div>
+  </div>`;
 }
