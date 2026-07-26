@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 500" role="img" aria-labelledby="title desc">
+  <title id="title">Vista posterior en press banca</title>
+  <desc id="desc">Tríceps y estabilizadores de hombro marcados como secundarios.</desc>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8e0eb"/><stop offset="1" stop-color="#8c9bad"/></linearGradient>
+    <linearGradient id="secondary" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fb923c"/><stop offset="1" stop-color="#ea580c"/></linearGradient>
+  </defs>
+  <rect width="320" height="500" rx="30" fill="#0f172a"/>
+  <g>
+    <circle cx="160" cy="62" r="40" fill="url(#body)"/>
+    <path d="M110 108 Q160 86 210 108 L225 232 Q207 269 190 281 L190 306 H130 V281 Q113 268 95 232Z" fill="url(#body)"/>
+    <path d="M104 118 Q82 128 72 158 L51 254 Q45 282 61 292 Q78 300 90 273 L118 181Z" fill="url(#body)"/>
+    <path d="M216 118 Q238 128 248 158 L269 254 Q275 282 259 292 Q242 300 230 273 L202 181Z" fill="url(#body)"/>
+    <path d="M132 302 L119 455 Q118 478 137 483 Q155 482 158 458 L160 342 L162 458 Q165 482 183 483 Q202 478 201 455 L188 302Z" fill="url(#body)"/>
+    <path d="M105 120 Q160 99 215 120 L205 205 Q160 232 115 205Z" fill="#9aa8b8"/>
+    <path d="M74 166 Q89 160 104 176 L89 238 Q78 250 64 240Z" fill="url(#secondary)"/>
+    <path d="M246 166 Q231 160 216 176 L231 238 Q242 250 256 240Z" fill="url(#secondary)"/>
+    <path d="M101 121 Q86 131 80 151 Q93 166 111 162 L120 130Z" fill="url(#secondary)" opacity=".72"/>
+    <path d="M219 121 Q234 131 240 151 Q227 166 209 162 L200 130Z" fill="url(#secondary)" opacity=".72"/>
+    <path d="M126 211 Q160 230 194 211 L191 267 Q160 281 129 267Z" fill="#aeb9c7" opacity=".6"/>
+    <path d="M135 307 L127 442" stroke="#68778b" stroke-width="4" opacity=".65"/>
+    <path d="M185 307 L193 442" stroke="#68778b" stroke-width="4" opacity=".65"/>
+  </g>
+  <g font-family="Arial, sans-serif">
+    <rect x="88" y="20" width="144" height="34" rx="12" fill="#111827" stroke="#334155"/>
+    <circle cx="108" cy="37" r="6" fill="#f97316"/>
+    <text x="122" y="42" fill="#f8fafc" font-size="14" font-weight="700">Estabilizadores</text>
+  </g>
+</svg>
