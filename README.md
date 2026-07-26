@@ -1,20 +1,23 @@
-# My Fit Plan v0.2
+# My Fit Plan 2.1
 
-Segunda versión del MVP de My Fit Plan. Aplicación web instalable construida con HTML, CSS y JavaScript, sin servidor ni base de datos.
+Aplicación web instalable para registrar entrenamientos serie a serie.
 
-## Novedades
+## Novedades principales
 
-- Perfil editable con nombre, edad, peso y estatura.
-- Cálculo orientativo del IMC para adultos.
-- Ajustes de color, apariencia y densidad visual.
-- Biblioteca ampliada con buscador y filtros.
-- Explicaciones detalladas de cada ejercicio.
-- Creación de ejercicios personalizados.
-- Posibilidad de añadir ejercicios al entrenamiento en curso.
-- Historial y progreso integrados en el perfil.
-- Casilla de mayoría de edad visible.
-- Migración automática de los datos guardados en la versión 0.1.
+- Registro individual de peso, repeticiones y repeticiones en reserva.
+- Temporizador de descanso con pausa, +15 segundos y aviso final.
+- Editor completo de rutina: días, orden, ejercicios, series, rango y descanso.
+- Recomendaciones sencillas de progresión basadas en sesiones anteriores.
+- Historial detallado, volumen, duración, calendario y récords personales.
+- Evolución del peso corporal e IMC orientativo.
+- Favoritos, filtros, búsqueda con sinónimos y ejercicios personalizados editables.
+- Copia de seguridad mediante exportación e importación JSON.
+- Aviso interno cuando existe una actualización de la PWA.
 
-## Publicación
+## Publicar en GitHub Pages
 
-Sube todos los archivos a la raíz del repositorio de GitHub Pages. La aplicación no necesita compilación.
+Sube todos los archivos y carpetas de este proyecto a la raíz de tu repositorio. No subas la carpeta contenedora como una subcarpeta adicional. GitHub Pages debe publicar desde `main` y `/root`.
+
+## Privacidad
+
+Los datos se guardan en `localStorage` en el dispositivo. No existen cuentas ni servidor. La copia JSON permite trasladar o recuperar la información.
