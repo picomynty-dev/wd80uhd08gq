@@ -156,44 +156,71 @@ function renderHome() {
   const lastSession = state.history[0];
   const calendar = buildCalendar(state.history);
   const recentRecords = recentPersonalRecords(3);
-  const firstName = state.profile.name?.trim().split(/\s+/)[0];
+  const firstName = state.profile.name?.trim().split(/\s+/)[0] || 'deportista';
+  const streak = calculateStreak(state.history);
+  const todayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+  const nextExerciseCount = state.activeWorkout?.exercises?.length || nextDay?.exercises?.length || 0;
+  const estimatedMinutes = Number(state.profile.minutes || 45);
 
   app.innerHTML = `
-    <section class="page home-page">
-      <div class="hero dashboard-hero compact-hero">
-        <p class="eyebrow">${firstName ? `Hola, ${esc(firstName)}` : 'Tu entrenamiento de hoy'}</p>
-        <h1>${esc(state.activeWorkout?.name || nextDay?.name || 'Crea tu siguiente rutina')}</h1>
-        <p>${state.activeWorkout ? 'Tienes una sesión en curso y todo está guardado.' : nextDay ? `${nextDay.exercises.length} ejercicios · ${esc(state.profile.minutes || 45)} min aproximadamente.` : 'Añade días y ejercicios a tu plan.'}</p>
-        <div class="hero-actions">
-          <button class="button button-primary" type="button" data-action="home-workout">${state.activeWorkout ? 'Continuar' : 'Empezar entrenamiento'}</button>
-          <button class="button button-secondary" type="button" data-nav-local="plan">Editar plan</button>
+    <section class="page home-page premium-home">
+      <header class="dashboard-greeting">
+        <div>
+          <p class="eyebrow">${esc(todayLabel)}</p>
+          <h1>Vamos a por ello, ${esc(firstName)}.</h1>
+          <p class="muted">Semana activa · ${weekly.length} de ${goal} sesiones completadas</p>
         </div>
-      </div>
+        <div class="streak-orb" aria-label="Racha de ${streak} días"><span>⚡</span><strong>${streak}</strong><small>racha</small></div>
+      </header>
 
-      <section class="section card home-week-card">
-        <div class="section-title-row"><div><p class="eyebrow">Esta semana</p><h2>${weekly.length} de ${goal} sesiones</h2></div><strong class="home-percent">${percentage}%</strong></div>
-        ${weekStripHtml()}
-        <div class="progress-track"><div class="progress-bar" style="width:${percentage}%"></div></div>
+      <section class="today-command-card">
+        <div class="today-card-glow" aria-hidden="true"></div>
+        <div class="today-command-copy">
+          <div class="today-command-topline"><span class="live-dot"></span><span>${state.activeWorkout ? 'SESIÓN EN CURSO' : 'ENTRENAMIENTO DE HOY'}</span></div>
+          <h2>${esc(state.activeWorkout?.name || nextDay?.name || 'Crea tu siguiente rutina')}</h2>
+          <div class="today-metadata">
+            <span><b>${nextExerciseCount}</b> ejercicios</span>
+            <span><b>${estimatedMinutes}</b> min</span>
+            <span><b>${percentage}%</b> semana</span>
+          </div>
+          <p>${state.activeWorkout ? 'Tu progreso está guardado. Continúa exactamente donde lo dejaste.' : nextDay ? 'Sesión preparada según tu plan. Registra cada serie y deja que My Fit Plan controle el progreso.' : 'Añade un día y tus ejercicios para empezar.'}</p>
+          <div class="today-command-actions">
+            <button class="button button-primary command-primary" type="button" data-action="home-workout"><span>${state.activeWorkout ? 'Continuar sesión' : 'Empezar entrenamiento'}</span><b>→</b></button>
+            <button class="command-icon-button" type="button" data-nav-local="plan" aria-label="Editar plan">✎</button>
+          </div>
+        </div>
+        <div class="progress-orbit" style="--progress:${percentage * 3.6}deg" aria-label="${percentage}% del objetivo semanal">
+          <div><strong>${percentage}%</strong><small>semana</small></div>
+        </div>
       </section>
 
-      <section class="section home-two-columns">
-        <article class="card home-calendar-card">
-          <div class="section-title-row"><div><p class="eyebrow">Calendario</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2></div><span class="pill">${sessionsThisMonth(state.history).length}</span></div>
+      <section class="weekly-performance-card">
+        <div class="section-title-row">
+          <div><p class="eyebrow">Ritmo semanal</p><h2>Constancia</h2></div>
+          <span class="performance-goal">Objetivo ${goal}</span>
+        </div>
+        ${weekStripHtml()}
+        <div class="weekly-caption"><span>${weeklyMessage(weekly.length, goal)}</span><strong>${weekly.length}/${goal}</strong></div>
+      </section>
+
+      <section class="section premium-dashboard-grid">
+        <article class="premium-panel calendar-panel">
+          <div class="panel-header"><div><p class="eyebrow">Actividad</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2></div><span class="panel-count">${sessionsThisMonth(state.history).length}</span></div>
           ${homeCalendarHtml(calendar)}
         </article>
-        <article class="card recent-records-card">
-          <div class="section-title-row"><div><p class="eyebrow">Marcas recientes</p><h2>Últimos récords</h2></div><button class="button button-ghost button-small" type="button" data-nav-local="profile">Ver todos</button></div>
-          ${recentRecords.length ? `<div class="records-list">${recentRecords.map((record) => `<div class="record-row compact-record"><span><strong>${esc(record.name)}</strong><small>${formatDate(record.date)}</small></span><strong>${record.type === 'weight' ? `${formatWeight(record.value)} kg` : `${record.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted small">Tus nuevas marcas aparecerán aquí al repetir ejercicios.</p>'}
+        <article class="premium-panel records-panel">
+          <div class="panel-header"><div><p class="eyebrow">Progreso real</p><h2>Marcas recientes</h2></div><button class="text-link" type="button" data-nav-local="profile">Ver todas</button></div>
+          ${recentRecords.length ? `<div class="premium-records-list">${recentRecords.map((record, idx) => `<div class="premium-record"><span class="record-rank">${String(idx + 1).padStart(2, '0')}</span><span class="record-copy"><strong>${esc(record.name)}</strong><small>${formatDate(record.date)}</small></span><b>${record.type === 'weight' ? `${formatWeight(record.value)} kg` : `${record.value} reps`}</b></div>`).join('')}</div>` : '<div class="empty-premium-state"><span>↗</span><p>Tus mejores marcas aparecerán aquí al repetir ejercicios.</p></div>'}
         </article>
       </section>
 
-      ${lastSession ? `<section class="section card last-workout-card"><div><p class="eyebrow">Último entrenamiento</p><h2>${esc(lastSession.name)}</h2><p class="muted small">${formatDateTime(lastSession.finishedAt)} · ${formatDuration(lastSession.durationSeconds)}</p></div><div class="history-summary"><span>${lastSession.exercises.length} ejercicios</span><span>${formatWeight(lastSession.volume || sessionVolume(lastSession))} kg</span>${lastSession.prs?.length ? `<span class="pill pill-success">${lastSession.prs.length} récord</span>` : ''}</div><button class="button button-secondary button-small" type="button" data-action="history-detail" data-id="${esc(lastSession.id)}">Abrir</button></section>` : ''}
+      ${lastSession ? `<section class="section last-session-premium"><div class="last-session-icon">✓</div><div class="last-session-main"><p class="eyebrow">Última sesión</p><h2>${esc(lastSession.name)}</h2><div class="last-session-meta"><span>${formatDateTime(lastSession.finishedAt)}</span><span>${formatDuration(lastSession.durationSeconds)}</span><span>${lastSession.exercises.length} ejercicios</span></div></div><div class="last-session-volume"><strong>${formatWeight(lastSession.volume || sessionVolume(lastSession))}</strong><small>kg volumen</small></div><button class="round-arrow-button" type="button" data-action="history-detail" data-id="${esc(lastSession.id)}" aria-label="Abrir entrenamiento">›</button></section>` : ''}
 
-      <section class="section quick-actions compact-quick-actions">
-        <button class="quick-action" type="button" data-action="quick-weight"><span>⚖</span><small>Peso</small></button>
-        <button class="quick-action" type="button" data-nav-local="library"><span>⌕</span><small>Biblioteca</small></button>
-        <button class="quick-action" type="button" data-nav-local="plan"><span>▤</span><small>Plan</small></button>
-        <button class="quick-action" type="button" data-action="go-history"><span>◷</span><small>Historial</small></button>
+      <section class="section quick-launch-grid">
+        <button class="quick-launch-card" type="button" data-action="quick-weight"><span class="quick-launch-icon">⚖</span><span><strong>Registrar peso</strong><small>Actualiza tu evolución</small></span><b>＋</b></button>
+        <button class="quick-launch-card" type="button" data-nav-local="library"><span class="quick-launch-icon">⌕</span><span><strong>Buscar ejercicio</strong><small>Más de 280 opciones</small></span><b>→</b></button>
+        <button class="quick-launch-card" type="button" data-nav-local="plan"><span class="quick-launch-icon">▤</span><span><strong>Editar mi plan</strong><small>Series, reps y orden</small></span><b>→</b></button>
+        <button class="quick-launch-card" type="button" data-action="go-history"><span class="quick-launch-icon">◷</span><span><strong>Ver historial</strong><small>Sesiones y récords</small></span><b>→</b></button>
       </section>
     </section>`;
 }
@@ -237,7 +264,7 @@ function renderWelcome() {
   app.innerHTML = `
     <section class="page">
       <div class="hero">
-        <p class="eyebrow">My Fit Plan 2.2</p>
+        <p class="eyebrow">My Fit Plan 3.0A</p>
         <h1>Tu entrenamiento, serie a serie.</h1>
         <p>Crea una rutina, registra cada serie, controla los descansos y recibe una orientación sencilla para progresar.</p>
         <div class="hero-actions">
@@ -457,32 +484,43 @@ function renderWorkout() {
   const doneSets = allSets.filter((set) => set.completed).length;
   const percentage = allSets.length ? Math.round((doneSets / allSets.length) * 100) : 0;
   const elapsed = Math.max(0, Math.floor((Date.now() - new Date(workout.startedAt).getTime()) / 1000));
+  const finishedExercises = workout.exercises.filter((exercise) => exercise.sets.length && completedSets(exercise).length === exercise.sets.length).length;
 
   app.innerHTML = `
-    <section class="page workout-page">
-      <div class="section-title-row">
-        <div><p class="eyebrow">Entrenamiento en curso</p><h1>${esc(workout.name)}</h1></div>
-        <button class="button button-secondary button-small" type="button" data-action="picker-workout-add">＋ Ejercicio</button>
-      </div>
-      <div class="workout-summary card">
-        <div><strong>${doneSets}/${allSets.length}</strong><small>series completadas</small></div>
-        <div><strong data-live-duration>${formatDuration(elapsed)}</strong><small>tiempo</small></div>
-        <div><strong>${formatWeight(sessionVolume(workout))}</strong><small>kg de volumen</small></div>
-      </div>
-      <div class="progress-track"><div class="progress-bar" style="width:${percentage}%"></div></div>
+    <section class="page workout-page premium-workout-page">
+      <header class="workout-command-header">
+        <div>
+          <p class="eyebrow"><span class="live-dot"></span> Entrenamiento en curso</p>
+          <h1>${esc(workout.name)}</h1>
+          <p>${finishedExercises} de ${workout.exercises.length} ejercicios completados</p>
+        </div>
+        <button class="command-add-button" type="button" data-action="picker-workout-add"><span>＋</span> Ejercicio</button>
+      </header>
 
-      <div class="workout-list section">
+      <section class="workout-control-deck">
+        <div class="workout-progress-ring" style="--progress:${percentage * 3.6}deg"><div><strong>${percentage}%</strong><small>completado</small></div></div>
+        <div class="workout-live-metrics">
+          <div><span>Series</span><strong>${doneSets}<small>/${allSets.length}</small></strong></div>
+          <div><span>Tiempo</span><strong data-live-duration>${formatDuration(elapsed)}</strong></div>
+          <div><span>Volumen</span><strong>${formatWeight(sessionVolume(workout))}<small> kg</small></strong></div>
+        </div>
+      </section>
+
+      <div class="workout-progress-track"><i style="width:${percentage}%"></i></div>
+
+      <div class="workout-list premium-workout-list section">
         ${workout.exercises.map((exercise, index) => renderWorkoutExercise(exercise, index)).join('')}
       </div>
 
-      <section class="section card">
-        <label class="field"><span>Notas generales de la sesión</span><textarea data-action="workout-notes" placeholder="Cómo te has sentido, molestias, cambios realizados…">${esc(workout.notes || '')}</textarea></label>
+      <section class="section premium-notes-card">
+        <div><p class="eyebrow">Diario de sesión</p><h2>Notas generales</h2></div>
+        <textarea data-action="workout-notes" placeholder="Cómo te has sentido, molestias, cambios realizados…">${esc(workout.notes || '')}</textarea>
       </section>
 
-      <section class="section grid grid-3 workout-footer-actions">
+      <section class="section premium-workout-actions">
         <button class="button button-secondary" type="button" data-action="save-exit-workout">Guardar y salir</button>
-        <button class="button button-danger" type="button" data-action="cancel-workout">Cancelar sesión</button>
-        <button class="button button-primary" type="button" data-action="finish-workout" ${doneSets ? '' : 'disabled'}>Finalizar sesión</button>
+        <button class="button button-danger" type="button" data-action="cancel-workout">Cancelar</button>
+        <button class="button button-primary finish-command" type="button" data-action="finish-workout" ${doneSets ? '' : 'disabled'}>Finalizar sesión <span>→</span></button>
       </section>
     </section>`;
   updateLiveDuration();
@@ -495,34 +533,36 @@ function renderWorkoutExercise(item, index) {
   const completed = completedSets(item).length;
   const isDone = item.sets.length > 0 && completed === item.sets.length;
 
-  return `<article class="card workout-exercise-card ${isDone ? 'exercise-complete' : ''}">
-    <div class="exercise-title-row">
+  return `<article class="workout-exercise-card premium-exercise-card ${isDone ? 'exercise-complete' : ''}">
+    <div class="premium-exercise-head">
       <button class="exercise-name-button" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">
-        <span class="exercise-index">${index + 1}</span>
-        <span><strong>${esc(exercise.name)}</strong><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small></span>
+        <span class="exercise-sequence">${String(index + 1).padStart(2, '0')}</span>
+        <span class="exercise-head-copy"><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small><strong>${esc(exercise.name)}</strong><em>${item.targetSets} × ${item.repMin}–${item.repMax} ${item.unit === 'sec' ? 'seg' : 'reps'} · ${item.restSeconds}s</em></span>
       </button>
-      <span class="pill ${isDone ? 'pill-success' : ''}">${completed}/${item.sets.length}</span>
+      <div class="exercise-status-stack"><span class="exercise-progress-pill ${isDone ? 'done' : ''}">${completed}/${item.sets.length}</span>${isDone ? '<small>Completado</small>' : '<small>Series</small>'}</div>
     </div>
 
-    <div class="target-line"><span>${item.targetSets} series</span><span>${item.repMin}–${item.repMax} ${item.unit === 'sec' ? 'segundos' : 'reps'}</span><span>${item.restSeconds}s descanso</span></div>
-    ${state.settings.showTips ? `<p class="exercise-note">${esc(exercise.summary)}</p>` : ''}
+    ${state.settings.showTips ? `<div class="exercise-coach-line"><span>TIP</span><p>${esc(exercise.summary)}</p></div>` : ''}
+    ${last ? `<div class="last-session-premium-box"><div><span>ÚLTIMA VEZ</span>${renderLastSets(last.exercise)}</div></div>` : ''}
+    ${recommendation ? `<div class="recommendation premium-recommendation recommendation-${recommendation.tone}"><div><span class="coach-badge">COACH</span><strong>${esc(recommendation.title)}</strong><p>${esc(recommendation.text)}</p></div>${recommendation.suggestedWeight ? `<button class="button button-secondary button-small" type="button" data-action="apply-suggested-weight" data-exercise="${index}" data-weight="${recommendation.suggestedWeight}">Aplicar ${formatWeight(recommendation.suggestedWeight)} kg</button>` : ''}</div>` : ''}
 
-    ${last ? `<div class="last-session-box"><strong>Última sesión</strong>${renderLastSets(last.exercise)}</div>` : ''}
-    ${recommendation ? `<div class="recommendation recommendation-${recommendation.tone}"><div><strong>${esc(recommendation.title)}</strong><p>${esc(recommendation.text)}</p></div>${recommendation.suggestedWeight ? `<button class="button button-secondary button-small" type="button" data-action="apply-suggested-weight" data-exercise="${index}" data-weight="${recommendation.suggestedWeight}">Aplicar ${formatWeight(recommendation.suggestedWeight)} kg</button>` : ''}</div>` : ''}
-
-    <div class="sets-table" role="table" aria-label="Series de ${esc(exercise.name)}">
+    <div class="sets-table premium-sets" role="table" aria-label="Series de ${esc(exercise.name)}">
       <div class="set-row set-header" role="row"><span>Serie</span><span>Peso kg</span><span>${item.unit === 'sec' ? 'Seg.' : 'Reps'}</span><span>Reserva</span><span>Hecha</span><span></span></div>
       ${item.sets.map((set, setIndex) => renderSetRow(set, index, setIndex, item)).join('')}
     </div>
 
-    <div class="exercise-card-actions">
-      <button class="button button-secondary button-small" type="button" data-action="add-set" data-exercise="${index}">＋ Serie</button>
-      <button class="button button-secondary button-small" type="button" data-action="manual-rest" data-exercise="${index}">◷ Descanso</button>
-      <button class="button button-secondary button-small" type="button" data-action="picker-workout-replace" data-exercise="${index}">⇄ Cambiar</button>
-      <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">Técnica</button>
-      <button class="button button-ghost button-small" type="button" data-action="remove-workout-exercise" data-exercise="${index}">Quitar</button>
+    <div class="premium-exercise-actions">
+      <div>
+        <button class="mini-action" type="button" data-action="add-set" data-exercise="${index}">＋ Serie</button>
+        <button class="mini-action" type="button" data-action="manual-rest" data-exercise="${index}">◷ Descanso</button>
+        <button class="mini-action" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">Técnica</button>
+      </div>
+      <div>
+        <button class="mini-action" type="button" data-action="picker-workout-replace" data-exercise="${index}">⇄ Cambiar</button>
+        <button class="mini-action danger-mini" type="button" data-action="remove-workout-exercise" data-exercise="${index}">Quitar</button>
+      </div>
     </div>
-    <label class="field exercise-notes"><span>Nota del ejercicio</span><input data-action="exercise-notes" data-exercise="${index}" value="${esc(item.notes || '')}" placeholder="Ej. ajustar asiento al 4"></label>
+    <label class="premium-exercise-note"><span>Nota rápida</span><input data-action="exercise-notes" data-exercise="${index}" value="${esc(item.notes || '')}" placeholder="Ej. asiento al 4, agarre neutro…"></label>
   </article>`;
 }
 

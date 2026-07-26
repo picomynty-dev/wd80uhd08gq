@@ -1,11 +1,28 @@
-# Cambios de My Fit Plan 2.2
+# My Fit Plan 3.0A — Dark Energy
 
-- Diseño general más compacto, especialmente en iPhone.
-- Contraste corregido en series completadas y número de serie siempre visible.
-- Calendario, semana, último entrenamiento y récords recientes trasladados a Inicio.
-- Biblioteca ampliada de 55 a 283 ejercicios.
-- Buscador por relevancia, con tolerancia a errores y consultas de varias palabras.
-- Filtros por músculo, material, nivel, favoritos, recientes y personalizados.
-- Pictogramas vectoriales del patrón de movimiento y mapa muscular principal/secundario.
-- Resultados cargados en bloques de 36 para evitar una pantalla inicial pesada.
-- Datos de la versión 2.1 migrados automáticamente.
+## Rediseño premium
+- Nueva identidad visual Dark Energy.
+- Navegación inferior flotante con iconos coherentes.
+- Cabecera, tarjetas, botones y jerarquía visual renovados.
+- Modo oscuro por defecto para usuarios nuevos, conservando los ajustes existentes.
+
+## Nueva pantalla de Inicio
+- Tarjeta protagonista del entrenamiento de hoy.
+- Progreso semanal circular.
+- Racha, calendario, marcas recientes y última sesión integrados.
+- Accesos rápidos rediseñados.
+
+## Experiencia de entrenamiento
+- Cabecera de sesión y panel de métricas en vivo.
+- Tarjetas de ejercicio más claras y compactas.
+- Coach, última sesión, series, acciones y notas mejor jerarquizados.
+- Nueva barra de progreso y acciones finales.
+
+## Compatibilidad
+- Migra automáticamente los datos guardados desde v2.2, v2.1 y versiones anteriores.
+- Continúa funcionando como PWA en iPhone y GitHub Pages.
+
+## Próximo sprint: 3.0B
+- Fichas visuales premium.
+- Mapa anatómico frontal y posterior de mayor precisión.
+- Ilustraciones de movimiento por ejercicio.

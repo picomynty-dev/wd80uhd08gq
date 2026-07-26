@@ -1,13 +1,13 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV22';
-export const LEGACY_KEYS = ['myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '2.2.0';
+export const STORAGE_KEY = 'myFitPlanStateV30A';
+export const LEGACY_KEYS = ['myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.0.0-alpha.1';
 
 export const defaultSettings = {
   accent: 'orange',
-  appearance: 'system',
+  appearance: 'dark',
   compact: true,
   showTips: true,
   reduceMotion: false,
@@ -18,7 +18,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 22,
+  schemaVersion: 30,
   appVersion: APP_VERSION,
   profile: null,
   settings: clone(defaultSettings),
@@ -78,7 +78,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 22,
+    schemaVersion: 30,
     appVersion: APP_VERSION,
     profile,
     settings: { ...clone(defaultSettings), ...(saved.settings || {}) },

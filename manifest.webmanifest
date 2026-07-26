@@ -1,12 +1,12 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Planifica, registra y mejora tus entrenamientos con una biblioteca visual de más de 280 ejercicios.",
+  "description": "Entrena con claridad, registra cada serie y mejora con recomendaciones de progresión.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f1f5f9",
-  "theme_color": "#f97316",
+  "background_color": "#070b14",
+  "theme_color": "#0a0f1c",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
