@@ -1,4 +1,5 @@
 import { extraExerciseLibrary } from './exercises-extra.js';
+import { premiumExerciseData } from './premium-data.js';
 
 'use strict';
 
@@ -265,6 +266,8 @@ function normalizeExerciseData(id, exercise = {}) {
     anatomyImages: exercise.anatomyImages || null,
     alternativeReasons: exercise.alternativeReasons || {},
     premium: Boolean(exercise.premium),
+    premiumTier: exercise.premiumTier || '',
+    media: exercise.media || null,
     custom: Boolean(exercise.custom)
   };
 }
@@ -273,7 +276,9 @@ export function getAllExercises(customExercises = []) {
   const custom = Object.fromEntries(
     customExercises.map((item) => [item.id, { ...item, custom: true }])
   );
-  const merged = { ...baseExerciseLibrary, ...extraExerciseLibrary, ...custom };
+  const baseMerged = { ...baseExerciseLibrary, ...extraExerciseLibrary };
+  const enriched = Object.fromEntries(Object.entries(baseMerged).map(([id, exercise]) => [id, { ...exercise, ...(premiumExerciseData[id] || {}) }]));
+  const merged = { ...enriched, ...custom };
   return Object.fromEntries(Object.entries(merged).map(([id, exercise]) => [id, normalizeExerciseData(id, exercise)]));
 }
 

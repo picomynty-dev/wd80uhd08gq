@@ -1104,9 +1104,9 @@ function renderLibrary() {
   app.innerHTML = `
     <section class="page library-page">
       <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
-      <button class="premium-pilot-banner" type="button" data-action="exercise-details" data-id="barbell_bench_press">
-        <span class="pilot-banner-badge">FICHA PREMIUM</span>
-        <span><strong>Prueba la nueva ficha premium</strong><small>Press banca con barra · movimiento, anatomía y técnica</small></span>
+      <button class="premium-pilot-banner media-banner" type="button" data-action="library-mode" data-mode="media">
+        <span class="pilot-banner-badge">20 ANIMACIONES</span>
+        <span><strong>Aprende viendo el recorrido</strong><small>Demostraciones en bucle, anatomía frontal y posterior y técnica paso a paso.</small></span>
         <b>→</b>
       </button>
       <section class="card library-controls">
@@ -1118,7 +1118,7 @@ function renderLibrary() {
           <select id="libraryLevel" class="filter-select" aria-label="Nivel">${levels.map((value) => `<option ${value === libraryFilters.level ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
         </div>
         <div class="segmented-control">
-          ${[['all','Todos'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
+          ${[['all','Todos'],['media','Animados'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
         </div>
       </section>
       <div id="libraryResults" class="library-results section">${libraryResultsHtml()}</div>
@@ -1134,6 +1134,7 @@ function libraryResultsHtml() {
     if (libraryFilters.muscle !== 'Todos' && exercise.muscle !== libraryFilters.muscle) return false;
     if (libraryFilters.equipment !== 'Todos' && exercise.equipment !== libraryFilters.equipment) return false;
     if (libraryFilters.level !== 'Todos' && exercise.level !== libraryFilters.level) return false;
+    if (libraryFilters.mode === 'media' && !exercise.media?.video) return false;
     if (libraryFilters.mode === 'favorites' && !state.favorites.includes(id)) return false;
     if (libraryFilters.mode === 'recent' && !recent.has(id)) return false;
     if (libraryFilters.mode === 'custom' && !exercise.custom) return false;
@@ -1153,7 +1154,7 @@ function libraryResultsHtml() {
       <div class="library-card-body">
         <div class="card-header"><div><div class="exercise-meta"><span>${esc(exercise.muscle)}</span><span>${esc(exercise.level)}</span></div><h3>${esc(exercise.name)}</h3></div><button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button></div>
         <p class="muted small clamp-2">${esc(exercise.summary)}</p>
-        <div class="exercise-meta"><span>${esc(exercise.equipment)}</span>${exercise.custom ? '<span>Personalizado</span>' : ''}${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}</div>
+        <div class="exercise-meta"><span>${esc(exercise.equipment)}</span>${exercise.media?.video ? '<span class="motion-badge">▶ Animación</span>' : ''}${exercise.custom ? '<span>Personalizado</span>' : ''}${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}</div>
         <div class="library-card-actions">
           <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Técnica</button>
           <button class="button button-primary button-small" type="button" data-action="library-add-workout" data-id="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Entreno</button>
@@ -1866,20 +1867,21 @@ function openExerciseDetails(id) {
   const primary = (exercise.primaryMuscles || [exercise.muscle]).join(', ');
   const secondary = (exercise.secondaryMuscles || []).join(', ');
   const isPilot = Boolean(exercise.premium);
+  const hasMotion = Boolean(exercise.media?.video);
 
   const wrapper = openModal(`
     <article class="premium-exercise-detail ${isPilot ? 'premium-pilot-detail' : ''}">
       <header class="premium-detail-header">
         <button class="premium-detail-back" type="button" data-close-modal aria-label="Volver">←</button>
         <div class="premium-detail-title">
-          <p class="eyebrow">${isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`}</p>
+          <p class="eyebrow">${hasMotion ? 'MULTIMEDIA · TÉCNICA' : (isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`)}</p>
           <h2>${esc(exercise.name)}</h2>
           ${exercise.englishName ? `<p>${esc(exercise.englishName)}</p>` : ''}
         </div>
         <button class="premium-favorite ${favorite ? 'active' : ''}" type="button" data-premium-favorite="${esc(id)}" aria-label="${favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}">★</button>
       </header>
 
-      ${premiumExerciseVisual(exercise, id)}
+      ${premiumExerciseVisual(exercise, id, { reduceMotion: state.settings.reduceMotion })}
 
       <section class="premium-detail-summary">
         <div class="premium-data-chips">
@@ -1944,6 +1946,32 @@ function openExerciseDetails(id) {
       panel.hidden = !active;
     });
   }));
+  const motionVideo = wrapper.querySelector('[data-motion-video]');
+  const motionToggle = wrapper.querySelector('[data-motion-toggle]');
+  if (motionVideo && motionToggle) {
+    const updateMotionToggle = () => {
+      motionToggle.innerHTML = motionVideo.paused ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>';
+    };
+    motionToggle.addEventListener('click', async () => {
+      if (motionVideo.paused) {
+        try { await motionVideo.play(); } catch (error) { showToast('Pulsa de nuevo para iniciar la demostración.'); }
+      } else motionVideo.pause();
+      updateMotionToggle();
+    });
+    motionVideo.addEventListener('play', updateMotionToggle);
+    motionVideo.addEventListener('pause', updateMotionToggle);
+    wrapper.querySelector('[data-motion-replay]')?.addEventListener('click', async () => {
+      motionVideo.currentTime = 0;
+      try { await motionVideo.play(); } catch (error) { /* iOS puede pedir interacción */ }
+      updateMotionToggle();
+    });
+    wrapper.querySelectorAll('[data-motion-speed]').forEach((button) => button.addEventListener('click', () => {
+      motionVideo.playbackRate = Number(button.dataset.motionSpeed) || 1;
+      wrapper.querySelectorAll('[data-motion-speed]').forEach((item) => item.classList.toggle('active', item === button));
+    }));
+    updateMotionToggle();
+  }
+
   wrapper.querySelector('[data-premium-favorite]')?.addEventListener('click', (event) => {
     const button = event.currentTarget;
     state.favorites = state.favorites.includes(id) ? state.favorites.filter((item) => item !== id) : [...state.favorites, id];

@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV312';
-export const LEGACY_KEYS = ['myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.1.2';
+export const STORAGE_KEY = 'myFitPlanStateV32';
+export const LEGACY_KEYS = ['myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.2';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -19,7 +19,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 312,
+  schemaVersion: 320,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -118,7 +118,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 312,
+    schemaVersion: 320,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
