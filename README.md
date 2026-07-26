@@ -1,11 +1,3 @@
-# My Fit Plan 3.2
+# My Fit Plan 3.2.1
 
-Aplicación web instalable para crear rutinas, registrar series y consultar técnica de ejercicios.
-
-## Novedad principal
-
-La biblioteca incorpora 20 fichas multimedia con demostración animada, anatomía frontal y posterior, respiración, ritmo, errores frecuentes y alternativas.
-
-## Publicación
-
-Sube el contenido del proyecto a la raíz de GitHub Pages conservando las carpetas `js`, `assets` e `icons`.
+Corrección multimedia: vídeos y mapas anatómicos integrados en JavaScript para evitar rutas rotas al publicar en GitHub Pages. También refuerza la pestaña Claves y añade mensajes de error visibles.

@@ -2154,3 +2154,26 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
   .motion-speed button { flex: 1; }
   .movement-cue-strip { grid-template-columns: 1fr; }
 }
+
+
+/* My Fit Plan 3.2.1 · reparación multimedia */
+.premium-visual-panel[hidden] { display: none !important; }
+.motion-media-error {
+  position: absolute;
+  inset: 50% 18px auto;
+  z-index: 3;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  transform: translateY(-50%);
+  border: 1px solid rgba(249,115,22,.25);
+  border-radius: 15px;
+  background: rgba(8,14,27,.92);
+  color: #f8fafc;
+  text-align: center;
+}
+.motion-media-error[hidden] { display: none !important; }
+.motion-media-error strong { font-size: .78rem; }
+.motion-media-error small { color: #9aa7ba; font-size: .63rem; line-height: 1.4; }
+.media-load-failed { display: grid; min-height: 260px; place-items: center; }
+.media-load-failed img { min-height: 230px; object-fit: contain; }
