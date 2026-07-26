@@ -1952,3 +1952,97 @@ html[data-theme="dark"] {
 .appearance-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.appearance-option{position:relative;min-width:0}.appearance-option input{position:absolute;opacity:0;pointer-events:none}.appearance-option>span{display:grid;min-height:104px;place-content:center;justify-items:center;gap:4px;padding:12px 8px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2);text-align:center;cursor:pointer}.appearance-option b{color:var(--accent);font-size:1.45rem}.appearance-option strong{font-size:.75rem}.appearance-option small{color:var(--muted);font-size:.57rem;line-height:1.25}.appearance-option input:checked+span{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px rgba(var(--accent-rgb),.11)}
 html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea{color-scheme:light}html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{color-scheme:dark}
 @media(max-width:560px){.custom-palette-card{grid-template-columns:1fr}.hex-color-field{grid-template-columns:58px 1fr;align-items:center}.appearance-option>span{min-height:92px;padding-inline:5px}}
+
+/* My Fit Plan 3.1.2 · acordeones de entrenamientos y rutinas */
+.accordion-all-button {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 850;
+}
+.accordion-all-button:hover { border-color: color-mix(in srgb, var(--accent) 38%, var(--line)); color: var(--accent); }
+.accordion-chevron {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 950;
+  transition: transform 180ms ease, color 180ms ease, background 180ms ease;
+}
+.is-collapsed .accordion-chevron { transform: rotate(-90deg); }
+.plan-day-body[hidden], .exercise-accordion-body[hidden] { display: none !important; }
+
+.plan-day-header { align-items: center; }
+.plan-day-summary-button {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.plan-day-heading-copy { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.plan-day-heading-copy .pill { width: max-content; }
+.plan-day-heading-copy strong { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.plan-day-heading-copy small { color: var(--muted); font-size: .7rem; font-weight: 700; }
+.plan-day-header-actions { flex: 0 0 auto; }
+.plan-day.is-collapsed .plan-day-header { border-bottom-color: transparent; }
+.plan-day.is-collapsed { box-shadow: none; }
+
+.workout-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.workout-accordion-all { color: #aeb8c8; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.055); }
+.exercise-accordion-toggle {
+  display: flex;
+  min-width: 76px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.exercise-accordion-toggle .accordion-chevron { width: 28px; height: 34px; background: var(--surface-2); }
+.premium-exercise-card.is-collapsed { box-shadow: none; }
+.premium-exercise-card.is-collapsed .premium-exercise-head { padding-block: 11px; }
+.premium-exercise-card.is-collapsed.exercise-complete { background: color-mix(in srgb, var(--success-soft) 35%, var(--premium-surface-solid)); }
+
+@media (max-width: 640px) {
+  .plan-toolbar { align-items: flex-start; }
+  .plan-toolbar .inline-actions { justify-content: flex-end; }
+  .plan-day-header { padding: 12px; }
+  .plan-day-summary-button { gap: 8px; }
+  .plan-day-summary-button > .pill-success { display: none; }
+  .plan-day-heading-copy strong { font-size: .9rem; }
+  .plan-day-heading-copy small { font-size: .61rem; }
+  .plan-day-header-actions .icon-button { width: 32px; height: 32px; }
+  .accordion-chevron { width: 28px; height: 28px; }
+  .workout-command-header { align-items: flex-start; }
+  .workout-header-actions { max-width: 150px; }
+  .workout-accordion-all { min-height: 31px; padding: 5px 8px; font-size: .61rem; }
+  .exercise-accordion-toggle { min-width: 68px; gap: 5px; }
+  .exercise-accordion-toggle .accordion-chevron { width: 25px; height: 31px; border-radius: 9px; }
+}
+
+@media (max-width: 390px) {
+  .plan-toolbar { display: grid; }
+  .plan-toolbar .inline-actions { justify-content: stretch; }
+  .plan-toolbar .inline-actions > button { flex: 1 1 auto; }
+  .plan-day-header-actions { gap: 4px; }
+  .workout-header-actions { display: grid; justify-items: end; }
+  .workout-accordion-all { order: 2; }
+}

@@ -1,18 +1,17 @@
-# My Fit Plan 3.1.1
+# My Fit Plan 3.1.2
 
-- Paleta de color libre con selector nativo y código hexadecimal.
-- Vista previa inmediata del color.
-- Modos claro, oscuro y según el dispositivo reparados.
-- Contraste automático para colores claros.
-- Migración transparente desde 3.1.
+## Cambios principales
 
-# Cambios de My Fit Plan 3.1
+- Los entrenamientos del apartado **Entrenar** ahora se pueden desplegar y recoger individualmente.
+- Al entrar en una sesión queda abierto el primer ejercicio pendiente y el resto aparece recogido para reducir desplazamientos.
+- Cuando completas todas las series de un ejercicio, se recoge automáticamente y se abre el siguiente ejercicio pendiente.
+- Nuevo botón **Abrir todos / Recoger todos** en la sesión.
+- Los días del apartado **Plan** funcionan ahora como acordeones.
+- Cada día muestra un resumen compacto con número de ejercicios y duración aproximada.
+- Nuevo botón **Abrir todos / Recoger todos** dentro del editor de la rutina.
+- Se conserva toda la información de la versión 3.1.1 mediante migración automática.
+- Nueva caché de aplicación para asegurar la actualización en iPhone.
 
-- Nuevo onboarding profesional de seis pasos.
-- Perfil ampliado con experiencia, lugar de entrenamiento, prioridades y movimientos a evitar.
-- Tres caminos iniciales: recomendación, plantilla o creación libre.
-- Sistema de carpetas para organizar rutinas.
-- Creación, duplicado, renombrado y eliminación de rutinas.
-- Plantillas Push/Pull/Legs, Upper/Lower, hipertrofia clásica y especialización estética.
-- Nombres de entrenamientos más claros y profesionales.
-- Conservación del historial y migración desde 3.0B y versiones anteriores.
+## Próxima fase
+
+La siguiente versión mayor será My Fit Plan 3.2, centrada en fichas multimedia de ejercicios, vídeos cortos de ejecución y una biblioteca visual más profesional.

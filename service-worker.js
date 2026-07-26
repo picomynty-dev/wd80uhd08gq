@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-fit-plan-v311-20260726-1';
+const CACHE_NAME = 'my-fit-plan-v312-20260726-1';
 const APP_SHELL = [
   './',
   './index.html',
