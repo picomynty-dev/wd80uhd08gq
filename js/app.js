@@ -56,6 +56,10 @@ let restInterval = null;
 let waitingServiceWorker = null;
 let onboardingStep = 1;
 let onboardingDraft = null;
+let collapsedPlanDays = new Set();
+let collapsedWorkoutExercises = new Set();
+let planAccordionPlanId = null;
+let workoutAccordionSessionId = null;
 
 init();
 
@@ -782,6 +786,31 @@ function activeFolder() {
   return state.routineFolders?.find((folder) => folder.id === state.activeFolderId) || state.routineFolders?.[0] || null;
 }
 
+function ensurePlanAccordionState(days = []) {
+  const planId = state.plan?.id || 'no-plan';
+  if (planAccordionPlanId === planId) return;
+  collapsedPlanDays = new Set(days.map((_, index) => index).filter((index) => index !== clamp(Number(state.nextWorkoutIndex) || 0, 0, Math.max(0, days.length - 1))));
+  planAccordionPlanId = planId;
+}
+
+function ensureWorkoutAccordionState(workout) {
+  if (!workout || workoutAccordionSessionId === workout.id) return;
+  const firstIncomplete = workout.exercises.findIndex((exercise) => completedSets(exercise).length < exercise.sets.length);
+  const openIndex = firstIncomplete >= 0 ? firstIncomplete : 0;
+  collapsedWorkoutExercises = new Set(workout.exercises.map((_, index) => index).filter((index) => index !== openIndex));
+  workoutAccordionSessionId = workout.id;
+}
+
+function planDayDuration(day) {
+  const exerciseSeconds = (day.exercises || []).reduce((sum, item) => {
+    const sets = Math.max(1, Number(item.targetSets) || 1);
+    const work = sets * 45;
+    const rest = Math.max(0, sets - 1) * (Number(item.restSeconds) || 75);
+    return sum + work + rest;
+  }, 0);
+  return Math.max(10, Math.round(exerciseSeconds / 60));
+}
+
 function renderPlan() {
   if (!state.profile) return renderLocked('Primero configura My Fit Plan.', 'Completa el onboarding para crear o importar tus primeras rutinas.');
   ensureRoutineLibrary();
@@ -789,6 +818,7 @@ function renderPlan() {
   const folder = activeFolder();
   const routines = folder?.routines || [];
   const days = state.plan?.days || [];
+  ensurePlanAccordionState(days);
   app.innerHTML = `
     <section class="page routines-page">
       <header class="routines-header">
@@ -826,6 +856,7 @@ function renderPlan() {
         <div class="plan-toolbar card premium-plan-toolbar">
           <span><strong>${days.length}</strong> entrenamientos · <strong>${days.reduce((sum, day) => sum + day.exercises.length, 0)}</strong> ejercicios</span>
           <div class="inline-actions">
+            <button class="button button-secondary button-small accordion-all-button" type="button" data-action="toggle-all-plan-days">${collapsedPlanDays.size ? 'Abrir todos' : 'Recoger todos'}</button>
             <button class="button button-secondary button-small" type="button" data-action="onboarding-start">Reconfigurar</button>
             ${state.plan.templateId !== 'custom' ? '<button class="button button-danger button-small" type="button" data-action="restore-plan">Restaurar plantilla</button>' : ''}
           </div>
@@ -855,20 +886,28 @@ function routineLibraryCard(routine) {
 }
 
 function renderPlanDay(day, dayIndex) {
-  return `<article class="card plan-day ${dayIndex === state.nextWorkoutIndex ? 'next-day' : ''}">
+  const collapsed = collapsedPlanDays.has(dayIndex);
+  const duration = planDayDuration(day);
+  return `<article class="card plan-day ${dayIndex === state.nextWorkoutIndex ? 'next-day' : ''} ${collapsed ? 'is-collapsed' : ''}">
     <div class="plan-day-header">
-      <div><span class="pill">Día ${dayIndex + 1}</span><h2>${esc(day.name)}</h2>${dayIndex === state.nextWorkoutIndex ? '<span class="pill pill-success">Siguiente</span>' : ''}</div>
-      <div class="inline-actions">
+      <button class="plan-day-summary-button" type="button" data-action="toggle-plan-day" data-day="${dayIndex}" aria-expanded="${!collapsed}">
+        <span class="plan-day-heading-copy"><span class="pill">Día ${dayIndex + 1}</span><strong>${esc(day.name)}</strong><small>${day.exercises.length} ejercicios · ${duration} min aprox.</small></span>
+        ${dayIndex === state.nextWorkoutIndex ? '<span class="pill pill-success">Siguiente</span>' : ''}
+        <span class="accordion-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div class="inline-actions plan-day-header-actions">
         <button class="icon-button" type="button" data-action="rename-day" data-day="${dayIndex}" aria-label="Cambiar nombre">✎</button>
         <button class="icon-button danger-icon" type="button" data-action="delete-day" data-day="${dayIndex}" aria-label="Eliminar día">×</button>
       </div>
     </div>
-    <div class="plan-exercise-list">
-      ${day.exercises.length ? day.exercises.map((item, exerciseIndex) => renderPlanExercise(item, dayIndex, exerciseIndex, day.exercises.length)).join('') : emptyState('Día vacío', 'Añade al menos un ejercicio para poder entrenarlo.')}
-    </div>
-    <div class="plan-day-actions">
-      <button class="button button-secondary" type="button" data-action="picker-plan-add" data-day="${dayIndex}">＋ Añadir ejercicio</button>
-      <button class="button button-primary" type="button" data-action="start-specific-day" data-day="${dayIndex}" ${day.exercises.length ? '' : 'disabled'}>Entrenar este día</button>
+    <div class="plan-day-body" ${collapsed ? 'hidden' : ''}>
+      <div class="plan-exercise-list">
+        ${day.exercises.length ? day.exercises.map((item, exerciseIndex) => renderPlanExercise(item, dayIndex, exerciseIndex, day.exercises.length)).join('') : emptyState('Día vacío', 'Añade al menos un ejercicio para poder entrenarlo.')}
+      </div>
+      <div class="plan-day-actions">
+        <button class="button button-secondary" type="button" data-action="picker-plan-add" data-day="${dayIndex}">＋ Añadir ejercicio</button>
+        <button class="button button-primary" type="button" data-action="start-specific-day" data-day="${dayIndex}" ${day.exercises.length ? '' : 'disabled'}>Entrenar este día</button>
+      </div>
     </div>
   </article>`;
 }
@@ -938,6 +977,7 @@ function renderWorkout() {
   if (!state.plan?.days?.length) return renderLocked('No tienes días de entrenamiento.', 'Añade al menos un día con ejercicios desde el plan.');
   if (!state.activeWorkout) createActiveWorkout();
   const workout = state.activeWorkout;
+  ensureWorkoutAccordionState(workout);
   const allSets = workout.exercises.flatMap((exercise) => exercise.sets);
   const doneSets = allSets.filter((set) => set.completed).length;
   const percentage = allSets.length ? Math.round((doneSets / allSets.length) * 100) : 0;
@@ -952,7 +992,10 @@ function renderWorkout() {
           <h1>${esc(workout.name)}</h1>
           <p>${finishedExercises} de ${workout.exercises.length} ejercicios completados</p>
         </div>
-        <button class="command-add-button" type="button" data-action="picker-workout-add"><span>＋</span> Ejercicio</button>
+        <div class="workout-header-actions">
+          <button class="accordion-all-button workout-accordion-all" type="button" data-action="toggle-all-workout-exercises">${collapsedWorkoutExercises.size ? 'Abrir todos' : 'Recoger todos'}</button>
+          <button class="command-add-button" type="button" data-action="picker-workout-add"><span>＋</span> Ejercicio</button>
+        </div>
       </header>
 
       <section class="workout-control-deck">
@@ -990,37 +1033,43 @@ function renderWorkoutExercise(item, index) {
   const last = lastExercisePerformance(state.history, item.exerciseId);
   const completed = completedSets(item).length;
   const isDone = item.sets.length > 0 && completed === item.sets.length;
+  const collapsed = collapsedWorkoutExercises.has(index);
 
-  return `<article class="workout-exercise-card premium-exercise-card ${isDone ? 'exercise-complete' : ''}">
+  return `<article class="workout-exercise-card premium-exercise-card ${isDone ? 'exercise-complete' : ''} ${collapsed ? 'is-collapsed' : ''}">
     <div class="premium-exercise-head">
       <button class="exercise-name-button" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">
         <span class="exercise-sequence">${String(index + 1).padStart(2, '0')}</span>
         <span class="exercise-head-copy"><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small><strong>${esc(exercise.name)}</strong><em>${item.targetSets} × ${item.repMin}–${item.repMax} ${item.unit === 'sec' ? 'seg' : 'reps'} · ${item.restSeconds}s</em></span>
       </button>
-      <div class="exercise-status-stack"><span class="exercise-progress-pill ${isDone ? 'done' : ''}">${completed}/${item.sets.length}</span>${isDone ? '<small>Completado</small>' : '<small>Series</small>'}</div>
+      <button class="exercise-accordion-toggle" type="button" data-action="toggle-workout-exercise" data-exercise="${index}" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Desplegar' : 'Recoger'} ${esc(exercise.name)}">
+        <span class="exercise-status-stack"><span class="exercise-progress-pill ${isDone ? 'done' : ''}">${completed}/${item.sets.length}</span>${isDone ? '<small>Completado</small>' : '<small>Series</small>'}</span>
+        <span class="accordion-chevron" aria-hidden="true">⌄</span>
+      </button>
     </div>
 
-    ${state.settings.showTips ? `<div class="exercise-coach-line"><span>TIP</span><p>${esc(exercise.summary)}</p></div>` : ''}
-    ${last ? `<div class="last-session-premium-box"><div><span>ÚLTIMA VEZ</span>${renderLastSets(last.exercise)}</div></div>` : ''}
-    ${recommendation ? `<div class="recommendation premium-recommendation recommendation-${recommendation.tone}"><div><span class="coach-badge">COACH</span><strong>${esc(recommendation.title)}</strong><p>${esc(recommendation.text)}</p></div>${recommendation.suggestedWeight ? `<button class="button button-secondary button-small" type="button" data-action="apply-suggested-weight" data-exercise="${index}" data-weight="${recommendation.suggestedWeight}">Aplicar ${formatWeight(recommendation.suggestedWeight)} kg</button>` : ''}</div>` : ''}
+    <div class="exercise-accordion-body" ${collapsed ? 'hidden' : ''}>
+      ${state.settings.showTips ? `<div class="exercise-coach-line"><span>TIP</span><p>${esc(exercise.summary)}</p></div>` : ''}
+      ${last ? `<div class="last-session-premium-box"><div><span>ÚLTIMA VEZ</span>${renderLastSets(last.exercise)}</div></div>` : ''}
+      ${recommendation ? `<div class="recommendation premium-recommendation recommendation-${recommendation.tone}"><div><span class="coach-badge">COACH</span><strong>${esc(recommendation.title)}</strong><p>${esc(recommendation.text)}</p></div>${recommendation.suggestedWeight ? `<button class="button button-secondary button-small" type="button" data-action="apply-suggested-weight" data-exercise="${index}" data-weight="${recommendation.suggestedWeight}">Aplicar ${formatWeight(recommendation.suggestedWeight)} kg</button>` : ''}</div>` : ''}
 
-    <div class="sets-table premium-sets" role="table" aria-label="Series de ${esc(exercise.name)}">
-      <div class="set-row set-header" role="row"><span>Serie</span><span>Peso kg</span><span>${item.unit === 'sec' ? 'Seg.' : 'Reps'}</span><span>Reserva</span><span>Hecha</span><span></span></div>
-      ${item.sets.map((set, setIndex) => renderSetRow(set, index, setIndex, item)).join('')}
-    </div>
-
-    <div class="premium-exercise-actions">
-      <div>
-        <button class="mini-action" type="button" data-action="add-set" data-exercise="${index}">＋ Serie</button>
-        <button class="mini-action" type="button" data-action="manual-rest" data-exercise="${index}">◷ Descanso</button>
-        <button class="mini-action" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">Técnica</button>
+      <div class="sets-table premium-sets" role="table" aria-label="Series de ${esc(exercise.name)}">
+        <div class="set-row set-header" role="row"><span>Serie</span><span>Peso kg</span><span>${item.unit === 'sec' ? 'Seg.' : 'Reps'}</span><span>Reserva</span><span>Hecha</span><span></span></div>
+        ${item.sets.map((set, setIndex) => renderSetRow(set, index, setIndex, item)).join('')}
       </div>
-      <div>
-        <button class="mini-action" type="button" data-action="picker-workout-replace" data-exercise="${index}">⇄ Cambiar</button>
-        <button class="mini-action danger-mini" type="button" data-action="remove-workout-exercise" data-exercise="${index}">Quitar</button>
+
+      <div class="premium-exercise-actions">
+        <div>
+          <button class="mini-action" type="button" data-action="add-set" data-exercise="${index}">＋ Serie</button>
+          <button class="mini-action" type="button" data-action="manual-rest" data-exercise="${index}">◷ Descanso</button>
+          <button class="mini-action" type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}">Técnica</button>
+        </div>
+        <div>
+          <button class="mini-action" type="button" data-action="picker-workout-replace" data-exercise="${index}">⇄ Cambiar</button>
+          <button class="mini-action danger-mini" type="button" data-action="remove-workout-exercise" data-exercise="${index}">Quitar</button>
+        </div>
       </div>
+      <label class="premium-exercise-note"><span>Nota rápida</span><input data-action="exercise-notes" data-exercise="${index}" value="${esc(item.notes || '')}" placeholder="Ej. asiento al 4, agarre neutro…"></label>
     </div>
-    <label class="premium-exercise-note"><span>Nota rápida</span><input data-action="exercise-notes" data-exercise="${index}" value="${esc(item.notes || '')}" placeholder="Ej. asiento al 4, agarre neutro…"></label>
   </article>`;
 }
 
@@ -1328,6 +1377,8 @@ async function handleAppClick(event) {
     'duplicate-routine': () => duplicateRoutine(target.dataset.id),
     'delete-routine': () => deleteRoutine(target.dataset.id),
     'add-day': addPlanDay,
+    'toggle-plan-day': () => togglePlanDay(Number(target.dataset.day)),
+    'toggle-all-plan-days': toggleAllPlanDays,
     'rename-day': () => renamePlanDay(Number(target.dataset.day)),
     'delete-day': () => deletePlanDay(Number(target.dataset.day)),
     'move-plan-exercise': () => movePlanExercise(Number(target.dataset.day), Number(target.dataset.exercise), target.dataset.direction),
@@ -1337,6 +1388,8 @@ async function handleAppClick(event) {
     'restore-plan': restoreRecommendedPlan,
     'start-specific-day': () => startSpecificDay(Number(target.dataset.day)),
     'exercise-details': () => openExerciseDetails(target.dataset.id),
+    'toggle-workout-exercise': () => toggleWorkoutExercise(Number(target.dataset.exercise)),
+    'toggle-all-workout-exercises': toggleAllWorkoutExercises,
     'toggle-set': () => toggleSet(Number(target.dataset.exercise), Number(target.dataset.set)),
     'add-set': () => addSet(Number(target.dataset.exercise)),
     'manual-rest': () => manualRest(Number(target.dataset.exercise)),
@@ -1639,6 +1692,32 @@ function deleteRoutine(routineId) {
   }});
 }
 
+function togglePlanDay(dayIndex) {
+  if (collapsedPlanDays.has(dayIndex)) collapsedPlanDays.delete(dayIndex);
+  else collapsedPlanDays.add(dayIndex);
+  renderPlan();
+}
+
+function toggleAllPlanDays() {
+  const days = state.plan?.days || [];
+  if (collapsedPlanDays.size) collapsedPlanDays.clear();
+  else collapsedPlanDays = new Set(days.map((_, index) => index));
+  renderPlan();
+}
+
+function toggleWorkoutExercise(exerciseIndex) {
+  if (collapsedWorkoutExercises.has(exerciseIndex)) collapsedWorkoutExercises.delete(exerciseIndex);
+  else collapsedWorkoutExercises.add(exerciseIndex);
+  renderWorkout();
+}
+
+function toggleAllWorkoutExercises() {
+  const exercises = state.activeWorkout?.exercises || [];
+  if (collapsedWorkoutExercises.size) collapsedWorkoutExercises.clear();
+  else collapsedWorkoutExercises = new Set(exercises.map((_, index) => index));
+  renderWorkout();
+}
+
 function addPlanDay() {
   state.plan.days.push({ id: uid('day'), name: `Nuevo entrenamiento ${state.plan.days.length + 1}`, focus: 'Personalizado', exercises: [] });
   state.profile.days = state.plan.days.length;
@@ -1668,6 +1747,7 @@ function deletePlanDay(dayIndex) {
     state.plan.days.splice(dayIndex, 1);
     state.profile.days = state.plan.days.length;
     state.nextWorkoutIndex = clamp(state.nextWorkoutIndex, 0, state.plan.days.length - 1);
+    planAccordionPlanId = null;
     save(); renderPlan();
   }});
 }
@@ -1762,6 +1842,7 @@ function applyPickedExercise(id, context) {
     save(); renderPlan(); showToast('Ejercicio cambiado.');
   } else if (context.mode === 'workout-add') {
     state.activeWorkout.exercises.push(workoutExerciseFromPlan(createPlanExercise(id, rules)));
+    workoutAccordionSessionId = null;
     save(); renderWorkout(); showToast('Ejercicio añadido a la sesión.', 'success');
   } else if (context.mode === 'workout-replace') {
     const current = state.activeWorkout.exercises[context.exerciseIndex];
@@ -1920,6 +2001,15 @@ function toggleSet(exerciseIndex, setIndex) {
   set.completedAt = set.completed ? new Date().toISOString() : null;
   save();
   if (set.completed && state.settings.autoStartRest) startRestTimer(exercise.restSeconds, getExercise(exercise.exerciseId, state.customExercises).name);
+
+  const exerciseFinished = exercise.sets.length > 0 && completedSets(exercise).length === exercise.sets.length;
+  if (exerciseFinished) {
+    collapsedWorkoutExercises.add(exerciseIndex);
+    const nextIndex = state.activeWorkout.exercises.findIndex((candidate, index) => index > exerciseIndex && completedSets(candidate).length < candidate.sets.length);
+    if (nextIndex >= 0) collapsedWorkoutExercises.delete(nextIndex);
+  } else if (!set.completed) {
+    collapsedWorkoutExercises.delete(exerciseIndex);
+  }
   renderWorkout();
 }
 
@@ -1953,7 +2043,9 @@ function removeWorkoutExercise(exerciseIndex) {
   const item = state.activeWorkout.exercises[exerciseIndex];
   const name = getExercise(item.exerciseId, state.customExercises).name;
   confirmAction({ title: `Quitar ${name}`, message: 'Se eliminará solo de esta sesión. Tu plan permanente no cambiará.', confirmLabel: 'Quitar', danger: true, onConfirm: () => {
-    state.activeWorkout.exercises.splice(exerciseIndex, 1); save(); renderWorkout();
+    state.activeWorkout.exercises.splice(exerciseIndex, 1);
+    workoutAccordionSessionId = null;
+    save(); renderWorkout();
   }});
 }
 
@@ -2011,6 +2103,7 @@ function openSessionCompleted(session) {
 function addLibraryExerciseToWorkout(id) {
   if (!state.activeWorkout) return showToast('Primero inicia un entrenamiento.', 'danger');
   state.activeWorkout.exercises.push(workoutExerciseFromPlan(createPlanExercise(id, trainingRules(state.profile))));
+  workoutAccordionSessionId = null;
   save(); showToast('Añadido al entrenamiento.', 'success');
   setView('workout');
 }
