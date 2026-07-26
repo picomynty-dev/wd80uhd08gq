@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Entrena con claridad, registra cada serie y mejora con recomendaciones de progresión.",
+  "description": "Crea, organiza y entrena tus propias rutinas con planes profesionales y seguimiento serie a serie.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

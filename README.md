@@ -1,5 +1,11 @@
-# My Fit Plan 3.0B · Piloto
+# My Fit Plan 3.1
 
-Primera prueba del nuevo sistema de fichas premium. Busca **Press banca con barra** en la biblioteca y pulsa **Técnica**.
+Versión centrada en un onboarding profesional, tres formas de empezar y una biblioteca personal de carpetas y rutinas.
 
-La aplicación mantiene la funcionalidad y los datos de las versiones anteriores. Para probarla correctamente debe publicarse mediante GitHub Pages o ejecutarse con un servidor local.
+## Novedades
+- Onboarding en seis pasos.
+- Plan recomendado, plantillas o creación desde cero.
+- Carpetas de rutinas.
+- Múltiples rutinas editables.
+- Plantillas con divisiones profesionales.
+- Migración automática desde versiones anteriores.

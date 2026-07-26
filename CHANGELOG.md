@@ -1,17 +1,10 @@
-# My Fit Plan 3.0B · Piloto 1
+# Cambios de My Fit Plan 3.1
 
-## Ficha premium piloto
-
-- Nueva ficha a pantalla completa para **Press banca con barra**.
-- Ilustraciones diferenciadas de posición inicial y final.
-- Mapa anatómico frontal y posterior.
-- Pectoral principal en rojo; tríceps y deltoides anterior en naranja.
-- Pestañas Movimiento / Músculos.
-- Datos rápidos de músculo, material, nivel y patrón.
-- Respiración, tempo, errores frecuentes y consejos.
-- Historial personal, récord de peso y mejor volumen cuando existen datos.
-- Alternativas con motivo de sustitución.
-- Acciones para añadir al plan o al entrenamiento.
-- Diseño optimizado para iPhone.
-
-Esta entrega aplica el sistema completo únicamente al press banca para validarlo antes de extenderlo al resto de la biblioteca.
+- Nuevo onboarding profesional de seis pasos.
+- Perfil ampliado con experiencia, lugar de entrenamiento, prioridades y movimientos a evitar.
+- Tres caminos iniciales: recomendación, plantilla o creación libre.
+- Sistema de carpetas para organizar rutinas.
+- Creación, duplicado, renombrado y eliminación de rutinas.
+- Plantillas Push/Pull/Legs, Upper/Lower, hipertrofia clásica y especialización estética.
+- Nombres de entrenamientos más claros y profesionales.
+- Conservación del historial y migración desde 3.0B y versiones anteriores.
