@@ -1,12 +1,13 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV31';
-export const LEGACY_KEYS = ['myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.1.0';
+export const STORAGE_KEY = 'myFitPlanStateV311';
+export const LEGACY_KEYS = ['myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.1.1';
 
 export const defaultSettings = {
-  accent: 'orange',
+  accent: 'custom',
+  accentHex: '#f97316',
   appearance: 'dark',
   compact: true,
   showTips: true,
@@ -18,7 +19,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 31,
+  schemaVersion: 311,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -117,12 +118,12 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 31,
+    schemaVersion: 311,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
     onboardingChoice: saved.onboardingChoice || profile?.trainingPath || null,
-    settings: { ...clone(defaultSettings), ...(saved.settings || {}) },
+    settings: normalizeSettings(saved.settings || {}),
     plan: activeRoutine ? normalizePlan(activeRoutine, profile || {}) : basePlan,
     routineFolders: normalizedFolders,
     activeFolderId,
@@ -143,6 +144,21 @@ export function normalizeState(saved = {}) {
   if (normalized.plan?.days?.length) normalized.nextWorkoutIndex %= normalized.plan.days.length;
   else normalized.nextWorkoutIndex = 0;
   return normalized;
+}
+
+function normalizeSettings(savedSettings = {}) {
+  const legacyColors = {
+    orange: '#f97316',
+    blue: '#2563eb',
+    green: '#16a34a',
+    violet: '#7c3aed'
+  };
+  const merged = { ...clone(defaultSettings), ...savedSettings };
+  const candidate = String(savedSettings.accentHex || legacyColors[savedSettings.accent] || merged.accentHex || '#f97316').trim();
+  merged.accent = 'custom';
+  merged.accentHex = /^#[0-9a-f]{6}$/i.test(candidate) ? candidate.toLowerCase() : '#f97316';
+  merged.appearance = ['system', 'light', 'dark'].includes(merged.appearance) ? merged.appearance : 'system';
+  return merged;
 }
 
 function normalizeRoutineFolders(folders, fallbackPlan, profile) {

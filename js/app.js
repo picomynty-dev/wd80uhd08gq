@@ -45,6 +45,7 @@ const profileShortcut = document.querySelector('#profileShortcut');
 const restTimerDock = document.querySelector('#restTimerDock');
 const updateBanner = document.querySelector('#updateBanner');
 const root = document.documentElement;
+const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 let state = loadState();
 let currentView = 'home';
@@ -61,6 +62,7 @@ init();
 function init() {
   window.__mfpBooted = true;
   applySettings();
+  bindSystemThemeListener();
   updateProfileShortcut();
   bindGlobalEvents();
   registerServiceWorker();
@@ -123,16 +125,80 @@ function save() {
   syncActiveRoutineFromPlan();
   state = persistState(state);
   applySettings();
+  bindSystemThemeListener();
   updateProfileShortcut();
 }
 
-function applySettings() {
-  root.dataset.accent = state.settings.accent || 'orange';
-  root.dataset.theme = state.settings.appearance || 'system';
+function bindSystemThemeListener() {
+  const refresh = () => {
+    if ((state.settings.appearance || 'system') === 'system') applySettings();
+  };
+  if (typeof systemThemeQuery.addEventListener === 'function') systemThemeQuery.addEventListener('change', refresh);
+  else if (typeof systemThemeQuery.addListener === 'function') systemThemeQuery.addListener(refresh);
+}
+
+function normalizeHexColor(value, fallback = '#f97316') {
+  const raw = String(value || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toLowerCase()}`;
+  return fallback;
+}
+
+function hexToRgb(hex) {
+  const clean = normalizeHexColor(hex).slice(1);
+  return {
+    r: Number.parseInt(clean.slice(0, 2), 16),
+    g: Number.parseInt(clean.slice(2, 4), 16),
+    b: Number.parseInt(clean.slice(4, 6), 16)
+  };
+}
+
+function mixHex(hex, targetHex, amount) {
+  const source = hexToRgb(hex);
+  const target = hexToRgb(targetHex);
+  const ratio = clamp(Number(amount) || 0, 0, 1);
+  const channel = (key) => Math.round(source[key] + (target[key] - source[key]) * ratio).toString(16).padStart(2, '0');
+  return `#${channel('r')}${channel('g')}${channel('b')}`;
+}
+
+function accentContrast(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.62 ? '#08111f' : '#ffffff';
+}
+
+function legacyAccentHex() {
+  const legacy = { orange: '#f97316', blue: '#2563eb', green: '#16a34a', violet: '#7c3aed' };
+  return legacy[state.settings.accent] || '#f97316';
+}
+
+function currentAccentHex() {
+  return normalizeHexColor(state.settings.accentHex || legacyAccentHex());
+}
+
+function resolvedAppearance(appearance = state.settings.appearance || 'system') {
+  if (appearance === 'system') return systemThemeQuery.matches ? 'dark' : 'light';
+  return appearance;
+}
+
+function applySettings(preview = {}) {
+  const appearance = preview.appearance || state.settings.appearance || 'system';
+  const resolved = resolvedAppearance(appearance);
+  const accent = normalizeHexColor(preview.accentHex || currentAccentHex());
+  const { r, g, b } = hexToRgb(accent);
+  const accentDark = mixHex(accent, '#000000', resolved === 'dark' ? 0.18 : 0.23);
+  const accentSoft = resolved === 'dark' ? mixHex(accent, '#111724', 0.79) : mixHex(accent, '#ffffff', 0.89);
+  root.dataset.accent = 'custom';
+  root.dataset.theme = appearance;
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--accent-dark', accentDark);
+  root.style.setProperty('--accent-soft', accentSoft);
+  root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+  root.style.setProperty('--accent-contrast', accentContrast(accent));
+  root.style.colorScheme = appearance === 'system' ? 'light dark' : appearance;
   root.classList.toggle('compact', Boolean(state.settings.compact));
   root.classList.toggle('reduce-motion', Boolean(state.settings.reduceMotion));
-  const themeColors = { orange: '#f97316', blue: '#2563eb', green: '#16a34a', violet: '#7c3aed' };
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[state.settings.accent] || themeColors.orange);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? mixHex(accent, '#070b14', 0.72) : accent);
 }
 
 function updateProfileShortcut() {
@@ -1146,11 +1212,30 @@ function profileDataHtml() {
 }
 
 function profileSettingsHtml() {
+  const accentHex = currentAccentHex();
+  const presets = ['#f97316','#ef4444','#ec4899','#8b5cf6','#3b82f6','#06b6d4','#10b981','#84cc16','#eab308','#f8fafc'];
+  const appearance = state.settings.appearance || 'system';
   return `<section class="profile-tab-panel">
     <form id="settingsForm" class="card form-card form-grid">
-      <div class="section-title-row"><div><p class="eyebrow">Personalización</p><h2>Ajustes</h2></div><button class="button button-primary button-small" type="submit">Guardar</button></div>
-      <fieldset class="fieldset"><legend>Color principal</legend><div class="color-options">${[['orange','Naranja'],['blue','Azul'],['green','Verde'],['violet','Violeta']].map(([value,label]) => `<label class="color-option color-${value}"><input type="radio" name="accent" value="${value}" ${state.settings.accent === value ? 'checked' : ''}><span></span><small>${label}</small></label>`).join('')}</div></fieldset>
-      <label class="field"><span>Apariencia</span><select name="appearance"><option value="system" ${state.settings.appearance === 'system' ? 'selected' : ''}>Según el iPhone</option><option value="light" ${state.settings.appearance === 'light' ? 'selected' : ''}>Clara</option><option value="dark" ${state.settings.appearance === 'dark' ? 'selected' : ''}>Oscura</option></select></label>
+      <div class="section-title-row"><div><p class="eyebrow">Personalización</p><h2>Tu estilo</h2></div><button class="button button-primary button-small" type="submit">Guardar</button></div>
+      <fieldset class="fieldset theme-fieldset"><legend>Color principal</legend>
+        <div class="custom-palette-card">
+          <label class="native-color-picker" for="accentColorPicker" style="--preview-color:${esc(accentHex)}">
+            <span class="palette-preview-ring"><i></i></span>
+            <span class="palette-copy"><strong>Elige cualquier color</strong><small>Se aplicará a botones, progreso, menús y detalles.</small></span>
+            <input id="accentColorPicker" name="accentHex" type="color" value="${esc(accentHex)}" aria-label="Elegir color principal">
+          </label>
+          <label class="hex-color-field"><span>Código</span><input id="accentHexText" type="text" inputmode="text" maxlength="7" value="${esc(accentHex)}" aria-label="Código hexadecimal del color"></label>
+        </div>
+        <div class="palette-presets" aria-label="Colores sugeridos">${presets.map((color) => `<button type="button" class="palette-preset ${color.toLowerCase() === accentHex ? 'active' : ''}" style="--preset:${color}" data-action="accent-preset" data-color="${color}" aria-label="Usar color ${color}"><span></span></button>`).join('')}</div>
+      </fieldset>
+      <fieldset class="fieldset theme-fieldset"><legend>Apariencia</legend>
+        <div class="appearance-options">
+          ${appearanceOption('system','Según tu móvil','Cambia automáticamente','◐',appearance)}
+          ${appearanceOption('light','Claro','Fondo luminoso','☀',appearance)}
+          ${appearanceOption('dark','Oscuro','Dark Energy','☾',appearance)}
+        </div>
+      </fieldset>
       ${settingSwitch('compact','Vista compacta','Reduce espacios en las listas.',state.settings.compact)}
       ${settingSwitch('showTips','Mostrar explicaciones','Enseña consejos breves durante el entrenamiento.',state.settings.showTips)}
       ${settingSwitch('reduceMotion','Reducir animaciones','Minimiza movimientos y transiciones.',state.settings.reduceMotion)}
@@ -1158,14 +1243,13 @@ function profileSettingsHtml() {
       ${settingSwitch('restSound','Sonido al terminar','Emite un aviso cuando finaliza el descanso.',state.settings.restSound)}
       ${settingSwitch('restVibrate','Vibración si está disponible','No todos los iPhone o navegadores la permiten.',state.settings.restVibrate)}
     </form>
-
-    <section class="section card">
-      <p class="eyebrow">Copia de seguridad</p><h2>Exportar o importar datos</h2>
-      <p class="muted small">Crea un archivo con tu plan, entrenamientos, ejercicios personalizados, ajustes y medidas.</p>
-      <div class="grid grid-2"><button class="button button-secondary" type="button" data-action="export-backup">Exportar copia</button><label class="button button-secondary file-button">Importar copia<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div>
-    </section>
+    <section class="section card"><p class="eyebrow">Copia de seguridad</p><h2>Exportar o importar datos</h2><p class="muted small">Crea un archivo con tu plan, entrenamientos, ejercicios personalizados, ajustes y medidas.</p><div class="grid grid-2"><button class="button button-secondary" type="button" data-action="export-backup">Exportar copia</button><label class="button button-secondary file-button">Importar copia<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div></section>
     <section class="section card danger-zone"><p class="eyebrow">Zona de seguridad</p><h2>Borrar todos los datos</h2><p class="muted small">Esta acción elimina el perfil y el progreso guardado en este dispositivo.</p><button class="button button-danger" type="button" data-action="reset-data">Borrar datos</button></section>
   </section>`;
+}
+
+function appearanceOption(value, title, subtitle, icon, selected) {
+  return `<label class="appearance-option"><input type="radio" name="appearance" value="${value}" ${selected === value ? 'checked' : ''}><span><b>${icon}</b><strong>${title}</strong><small>${subtitle}</small></span></label>`;
 }
 
 function settingSwitch(name, title, subtitle, checked) {
@@ -1279,6 +1363,7 @@ async function handleAppClick(event) {
     'filter-history-exercise': () => showProfileTab('history', target.dataset.id),
     'clear-history-filter': () => showProfileTab('history'),
     'export-backup': exportBackup,
+    'accent-preset': () => applyAccentPreset(target.dataset.color),
     'reset-data': resetAllData
   };
   actions[action]?.();
@@ -1296,6 +1381,7 @@ function handleAppChange(event) {
   if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'libraryLevel') { libraryFilters.level = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'backupFile') importBackup(target.files?.[0]);
+  if (target.name === 'appearance') previewThemeFromSettingsForm();
   if (target.matches('[data-profile-tab]')) showProfileTab(target.dataset.profileTab);
 }
 
@@ -1312,6 +1398,8 @@ function handleAppInput(event) {
     libraryPageSize = 36;
     debounceRefreshLibrary();
   }
+  if (target.id === 'accentColorPicker') syncAccentControls(target.value);
+  if (target.id === 'accentHexText') { const normalized = normalizeHexColor(target.value, ''); if (normalized) syncAccentControls(normalized, false); }
   if (['set-field','workout-notes','exercise-notes'].includes(target.dataset.action)) delayedSaveField(target);
 }
 
@@ -2033,19 +2121,33 @@ function submitProfileForm(form) {
 
 function submitSettingsForm(form) {
   const data = new FormData(form);
+  const accentHex = normalizeHexColor(data.get('accentHex') || document.querySelector('#accentHexText')?.value || currentAccentHex());
   state.settings = {
     ...state.settings,
-    accent: data.get('accent') || 'orange',
-    appearance: data.get('appearance') || 'system',
-    compact: data.has('compact'),
-    showTips: data.has('showTips'),
-    reduceMotion: data.has('reduceMotion'),
-    autoStartRest: data.has('autoStartRest'),
-    restSound: data.has('restSound'),
-    restVibrate: data.has('restVibrate')
+    accent: 'custom', accentHex,
+    appearance: ['system','light','dark'].includes(data.get('appearance')) ? data.get('appearance') : 'system',
+    compact: data.has('compact'), showTips: data.has('showTips'), reduceMotion: data.has('reduceMotion'),
+    autoStartRest: data.has('autoStartRest'), restSound: data.has('restSound'), restVibrate: data.has('restVibrate')
   };
-  save(); showToast('Ajustes guardados.', 'success'); renderProfile(); showProfileTab('settings');
+  save(); showToast('Apariencia guardada.', 'success'); renderProfile(); showProfileTab('settings');
 }
+
+function settingsFormValues() {
+  const form = document.querySelector('#settingsForm');
+  if (!form) return null;
+  const appearance = form.querySelector('input[name="appearance"]:checked')?.value || state.settings.appearance || 'system';
+  const accentHex = normalizeHexColor(form.querySelector('#accentColorPicker')?.value || currentAccentHex());
+  return { appearance, accentHex };
+}
+function previewThemeFromSettingsForm() { const values = settingsFormValues(); if (values) applySettings(values); }
+function syncAccentControls(value, updateText = true) {
+  const color = normalizeHexColor(value);
+  const picker = document.querySelector('#accentColorPicker'); const text = document.querySelector('#accentHexText'); const card = document.querySelector('.native-color-picker');
+  if (picker) picker.value = color; if (text && updateText) text.value = color; if (card) card.style.setProperty('--preview-color', color);
+  document.querySelectorAll('.palette-preset').forEach((button) => button.classList.toggle('active', button.dataset.color?.toLowerCase() === color));
+  previewThemeFromSettingsForm();
+}
+function applyAccentPreset(color) { syncAccentControls(color); }
 
 function openWeightModal() {
   if (!state.profile) return renderQuestionnaire();
