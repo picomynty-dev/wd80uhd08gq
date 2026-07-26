@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV30A';
-export const LEGACY_KEYS = ['myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.0.0-alpha.1';
+export const STORAGE_KEY = 'myFitPlanStateV30B1';
+export const LEGACY_KEYS = ['myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.0.0-beta.1';
 
 export const defaultSettings = {
   accent: 'orange',

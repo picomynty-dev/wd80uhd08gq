@@ -103,3 +103,29 @@ export function exerciseVisual(exercise, { large = false } = {}) {
     <div class="muscle-panel">${bodyMap(exercise)}<small><i class="legend-primary"></i> Principal <i class="legend-secondary"></i> Secundario</small></div>
   </div>`;
 }
+
+export function premiumExerciseVisual(exercise, exerciseId = '') {
+  if (!exercise?.movementImages?.start || !exercise?.movementImages?.end || !exercise?.anatomyImages?.front || !exercise?.anatomyImages?.back) {
+    return `<div class="premium-exercise-fallback">${exerciseVisual(exercise, { large: true })}</div>`;
+  }
+  return `<section class="premium-exercise-visual" data-premium-visual="${esc(exerciseId)}">
+    <div class="premium-visual-tabs" role="tablist" aria-label="Vista del ejercicio">
+      <button type="button" class="active" data-exercise-visual-tab="movement" role="tab" aria-selected="true">Movimiento</button>
+      <button type="button" data-exercise-visual-tab="muscles" role="tab" aria-selected="false">Músculos</button>
+    </div>
+    <div class="premium-visual-panel active" data-exercise-visual-panel="movement">
+      <div class="movement-compare-grid">
+        <figure><img src="${esc(exercise.movementImages.start)}" alt="Posición inicial de ${esc(exercise.name)}" loading="eager"><figcaption><span>01</span><strong>Inicio</strong><small>Barra estable sobre el pecho</small></figcaption></figure>
+        <figure><img src="${esc(exercise.movementImages.end)}" alt="Posición final de ${esc(exercise.name)}" loading="eager"><figcaption><span>02</span><strong>Final</strong><small>Bajada controlada y hombros estables</small></figcaption></figure>
+      </div>
+      <p class="visual-swipe-hint">Compara las dos posiciones antes de empezar la serie.</p>
+    </div>
+    <div class="premium-visual-panel" data-exercise-visual-panel="muscles" hidden>
+      <div class="anatomy-compare-grid">
+        <figure><img src="${esc(exercise.anatomyImages.front)}" alt="Vista frontal de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista frontal</figcaption></figure>
+        <figure><img src="${esc(exercise.anatomyImages.back)}" alt="Vista posterior de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista posterior</figcaption></figure>
+      </div>
+      <div class="anatomy-legend"><span><i class="primary"></i>Principal</span><span><i class="secondary"></i>Secundario</span><span><i class="neutral"></i>No prioritario</span></div>
+    </div>
+  </section>`;
+}

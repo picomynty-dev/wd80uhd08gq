@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-fit-plan-v30a2-20260726-1';
+const CACHE_NAME = 'my-fit-plan-v30b-pilot-20260726-1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,6 +6,10 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './assets/exercises/barbell-bench-press-start.svg',
+  './assets/exercises/barbell-bench-press-end.svg',
+  './assets/anatomy/bench-press-front.svg',
+  './assets/anatomy/bench-press-back.svg',
   './js/app.js',
   './js/exercises.js',
   './js/exercises-extra.js',

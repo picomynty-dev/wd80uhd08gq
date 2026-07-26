@@ -26,7 +26,57 @@ export const baseExerciseLibrary = {
 
   chest_press: ex('Press de pecho en máquina', 'Pecho', 'Máquina', 'Empuje horizontal estable para pecho y tríceps.', ['Ajusta el asiento para que las asas queden a la altura del pecho.', 'Mantén los hombros bajos y la espalda apoyada.', 'Empuja y vuelve con control.'], ['Encoger los hombros.', 'Despegar la espalda.'], ['dumbbell_press', 'push_up', 'pec_deck']),
   dumbbell_press: ex('Press con mancuernas', 'Pecho', 'Mancuernas', 'Press tumbado que permite mover cada brazo de forma independiente.', ['Apoya pies, glúteos y espalda.', 'Baja las mancuernas a ambos lados del pecho.', 'Empuja sin chocar las mancuernas.'], ['Abrir los codos en exceso.', 'Perder el control al bajar.'], ['chest_press', 'barbell_bench_press', 'push_up']),
-  barbell_bench_press: ex('Press banca con barra', 'Pecho', 'Barra', 'Empuje horizontal con barra para pecho, hombro anterior y tríceps.', ['Coloca ojos debajo de la barra.', 'Retrae ligeramente los hombros y apoya los pies.', 'Baja hacia la zona media del pecho y sube con control.'], ['Entrenar sin seguros o ayuda cuando la carga es alta.', 'Rebotar la barra sobre el pecho.'], ['dumbbell_press', 'chest_press']),
+  barbell_bench_press: {
+    name: 'Press banca con barra',
+    englishName: 'Barbell Bench Press',
+    muscle: 'Pecho',
+    equipment: 'Barra y banco',
+    summary: 'Empuje horizontal con barra para desarrollar el pectoral, con participación del tríceps y el hombro anterior.',
+    steps: [
+      'Túmbate con los ojos debajo de la barra y apoya los pies firmemente en el suelo.',
+      'Junta y estabiliza los omóplatos; agarra la barra algo más ancho que los hombros.',
+      'Saca la barra y colócala sobre la zona media del pecho con los brazos extendidos.',
+      'Baja de forma controlada manteniendo los antebrazos casi verticales.',
+      'Empuja la barra hacia arriba sin rebotar ni perder la posición de los hombros.'
+    ],
+    mistakes: [
+      'Abrir los codos en exceso y perder una trayectoria estable.',
+      'Rebotar la barra contra el pecho.',
+      'Levantar los glúteos o mover los pies durante la repetición.',
+      'Entrenar cerca del fallo sin soportes de seguridad o ayuda.'
+    ],
+    tips: [
+      'Mantén el pecho abierto y los omóplatos estables durante toda la serie.',
+      'Utiliza un peso que puedas controlar también durante la bajada.',
+      'Pide ayuda o usa soportes cuando entrenes con cargas exigentes.',
+      'Reduce la carga si la técnica cambia entre repeticiones.'
+    ],
+    breathing: 'Inspira durante la bajada y expulsa el aire mientras empujas la barra.',
+    tempo: 'Bajada controlada de 2–3 segundos · pausa breve · subida firme.',
+    alternatives: ['dumbbell_press', 'chest_press', 'push_up'],
+    alternativeReasons: {
+      dumbbell_press: 'Mismo patrón con mayor libertad para cada brazo.',
+      chest_press: 'Más estabilidad y fácil ajuste de carga en máquina.',
+      push_up: 'Alternativa sin material para casa o calentamiento.'
+    },
+    synonyms: ['press banca', 'banca barra', 'bench press', 'barbell bench press'],
+    level: 'Intermedio',
+    movement: 'press_horizontal',
+    movementType: 'Empuje horizontal',
+    location: ['Gimnasio'],
+    primaryMuscles: ['Pectoral mayor'],
+    secondaryMuscles: ['Tríceps', 'Deltoides anterior'],
+    visualType: 'press_horizontal',
+    movementImages: {
+      start: './assets/exercises/barbell-bench-press-start.svg',
+      end: './assets/exercises/barbell-bench-press-end.svg'
+    },
+    anatomyImages: {
+      front: './assets/anatomy/bench-press-front.svg',
+      back: './assets/anatomy/bench-press-back.svg'
+    },
+    premium: true
+  },
   incline_dumbbell_press: ex('Press inclinado con mancuernas', 'Pecho', 'Mancuernas', 'Variante inclinada con mayor participación de la zona superior del pecho.', ['Ajusta el banco con una inclinación moderada.', 'Baja las mancuernas cerca del pecho superior.', 'Empuja manteniendo hombros estables.'], ['Usar una inclinación demasiado vertical.', 'Chocar las mancuernas.'], ['dumbbell_press', 'chest_press']),
   pec_deck: ex('Aperturas en peck deck', 'Pecho', 'Máquina', 'Aducción de brazos guiada para trabajar el pecho.', ['Ajusta el asiento para que los brazos queden a la altura del pecho.', 'Junta los apoyos sin encoger hombros.', 'Regresa lentamente.'], ['Forzar demasiado el estiramiento.', 'Dar impulso.'], ['cable_fly', 'chest_press']),
   cable_fly: ex('Cruce de poleas', 'Pecho', 'Polea', 'Apertura y cierre de brazos con tensión continua.', ['Adopta una postura estable.', 'Mantén una ligera flexión de codo.', 'Junta las manos delante del pecho y vuelve con control.'], ['Convertirlo en un press.', 'Mover el torso.'], ['pec_deck', 'push_up']),
@@ -205,6 +255,16 @@ function normalizeExerciseData(id, exercise = {}) {
     visualType: exercise.visualType || movement,
     primaryMuscles: Array.isArray(exercise.primaryMuscles) && exercise.primaryMuscles.length ? exercise.primaryMuscles : inferPrimaryMuscles(exercise),
     secondaryMuscles: Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : inferSecondaryMuscles({ ...exercise, movement }),
+    englishName: exercise.englishName || '',
+    breathing: exercise.breathing || '',
+    tempo: exercise.tempo || '',
+    tips: Array.isArray(exercise.tips) ? exercise.tips : [],
+    movementType: exercise.movementType || movement.replaceAll('_', ' '),
+    location: Array.isArray(exercise.location) ? exercise.location : [],
+    movementImages: exercise.movementImages || null,
+    anatomyImages: exercise.anatomyImages || null,
+    alternativeReasons: exercise.alternativeReasons || {},
+    premium: Boolean(exercise.premium),
     custom: Boolean(exercise.custom)
   };
 }
@@ -230,11 +290,14 @@ export function searchableExerciseText(id, exercise) {
   return [
     id,
     exercise.name,
+    exercise.englishName,
     exercise.muscle,
     exercise.equipment,
     exercise.summary,
     exercise.level,
     exercise.movement,
+    exercise.movementType,
+    ...(exercise.location || []),
     ...(exercise.primaryMuscles || []),
     ...(exercise.secondaryMuscles || []),
     ...(exerciseSynonyms[id] || []),

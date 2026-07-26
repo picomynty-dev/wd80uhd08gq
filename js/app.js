@@ -36,7 +36,7 @@ import {
 } from './utils.js';
 import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js';
 import { searchExerciseEntries, suggestedSearches } from './search.js';
-import { exerciseVisual } from './visuals.js';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -56,6 +56,7 @@ let waitingServiceWorker = null;
 init();
 
 function init() {
+  window.__mfpBooted = true;
   applySettings();
   updateProfileShortcut();
   bindGlobalEvents();
@@ -264,7 +265,7 @@ function renderWelcome() {
   app.innerHTML = `
     <section class="page">
       <div class="hero">
-        <p class="eyebrow">My Fit Plan 3.0A</p>
+        <p class="eyebrow">My Fit Plan 3.0B</p>
         <h1>Tu entrenamiento, serie a serie.</h1>
         <p>Crea una rutina, registra cada serie, controla los descansos y recibe una orientación sencilla para progresar.</p>
         <div class="hero-actions">
@@ -597,6 +598,11 @@ function renderLibrary() {
   app.innerHTML = `
     <section class="page library-page">
       <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
+      <button class="premium-pilot-banner" type="button" data-action="exercise-details" data-id="barbell_bench_press">
+        <span class="pilot-banner-badge">NUEVO · 3.0B</span>
+        <span><strong>Prueba la nueva ficha premium</strong><small>Press banca con barra · movimiento, anatomía y técnica</small></span>
+        <b>→</b>
+      </button>
       <section class="card library-controls">
         <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" type="search" placeholder="Ej. espalda con polea, sentadiya…" value="${esc(libraryFilters.query)}"></div>
         ${suggestions.length ? `<div class="search-suggestions">${suggestions.map((value) => `<button type="button" data-action="library-query" data-query="${esc(value)}">${esc(value)}</button>`).join('')}</div>` : ''}
@@ -1075,9 +1081,134 @@ function applyPickedExercise(id, context) {
 
 function openExerciseDetails(id) {
   const exercise = getExercise(id, state.customExercises);
-  const alternatives = (exercise.alternatives || []).map((altId) => ({ id: altId, ...getExercise(altId, state.customExercises) }));
-  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</p><h2>${esc(exercise.name)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>${exerciseVisual(exercise, { large: true })}<div class="exercise-detail-tags"><span class="pill">${esc(exercise.level)}</span><span class="pill">Principal: ${esc((exercise.primaryMuscles || []).join(', '))}</span>${exercise.secondaryMuscles?.length ? `<span class="pill">Secundario: ${esc(exercise.secondaryMuscles.join(', '))}</span>` : ''}</div><p>${esc(exercise.summary)}</p><h3>Cómo hacerlo</h3><ol class="detail-list">${(exercise.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol><h3>Errores frecuentes</h3><ul class="detail-list warning-list">${(exercise.mistakes || []).map((mistake) => `<li>${esc(mistake)}</li>`).join('')}</ul>${alternatives.length ? `<h3>Alternativas</h3><div class="alternative-list">${alternatives.map((item) => `<button type="button" class="alternative-button" data-alt-details="${esc(item.id)}"><span><strong>${esc(item.name)}</strong><small>${esc(item.muscle)} · ${esc(item.equipment)}</small></span><span>›</span></button>`).join('')}</div>` : ''}<section class="notice">Las ilustraciones son orientativas. Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. La explicación no sustituye una corrección presencial.</section>`, { wide: true });
-  wrapper.querySelectorAll('[data-alt-details]').forEach((button) => button.addEventListener('click', () => { wrapper._closeModal(); openExerciseDetails(button.dataset.altDetails); }));
+  const alternatives = (exercise.alternatives || []).map((altId) => ({
+    id: altId,
+    ...getExercise(altId, state.customExercises),
+    reason: exercise.alternativeReasons?.[altId] || alternativeReason(exercise, getExercise(altId, state.customExercises))
+  }));
+  const favorite = state.favorites.includes(id);
+  const last = lastExercisePerformance(state.history, id);
+  const record = personalRecords(state.history, state.customExercises).find((item) => item.exerciseId === id);
+  const primary = (exercise.primaryMuscles || [exercise.muscle]).join(', ');
+  const secondary = (exercise.secondaryMuscles || []).join(', ');
+  const isPilot = Boolean(exercise.premium);
+
+  const wrapper = openModal(`
+    <article class="premium-exercise-detail ${isPilot ? 'premium-pilot-detail' : ''}">
+      <header class="premium-detail-header">
+        <button class="premium-detail-back" type="button" data-close-modal aria-label="Volver">←</button>
+        <div class="premium-detail-title">
+          <p class="eyebrow">${isPilot ? 'FICHA PREMIUM · PILOTO 3.0B' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`}</p>
+          <h2>${esc(exercise.name)}</h2>
+          ${exercise.englishName ? `<p>${esc(exercise.englishName)}</p>` : ''}
+        </div>
+        <button class="premium-favorite ${favorite ? 'active' : ''}" type="button" data-premium-favorite="${esc(id)}" aria-label="${favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}">★</button>
+      </header>
+
+      ${premiumExerciseVisual(exercise, id)}
+
+      <section class="premium-detail-summary">
+        <div class="premium-data-chips">
+          <span><small>Músculo</small><strong>${esc(exercise.muscle)}</strong></span>
+          <span><small>Material</small><strong>${esc(exercise.equipment)}</strong></span>
+          <span><small>Nivel</small><strong>${esc(exercise.level)}</strong></span>
+          <span><small>Patrón</small><strong>${esc(exercise.movementType || exercise.movement)}</strong></span>
+        </div>
+        <div class="premium-muscle-copy">
+          <p><span class="muscle-dot primary"></span><strong>Principal:</strong> ${esc(primary)}</p>
+          ${secondary ? `<p><span class="muscle-dot secondary"></span><strong>Secundarios:</strong> ${esc(secondary)}</p>` : ''}
+        </div>
+        <p class="premium-exercise-intro">${esc(exercise.summary)}</p>
+      </section>
+
+      <section class="premium-detail-actions">
+        <button class="button button-primary" type="button" data-premium-add-plan="${esc(id)}" ${state.plan?.days?.length ? '' : 'disabled'}>＋ Añadir al plan</button>
+        <button class="button button-secondary" type="button" data-premium-add-workout="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Añadir al entreno</button>
+      </section>
+
+      ${exerciseHistoryHtml(last, record, exercise)}
+
+      <section class="premium-content-section">
+        <div class="premium-section-heading"><span>01</span><div><p class="eyebrow">Técnica</p><h3>Cómo hacerlo</h3></div></div>
+        <ol class="premium-step-list">${(exercise.steps || []).map((step, index) => `<li><span>${String(index + 1).padStart(2, '0')}</span><p>${esc(step)}</p></li>`).join('')}</ol>
+      </section>
+
+      ${(exercise.breathing || exercise.tempo) ? `<section class="technique-cue-grid">
+        ${exercise.breathing ? `<article><span class="cue-icon">◌</span><div><p class="eyebrow">Respiración</p><strong>${esc(exercise.breathing)}</strong></div></article>` : ''}
+        ${exercise.tempo ? `<article><span class="cue-icon">◷</span><div><p class="eyebrow">Ritmo recomendado</p><strong>${esc(exercise.tempo)}</strong></div></article>` : ''}
+      </section>` : ''}
+
+      <section class="premium-content-section">
+        <div class="premium-section-heading warning"><span>02</span><div><p class="eyebrow">Evita esto</p><h3>Errores frecuentes</h3></div></div>
+        <ul class="premium-warning-list">${(exercise.mistakes || []).map((mistake) => `<li><span>!</span><p>${esc(mistake)}</p></li>`).join('')}</ul>
+      </section>
+
+      ${(exercise.tips || []).length ? `<section class="premium-content-section">
+        <div class="premium-section-heading tips"><span>03</span><div><p class="eyebrow">Detalles útiles</p><h3>Consejos prácticos</h3></div></div>
+        <ul class="premium-tip-list">${exercise.tips.map((tip) => `<li><span>✓</span><p>${esc(tip)}</p></li>`).join('')}</ul>
+      </section>` : ''}
+
+      ${alternatives.length ? `<section class="premium-content-section alternatives-section">
+        <div class="premium-section-heading"><span>04</span><div><p class="eyebrow">Máquina ocupada</p><h3>Alternativas</h3></div></div>
+        <div class="premium-alternative-list">${alternatives.map((item) => `<button type="button" class="premium-alternative-card" data-alt-details="${esc(item.id)}"><span class="alternative-mini-visual">${exerciseVisual(item)}</span><span class="alternative-copy"><strong>${esc(item.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.equipment)} · ${esc(item.level)}</em></span><b>›</b></button>`).join('')}</div>
+      </section>` : ''}
+
+      <section class="premium-safety-note"><span>i</span><p>La ficha es educativa. Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. Para corregir técnica o adaptar el movimiento a una lesión, consulta a un profesional.</p></section>
+    </article>
+  `, { wide: true });
+
+  wrapper.querySelectorAll('[data-exercise-visual-tab]').forEach((button) => button.addEventListener('click', () => {
+    const tab = button.dataset.exerciseVisualTab;
+    wrapper.querySelectorAll('[data-exercise-visual-tab]').forEach((item) => {
+      const active = item.dataset.exerciseVisualTab === tab;
+      item.classList.toggle('active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+    wrapper.querySelectorAll('[data-exercise-visual-panel]').forEach((panel) => {
+      const active = panel.dataset.exerciseVisualPanel === tab;
+      panel.classList.toggle('active', active);
+      panel.hidden = !active;
+    });
+  }));
+  wrapper.querySelector('[data-premium-favorite]')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    state.favorites = state.favorites.includes(id) ? state.favorites.filter((item) => item !== id) : [...state.favorites, id];
+    save();
+    const active = state.favorites.includes(id);
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-label', active ? 'Quitar de favoritos' : 'Añadir a favoritos');
+    refreshLibraryResults();
+  });
+  wrapper.querySelector('[data-premium-add-plan]')?.addEventListener('click', () => {
+    wrapper._closeModal();
+    choosePlanDayForExercise(id);
+  });
+  wrapper.querySelector('[data-premium-add-workout]')?.addEventListener('click', () => {
+    wrapper._closeModal();
+    addLibraryExerciseToWorkout(id);
+  });
+  wrapper.querySelectorAll('[data-alt-details]').forEach((button) => button.addEventListener('click', () => {
+    wrapper._closeModal();
+    openExerciseDetails(button.dataset.altDetails);
+  }));
+}
+
+function exerciseHistoryHtml(last, record, exercise) {
+  if (!last && !record) return `<section class="premium-history-card empty"><div><p class="eyebrow">Tu progreso</p><h3>Primera referencia</h3></div><p>Cuando completes este ejercicio, aquí aparecerán tu último resultado, tu récord de peso y tu mejor volumen.</p></section>`;
+  const sets = last ? completedSets(last.exercise) : [];
+  return `<section class="premium-history-card">
+    <div class="premium-history-title"><div><p class="eyebrow">Tu progreso</p><h3>Último resultado</h3></div>${last ? `<small>${formatDate(last.session.finishedAt || last.session.startedAt)}</small>` : ''}</div>
+    ${sets.length ? `<div class="premium-history-sets">${sets.map((set, index) => `<span><small>S${index + 1}</small><strong>${set.weight ? `${formatWeight(set.weight)} kg` : '—'}</strong><em>${set.reps || '—'} ${last.exercise.unit === 'sec' ? 's' : 'reps'}</em></span>`).join('')}</div>` : ''}
+    ${record ? `<div class="premium-record-strip"><span><small>Récord de peso</small><strong>${formatWeight(record.bestWeight)} kg</strong></span><span><small>Mejor volumen</small><strong>${formatWeight(record.bestVolume)} kg</strong></span></div>` : ''}
+  </section>`;
+}
+
+function alternativeReason(source, alternative) {
+  if (alternative.equipment === 'Peso corporal') return 'Alternativa sin material para casa o calentamiento.';
+  if (alternative.equipment === 'Máquina') return 'Más estabilidad y una progresión de carga sencilla.';
+  if (alternative.equipment === 'Mancuernas') return 'Permite mover cada brazo de forma independiente.';
+  if (alternative.muscle === source.muscle) return `Trabaja ${source.muscle.toLowerCase()} con otro material.`;
+  return 'Alternativa similar para mantener el objetivo de la sesión.';
 }
 
 function updateSetField(target, rerender = false) {
