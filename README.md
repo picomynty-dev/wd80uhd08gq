@@ -1,4 +1,4 @@
-# My Fit Plan 3.1
+# My Fit Plan 3.1.1
 
 Versión centrada en un onboarding profesional, tres formas de empezar y una biblioteca personal de carpetas y rutinas.
 

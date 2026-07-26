@@ -1,3 +1,11 @@
+# My Fit Plan 3.1.1
+
+- Paleta de color libre con selector nativo y código hexadecimal.
+- Vista previa inmediata del color.
+- Modos claro, oscuro y según el dispositivo reparados.
+- Contraste automático para colores claros.
+- Migración transparente desde 3.1.
+
 # Cambios de My Fit Plan 3.1
 
 - Nuevo onboarding profesional de seis pasos.
