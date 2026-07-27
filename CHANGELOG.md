@@ -1,3 +1,17 @@
+# My Fit Plan v3.3
+
+- Nuevo apartado Cuerpo dentro de Perfil.
+- Fotografías frontal, lateral y posterior.
+- Comparador lado a lado y deslizador antes/después.
+- Registro de pecho, cintura, cadera, brazo, muslo y gemelo.
+- Gráficos de evolución corporal.
+- Fotografías privadas en IndexedDB.
+- PIN opcional para bloquear el apartado.
+- Exportación y eliminación individual de revisiones.
+- Acceso rápido desde Inicio.
+- Migración automática desde v3.2.3B.
+- Nueva caché PWA.
+
 # My Fit Plan v3.2.3B
 
 - Rehace la estética de las tarjetas en Biblioteca y Plan visual.
