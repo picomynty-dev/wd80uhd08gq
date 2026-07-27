@@ -5039,3 +5039,282 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.4C.4 · Recomendación honesta y layout Pro
+   ========================================================= */
+.workout-selector-grid {
+  grid-template-columns: minmax(0,1.12fr) minmax(390px,.88fr);
+  gap: 16px;
+}
+.training-option-primary {
+  min-height: 610px;
+}
+.training-coach-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  overflow: hidden;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid rgba(96,165,250,.18);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 94% 4%,rgba(59,130,246,.12),transparent 36%),
+    var(--surface);
+}
+.training-coach-card::after {
+  content: "";
+  position: absolute;
+  right: -100px;
+  bottom: -140px;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgba(96,165,250,.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.coach-choice-routine {
+  border-color: rgba(var(--accent-rgb),.24);
+  background:
+    radial-gradient(circle at 94% 4%,rgba(var(--accent-rgb),.12),transparent 36%),
+    var(--surface);
+}
+.coach-choice-header,
+.coach-choice-copy,
+.coach-choice-verdict,
+.coach-choice-facts,
+.coach-choice-actions,
+.training-coach-card .training-exercise-preview {
+  position: relative;
+  z-index: 1;
+}
+.coach-choice-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.coach-choice-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 9px;
+}
+.coach-choice-brand > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+.coach-choice-brand small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .48rem;
+  font-weight: 950;
+  letter-spacing: .07em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coach-choice-brand strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coach-choice-header .training-confidence {
+  flex: 0 0 auto;
+}
+.coach-choice-copy {
+  display: grid;
+  gap: 6px;
+}
+.coach-choice-state {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: .5rem;
+  font-weight: 950;
+  letter-spacing: .07em;
+}
+.coach-choice-state.routine {
+  background: rgba(var(--accent-rgb),.12);
+  color: var(--accent);
+}
+.coach-choice-state.alternative {
+  background: rgba(59,130,246,.12);
+  color: #93c5fd;
+}
+.coach-choice-copy h2 {
+  margin: 0;
+  font-size: clamp(1.35rem,2.6vw,2rem);
+  line-height: 1.12;
+}
+.coach-choice-copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.coach-choice-verdict {
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid rgba(34,197,94,.18);
+  border-radius: 15px;
+  background: rgba(34,197,94,.07);
+}
+.coach-choice-verdict > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(34,197,94,.14);
+  color: #4ade80;
+  font-size: 1rem;
+  font-weight: 950;
+}
+.coach-choice-verdict > div {
+  display: grid;
+  gap: 2px;
+}
+.coach-choice-verdict small {
+  color: #86efac;
+  font-size: .48rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.coach-choice-verdict p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .6rem;
+}
+.coach-choice-facts {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+}
+.coach-choice-facts span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.coach-choice-facts small {
+  color: var(--muted);
+  font-size: .48rem;
+}
+.coach-choice-facts strong {
+  overflow: hidden;
+  font-size: .62rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+.coach-choice-facts.compact strong {
+  white-space: normal;
+}
+.coach-choice-actions {
+  display: grid;
+  gap: 7px;
+  margin-top: auto;
+}
+.coach-choice-actions .button {
+  width: 100%;
+  min-height: 45px;
+  justify-content: center;
+}
+.coach-text-action {
+  width: 100%;
+  padding: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: .58rem;
+  font-weight: 800;
+  text-align: center;
+}
+.coach-text-action:hover {
+  color: var(--text);
+}
+.training-coach-card .training-exercise-preview {
+  max-height: none;
+}
+.training-coach-card .training-exercise-preview > span {
+  min-width: 0;
+}
+.training-coach-card .training-exercise-preview b {
+  font-size: .66rem;
+}
+.training-coach-card .training-exercise-preview small {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.training-option-custom {
+  min-width: 0;
+}
+.training-option-top,
+.training-recommendation-tools {
+  flex-wrap: wrap;
+}
+.training-refresh-button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Quitar estilos antiguos que hacían parecer la alternativa una obligación */
+.training-option-recommended {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .workout-selector-grid {
+    grid-template-columns: minmax(0,1fr) minmax(340px,.85fr);
+  }
+}
+@media (max-width: 840px) {
+  .workout-selector-grid {
+    grid-template-columns: 1fr;
+  }
+  .training-option-primary {
+    min-height: 0;
+  }
+  .training-coach-card {
+    min-height: 0;
+  }
+}
+@media (max-width: 520px) {
+  .training-coach-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .coach-choice-header {
+    align-items: center;
+  }
+  .coach-choice-brand .coach-mark {
+    width: 36px;
+    height: 36px;
+  }
+  .coach-choice-facts {
+    grid-template-columns: 1fr;
+  }
+  .coach-choice-facts span {
+    grid-template-columns: minmax(100px,.8fr) minmax(0,1.2fr);
+    align-items: center;
+  }
+  .coach-choice-facts small,
+  .coach-choice-facts strong {
+    font-size: .58rem;
+  }
+  .coach-choice-copy h2 {
+    font-size: 1.4rem;
+  }
+}

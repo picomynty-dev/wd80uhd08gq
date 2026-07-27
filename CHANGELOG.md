@@ -1,3 +1,15 @@
+# My Fit Plan v3.4C.4
+
+- La rutina puede ser la recomendación del entrenador.
+- El sistema deja de forzar una alternativa distinta.
+- Evalúa la proximidad de la última sesión y el solapamiento muscular reciente.
+- Recomienda una alternativa solo cuando existe un conflicto claro.
+- Permite explorar alternativas manualmente.
+- Las alternativas pueden conservar hasta dos ejercicios útiles de la rutina.
+- Rediseña completamente la tarjeta derecha.
+- Corrige chips, textos y botones comprimidos o desbordados.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4C.3
 
 - Añade memoria real de recomendaciones.

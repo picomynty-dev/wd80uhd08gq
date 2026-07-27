@@ -1,17 +1,19 @@
-# My Fit Plan v3.4C.3 · Biblioteca Pro
+# My Fit Plan v3.4C.4 · Recomendación honesta
 
-## Recomendaciones
-- Cero ejercicios compartidos con la próxima sesión.
-- Cero ejercicios compartidos con las propuestas vistas durante la rotación.
-- Memoria persistente de las últimas 16 recomendaciones.
-- Rotación de enfoque muscular.
-- Penalización de patrones y ejercicios utilizados recientemente.
-- Botón “Otra distinta”.
+## Nuevo criterio
+La app ya no considera que “recomendar” significa crear obligatoriamente una
+sesión diferente.
 
-## Biblioteca
-- Todas las tarjetas tienen la misma estructura y proporción.
-- Los ejercicios sin vídeo usan una portada técnica profesional.
-- Desaparece el bloque partido de palitos y muñeco.
-- Las fichas sin vídeo usan una cabecera coherente con músculos y movimiento.
-- Acciones y alturas corregidas.
-- Los pósteres que fallen muestran una portada limpia en lugar de un icono roto.
+- La rutina es la recomendación predeterminada cuando no existe un conflicto
+  claro de recuperación.
+- Solo se recomienda una alternativa cuando la misma sesión o sus principales
+  grupos musculares se trabajaron demasiado recientemente.
+- El usuario puede explorar una alternativa voluntariamente.
+- Las alternativas pueden conservar hasta dos ejercicios de la rutina cuando
+  siguen teniendo sentido; no cambian por cambiar.
+
+## Diseño
+- La tarjeta derecha se convierte en una tarjeta de decisión del entrenador.
+- Cuando la rutina es lo mejor, no repite toda la lista de ejercicios.
+- Se corrigen el ancho, el desbordamiento de etiquetas y los botones.
+- La alternativa usa una estructura compacta y coherente.
