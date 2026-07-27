@@ -1,12 +1,9 @@
-# My Fit Plan v3.4C.5 · Parche del check-in personalizado
+# My Fit Plan v3.4C.6
 
-Corrige el flujo del entrenamiento personalizado:
+Parche completo para el entrenamiento personalizado y las tarjetas.
 
-1. El usuario termina de configurar ejercicios, series y descansos.
-2. Pulsa “Continuar al check-in”.
-3. El borrador se copia a una selección temporal.
-4. El constructor se cierra.
-5. Se abre correctamente el check-in de tiempo, energía, sueño y molestias.
-
-La rutina activa no se modifica y el entrenamiento personalizado sigue siendo
-una sesión temporal.
+- El botón Continuar al check-in tiene un listener directo.
+- El check-in se renderiza directamente, sin volver al constructor.
+- Se eliminan los rectángulos blancos/grises de los títulos.
+- Biblioteca y constructor recuperan sus tarjetas oscuras.
+- Se realiza una limpieza única de cachés antiguas sin borrar datos personales.

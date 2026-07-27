@@ -1,3 +1,12 @@
+# My Fit Plan v3.4C.6
+
+- Repara el acceso al check-in personalizado.
+- Añade comprobación directa del botón.
+- Elimina rectángulos blancos y grises.
+- Recupera las tarjetas de ejercicios.
+- Fuerza una actualización limpia sin borrar rutinas, historial o fotografías.
+- Actualiza inmediatamente el service worker.
+
 # My Fit Plan v3.4C.5
 
 - Corrige el botón “Continuar al check-in” del entrenamiento personalizado.

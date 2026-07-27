@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-fit-plan-v34c5-20260727-1';
+const CACHE_NAME = 'my-fit-plan-v34c6-20260727-3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -30,7 +30,11 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -45,7 +49,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.destination === 'video' || event.request.headers.has('range')) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(new Request(event.request, {
+      cache: ['script', 'style', 'document'].includes(event.request.destination)
+        ? 'no-store'
+        : event.request.cache
+    }))
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));

@@ -5318,3 +5318,111 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
     font-size: 1.4rem;
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.4C.6 · Reparación visual definitiva
+   ========================================================= */
+.custom-session-exercise-main > button[data-action="exercise-details"],
+.library-card-title-button,
+.library-card-visual-button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.custom-session-exercise-main > button[data-action="exercise-details"] {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+
+.custom-session-exercise-main > button[data-action="exercise-details"]:hover,
+.library-card-title-button:hover,
+.library-card-visual-button:hover {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.custom-session-exercise-main > button[data-action="exercise-details"]:focus-visible,
+.library-card-title-button:focus-visible,
+.library-card-visual-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.custom-session-exercise {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.025), transparent 48%),
+    var(--surface-2);
+}
+
+.custom-session-exercise-main {
+  min-height: 68px;
+}
+
+.custom-session-exercise-main > button[data-action="exercise-details"] strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: .78rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-session-exercise-main > button[data-action="exercise-details"] small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-card-title-button h3,
+.library-card-title-button .exercise-meta {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.library-card-pro {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.library-card-heading,
+.library-card-body {
+  min-width: 0;
+}
+
+.library-card-visual-button {
+  overflow: hidden;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+}
+
+@media (max-width: 620px) {
+  .custom-session-exercise-main {
+    grid-template-columns: 34px minmax(0,1fr) auto;
+    gap: 7px;
+  }
+}
