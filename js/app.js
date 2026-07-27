@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c6';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c6';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c6';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c7';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c7';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c7';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c6';
+} from './stats.js?v=34c7';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c6';
+} from './coach.js?v=34c7';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c6';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c6';
+} from './adaptive.js?v=34c7';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c7';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c6';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c6';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c6';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c6';
+} from './utils.js?v=34c7';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c7';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c7';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c7';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c6';
+} from './photo-progress.js?v=34c7';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1172,27 +1172,28 @@ function renderWorkoutSelector() {
     weeklyGoal: state.profile?.days || state.plan?.days?.length || 3
   });
   const routineDay = routine?.day;
-  const displayAlternative = showOptionalAlternative || coachChoice.mode === 'alternative';
-  const displayedSelection = displayAlternative ? alternative : routine;
-  const displayedDay = displayedSelection?.day;
+  const mfpBase = coachChoice.mode === 'alternative' && alternative?.day?.exercises?.length
+    ? alternative
+    : routine;
+  const mfpDay = mfpBase?.day;
 
   app.innerHTML = `<section class="page workout-selector-page">
     <header class="workout-selector-hero">
-      <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Elige cómo quieres empezar</strong></span></div>
-      <h1>Tu entrenamiento, primero.</h1>
-      <p>La app respeta tu planificación. Solo propone una alternativa cuando existe un motivo real o cuando tú decides explorar otra opción.</p>
+      <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Elige cómo quieres entrenar hoy</strong></span></div>
+      <h1>Tres formas, tres funciones distintas.</h1>
+      <p>Tu rutina empieza directamente. My Fit Plan prepara una sesión según cómo llegas hoy. El personalizado lo construyes tú y también empieza directamente.</p>
     </header>
 
-    <section class="workout-selector-grid">
+    <section class="workout-selector-grid workout-selector-grid-v347">
       ${routineDay ? `<article class="training-option-card training-option-primary">
         <div class="training-option-top">
-          <span class="training-option-badge"><i></i> SIGUIENTE DE TU RUTINA</span>
+          <span class="training-option-badge"><i></i> TU PRÓXIMA SESIÓN</span>
           <span class="training-option-number">${String((routine.planDayIndex || 0) + 1).padStart(2,'0')}</span>
         </div>
         <div class="training-option-copy">
           <p class="eyebrow">${esc(state.plan?.name || 'Rutina activa')}</p>
           <h2>${esc(routineDay.name)}</h2>
-          <p>${esc(routine.reason)}</p>
+          <p>Sigue la planificación que ya tienes creada. Esta opción avanza normalmente al siguiente día cuando terminas.</p>
         </div>
         ${workoutOptionPreview(routineDay)}
         <div class="training-option-footer">
@@ -1201,76 +1202,65 @@ function renderWorkoutSelector() {
             <span><strong>${estimatePlanMinutes(routineDay)}</strong><small>min aprox.</small></span>
             <span><strong>${routineDay.exercises.reduce((sum,item) => sum + numberValue(item.targetSets,3),0)}</strong><small>series</small></span>
           </div>
-          <button class="button button-primary training-primary-button" type="button" data-action="training-routine">Preparar esta sesión <span>→</span></button>
+          <button class="button button-primary training-primary-button" type="button" data-action="training-routine-direct">Empezar mi rutina <span>→</span></button>
         </div>
       </article>` : `<article class="training-option-card training-option-primary training-option-disabled">
-        <div class="training-option-copy"><p class="eyebrow">Tu rutina</p><h2>No hay una sesión preparada</h2><p>Crea o activa una rutina para que aparezca aquí como opción principal.</p></div>
+        <div class="training-option-copy"><p class="eyebrow">Tu rutina</p><h2>No hay una sesión preparada</h2><p>Crea o activa una rutina para entrenarla directamente.</p></div>
         <button class="button button-primary" type="button" data-nav="plan">Ir a mis rutinas</button>
       </article>`}
 
-      <article class="training-option-card training-coach-card coach-choice-${displayAlternative ? 'alternative' : 'routine'}">
-        <div class="coach-choice-header">
-          <div class="coach-choice-brand">
+      <article class="training-option-card training-option-mfp">
+        <div class="training-option-mfp-header">
+          <div class="training-option-mfp-brand">
             <span class="coach-mark">MFP</span>
-            <div><small>RECOMENDACIÓN DEL ENTRENADOR</small><strong>${esc(displayAlternative ? (showOptionalAlternative ? 'Alternativa opcional' : coachChoice.eyebrow) : coachChoice.eyebrow)}</strong></div>
+            <div><small>CREADO POR MY FIT PLAN</small><strong>Entrenamiento inteligente para hoy</strong></div>
           </div>
-          <span class="training-confidence">${displayAlternative ? alternative?.confidence || 60 : coachChoice.confidence}% datos</span>
+          <span class="training-confidence">${coachChoice.confidence || 70}% datos</span>
         </div>
 
-        ${displayAlternative && displayedDay ? `
-          <div class="coach-choice-copy">
-            <span class="coach-choice-state alternative">ALTERNATIVA</span>
-            <h2>${esc(displayedDay.name)}</h2>
-            <p>${esc(showOptionalAlternative ? alternative.reason : coachChoice.reason)}</p>
-          </div>
-          ${workoutOptionPreview(displayedDay, true)}
-          <div class="coach-choice-facts compact">
-            ${(alternative?.tags || []).slice(0,3).map((tag) => `<span><small>Dato</small><strong>${esc(tag)}</strong></span>`).join('')}
-          </div>
-          <div class="coach-choice-actions">
-            <button class="button button-primary button-block" type="button" data-action="training-recommended">Preparar alternativa</button>
-            <button class="button button-ghost button-block" type="button" data-action="training-refresh-recommended">↻ Generar otra</button>
-            <button class="coach-text-action" type="button" data-action="training-restore-coach">Volver a la recomendación del entrenador</button>
-          </div>
-        ` : `
-          <div class="coach-choice-copy">
-            <span class="coach-choice-state routine">RUTINA RECOMENDADA</span>
-            <h2>${esc(coachChoice.title)}</h2>
-            <p>${esc(coachChoice.reason)}</p>
-          </div>
-          <div class="coach-choice-verdict">
-            <span>✓</span>
-            <div><small>Decisión</small><strong>No cambiar por cambiar</strong><p>Tu sesión programada sigue siendo la referencia principal.</p></div>
-          </div>
-          <div class="coach-choice-facts">
-            ${(coachChoice.facts || []).map((fact) => `<span><small>${esc(fact.label)}</small><strong>${esc(fact.value)}</strong></span>`).join('')}
-          </div>
-          <div class="coach-choice-actions">
-            <button class="button button-primary button-block" type="button" data-action="training-routine">Preparar mi rutina</button>
-            <button class="button button-secondary button-block" type="button" data-action="training-show-alternative">Explorar una alternativa</button>
-          </div>
-        `}
+        <div class="training-option-copy">
+          <span class="coach-choice-state alternative">MY FIT PLAN</span>
+          <h2>${mfpDay ? esc(mfpDay.name) : 'Prepara una sesión para hoy'}</h2>
+          <p>${esc(coachChoice.reason || 'Responde unas preguntas y My Fit Plan ajustará la sesión al tiempo, energía, sueño y molestias de hoy.')}</p>
+        </div>
+
+        <div class="mfp-checkin-features">
+          <span><i>01</i><strong>Tiempo disponible</strong></span>
+          <span><i>02</i><strong>Energía y sueño</strong></span>
+          <span><i>03</i><strong>Molestias</strong></span>
+        </div>
+
+        ${mfpDay ? `<div class="mfp-base-session">
+          <small>Base que utilizará My Fit Plan</small>
+          <strong>${esc(mfpDay.name)}</strong>
+          <span>${mfpDay.exercises.length} ejercicios · ${estimatePlanMinutes(mfpDay)} min aprox.</span>
+        </div>` : ''}
+
+        <div class="coach-choice-actions">
+          <button class="button button-primary button-block" type="button" data-action="training-mfp" ${mfpDay ? '' : 'disabled'}>Crear entrenamiento My Fit Plan</button>
+          <button class="button button-ghost button-block" type="button" data-action="training-refresh-recommended" ${alternative?.day ? '' : 'disabled'}>↻ Cambiar propuesta base</button>
+        </div>
       </article>
 
-      <article class="training-option-card training-option-custom">
+      <article class="training-option-card training-option-custom training-option-custom-v347">
         <div class="custom-option-icon">＋</div>
         <div class="training-option-copy">
-          <p class="eyebrow">Sesión libre</p>
+          <p class="eyebrow">CREADO POR TI</p>
           <h2>Entrenamiento personalizado</h2>
-          <p>Crea una sesión puntual desde cero. No modifica tu rutina ni altera el orden de tu próximo entrenamiento.</p>
+          <p>Elige los ejercicios, ordénalos y configura sus series. Al terminar el constructor, el entrenamiento empieza directamente.</p>
         </div>
         <ul class="custom-option-list">
-          <li>Elige ejercicios de la biblioteca</li>
-          <li>Ajusta series, repeticiones y descanso</li>
-          <li>Pasa después por el check-in adaptativo</li>
+          <li>Ejercicios elegidos manualmente</li>
+          <li>Series, repeticiones y descansos propios</li>
+          <li>Sin check-in ni adaptación automática</li>
         </ul>
-        <button class="button button-secondary button-block" type="button" data-action="training-custom">Crear personalizado</button>
+        <button class="button button-secondary button-block" type="button" data-action="training-custom">Crear mi personalizado</button>
       </article>
     </section>
 
     <section class="training-selector-note">
       <span>i</span>
-      <p><strong>Recomendar no significa cambiar.</strong> My Fit Plan mantiene tu rutina cuando sigue siendo la mejor decisión y presenta alternativas solo cuando existe un motivo o tú las solicitas.</p>
+      <p><strong>Separación clara:</strong> rutina y personalizado empiezan directamente; el cuestionario de tiempo, energía, sueño y molestias pertenece exclusivamente al entrenamiento creado por My Fit Plan.</p>
     </section>
   </section>`;
 }
@@ -1286,20 +1276,65 @@ function workoutOptionPreview(day, compact = false) {
   </div>`;
 }
 
-function chooseTrainingOption(source) {
-  const selection = source === 'recommended'
-    ? recommendedSelection()
-    : routineSelection();
-
+function startRoutineWorkoutDirect() {
+  const selection = routineSelection();
   if (!selection?.day?.exercises?.length) {
-    showToast('No hay una sesión disponible para esta opción.', 'danger');
+    showToast('No hay una sesión de rutina disponible.', 'danger');
     return;
   }
 
-  if (source === 'recommended') rememberRecommendedSession(selection);
-  pendingWorkoutSelection = selection;
+  const workout = createActiveWorkout(selection.planDayIndex, {
+    dayOverride: selection.day,
+    sessionSource: 'routine',
+    sourceLabel: 'Tu rutina',
+    sourceReason: selection.reason,
+    sourcePlanDayIndex: selection.planDayIndex
+  });
+
+  if (!workout) {
+    showToast('No se pudo preparar la sesión de rutina.', 'danger');
+    return;
+  }
+
+  pendingWorkoutSelection = null;
   customWorkoutDraft = null;
   renderWorkout();
+  showToast('Rutina preparada.', 'success');
+}
+
+function startMfpWorkoutCheckin() {
+  const routine = routineSelection();
+  const alternative = recommendedSelection();
+  const coachChoice = evaluateTrainingChoice({
+    routine,
+    alternative,
+    history: state.history,
+    customExercises: state.customExercises,
+    weeklyGoal: state.profile?.days || state.plan?.days?.length || 3
+  });
+
+  const base = coachChoice.mode === 'alternative' && alternative?.day?.exercises?.length
+    ? alternative
+    : routine;
+
+  if (!base?.day?.exercises?.length) {
+    showToast('No hay una sesión base para My Fit Plan.', 'danger');
+    return;
+  }
+
+  if (base === alternative) rememberRecommendedSession(alternative);
+
+  pendingWorkoutSelection = {
+    source: 'mfp',
+    sourceLabel: 'My Fit Plan',
+    planDayIndex: null,
+    sourcePlanDayIndex: routine?.planDayIndex ?? null,
+    day: clone(base.day),
+    reason: coachChoice.reason || 'My Fit Plan ajustará esta sesión según tu check-in.',
+    confidence: coachChoice.confidence || base.confidence || 70
+  };
+  customWorkoutDraft = null;
+  renderPreWorkoutCheckin(pendingWorkoutSelection);
 }
 
 function startCustomWorkoutBuilder() {
@@ -1342,7 +1377,7 @@ function renderCustomWorkoutBuilder() {
       </div>` : `<div class="custom-session-empty">
         <span>＋</span>
         <h3>Empieza eligiendo tus ejercicios</h3>
-        <p>Puedes añadirlos, ordenarlos y ajustar sus objetivos antes de pasar al check-in.</p>
+        <p>Puedes añadirlos, ordenarlos y ajustar sus objetivos antes de empezar el entrenamiento.</p>
         <button class="button button-primary" type="button" data-action="custom-session-add">Abrir biblioteca</button>
       </div>`}
     </section>
@@ -1353,7 +1388,7 @@ function renderCustomWorkoutBuilder() {
 
     <div class="custom-session-actions">
       <button class="button button-secondary" type="button" data-action="custom-session-cancel">Cancelar</button>
-      <button id="customSessionContinue" class="button button-primary custom-session-continue" type="button" ${draft.exercises.length ? '' : 'disabled'}>Continuar al check-in <span>→</span></button>
+      <button id="customSessionContinue" class="button button-primary custom-session-continue" type="button" ${draft.exercises.length ? '' : 'disabled'}>Empezar entrenamiento <span>→</span></button>
     </div>
   </section>`;
 
@@ -1398,30 +1433,29 @@ function continueCustomSession() {
   }
 
   const completedDraft = clone(customWorkoutDraft);
-  const selection = {
-    source: 'custom',
-    sourceLabel: 'Personalizado',
-    planDayIndex: null,
-    day: {
-      id: completedDraft.id || uid('custom-session'),
-      name: String(completedDraft.name || '').trim() || 'Entrenamiento personalizado',
-      exercises: clone(completedDraft.exercises)
-    },
-    reason: 'Sesión creada manualmente para hoy.',
-    confidence: 100
+  const day = {
+    id: completedDraft.id || uid('custom-session'),
+    name: String(completedDraft.name || '').trim() || 'Entrenamiento personalizado',
+    exercises: clone(completedDraft.exercises)
   };
 
-  pendingWorkoutSelection = selection;
-  customWorkoutDraft = null;
+  const workout = createActiveWorkout(state.nextWorkoutIndex, {
+    dayOverride: day,
+    sessionSource: 'custom',
+    sourceLabel: 'Personalizado',
+    sourceReason: 'Sesión creada manualmente por el usuario.',
+    sourcePlanDayIndex: null
+  });
 
-  try {
-    renderPreWorkoutCheckin(selection);
-    showToast('Personalizado preparado. Completa el check-in.', 'success');
-  } catch (error) {
-    console.error('No se pudo abrir el check-in personalizado:', error);
-    pendingWorkoutSelection = selection;
-    showToast('No se pudo abrir el check-in. Recarga y vuelve a intentarlo.', 'danger');
+  if (!workout) {
+    showToast('No se pudo preparar el entrenamiento personalizado.', 'danger');
+    return;
   }
+
+  pendingWorkoutSelection = null;
+  customWorkoutDraft = null;
+  renderWorkout();
+  showToast('Entrenamiento personalizado preparado.', 'success');
 }
 
 function removeCustomSessionExercise(index) {
@@ -1490,10 +1524,22 @@ function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
   state.activeWorkout = {
     id: uid('session'),
     planDayIndex: sessionSource === 'routine' ? safeIndex : null,
-    sourcePlanDayIndex: Number.isInteger(options.sourcePlanDayIndex) ? options.sourcePlanDayIndex : safeIndex,
+    sourcePlanDayIndex: Number.isInteger(options.sourcePlanDayIndex)
+      ? options.sourcePlanDayIndex
+      : sessionSource === 'routine'
+        ? safeIndex
+        : null,
     planDayId: day.id,
     sessionSource,
-    sourceLabel: options.sourceLabel || (sessionSource === 'routine' ? 'Tu rutina' : sessionSource === 'recommended' ? 'Recomendada por MFP' : 'Personalizado'),
+    sourceLabel: options.sourceLabel || (
+      sessionSource === 'routine'
+        ? 'Tu rutina'
+        : sessionSource === 'mfp'
+          ? 'My Fit Plan'
+          : sessionSource === 'recommended'
+            ? 'Recomendada por MFP'
+            : 'Personalizado'
+    ),
     sourceReason: options.sourceReason || '',
     name: day.name,
     startedAt: new Date().toISOString(),
@@ -1540,18 +1586,20 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
 
   const estimated = estimatePlanMinutes(day);
   const muscleNames = [...new Set(day.exercises.map((item) => getExercise(item.exerciseId, state.customExercises).muscle))].slice(0, 4);
-  const sourceEyebrow = resolved.source === 'routine'
-    ? 'TU PRÓXIMA SESIÓN'
-    : resolved.source === 'recommended'
-      ? 'SESIÓN RECOMENDADA'
-      : 'SESIÓN PERSONALIZADA';
+  const sourceEyebrow = resolved.source === 'mfp'
+    ? 'ENTRENAMIENTO MY FIT PLAN'
+    : resolved.source === 'routine'
+      ? 'TU PRÓXIMA SESIÓN'
+      : resolved.source === 'recommended'
+        ? 'SESIÓN RECOMENDADA'
+        : 'PREPARACIÓN DE SESIÓN';
 
   app.innerHTML = `<section class="page readiness-page">
     <header class="readiness-hero">
       <div class="readiness-hero-top">
         <button class="readiness-back-button" type="button" data-action="workout-selector-back">←</button>
         <div class="readiness-brand"><span class="coach-mark">MFP</span><span><small>${sourceEyebrow}</small><strong>${esc(resolved.sourceLabel || 'Entrenador adaptativo')}</strong></span></div>
-        <span class="readiness-source-pill source-${esc(resolved.source || 'routine')}">${resolved.source === 'routine' ? 'Rutina' : resolved.source === 'recommended' ? 'Recomendada' : 'Personalizada'}</span>
+        <span class="readiness-source-pill source-${esc(resolved.source || 'routine')}">${resolved.source === 'mfp' ? 'My Fit Plan' : resolved.source === 'routine' ? 'Rutina' : resolved.source === 'recommended' ? 'Recomendada' : 'Sesión'}</span>
       </div>
       <p class="eyebrow">${sourceEyebrow}</p>
       <h1>${esc(day.name)}</h1>
@@ -1607,8 +1655,8 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
 
       <div class="readiness-actions">
         <button class="button button-secondary" type="button" data-action="workout-selector-back">Cambiar sesión</button>
-        <button class="button button-secondary" type="button" id="startOriginalWorkout">Usar sesión completa</button>
-        <button class="button button-primary readiness-start-button" type="submit">Crear sesión adaptada <span>→</span></button>
+        <button class="button button-secondary" type="button" id="startOriginalWorkout">Usar propuesta completa</button>
+        <button class="button button-primary readiness-start-button" type="submit">${resolved.source === 'mfp' ? 'Crear entrenamiento My Fit Plan' : 'Crear sesión adaptada'} <span>→</span></button>
       </div>
     </form>
   </section>`;
@@ -1682,7 +1730,7 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
     pendingWorkoutSelection = null;
     customWorkoutDraft = null;
     renderWorkout();
-    showToast('Sesión adaptada preparada.', 'success');
+    showToast(resolved.source === 'mfp' ? 'Entrenamiento My Fit Plan preparado.' : 'Sesión adaptada preparada.', 'success');
   });
 
   originalButton.addEventListener('click', () => {
@@ -2700,8 +2748,8 @@ async function handleAppClick(event) {
     'onboarding-finish': finishOnboarding,
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
-    'training-routine': () => chooseTrainingOption('routine'),
-    'training-recommended': () => chooseTrainingOption('recommended'),
+    'training-routine-direct': startRoutineWorkoutDirect,
+    'training-mfp': startMfpWorkoutCheckin,
     'training-refresh-recommended': rotateRecommendedSession,
     'training-show-alternative': showAlternativeOption,
     'training-restore-coach': restoreCoachRecommendation,
@@ -3960,7 +4008,7 @@ function updateLiveDuration() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34c6', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34c7', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
