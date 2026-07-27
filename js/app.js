@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c4';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c4';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c4';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c5';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c5';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c5';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c4';
+} from './stats.js?v=34c5';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c4';
+} from './coach.js?v=34c5';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c4';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c4';
+} from './adaptive.js?v=34c5';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c5';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c4';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c4';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c4';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c4';
+} from './utils.js?v=34c5';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c5';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c5';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c5';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c4';
+} from './photo-progress.js?v=34c5';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1390,20 +1390,28 @@ function continueCustomSession() {
     showToast('Añade al menos un ejercicio.', 'danger');
     return;
   }
-  const name = String(customWorkoutDraft.name || '').trim() || 'Entrenamiento personalizado';
+
+  // Copiar el borrador antes de cerrarlo. Mientras customWorkoutDraft siga
+  // activo, renderWorkout vuelve a mostrar el constructor en lugar del check-in.
+  const completedDraft = clone(customWorkoutDraft);
+  const name = String(completedDraft.name || '').trim() || 'Entrenamiento personalizado';
+
   pendingWorkoutSelection = {
     source: 'custom',
     sourceLabel: 'Personalizado',
     planDayIndex: null,
     day: {
-      id: customWorkoutDraft.id,
+      id: completedDraft.id,
       name,
-      exercises: clone(customWorkoutDraft.exercises)
+      exercises: clone(completedDraft.exercises)
     },
     reason: 'Sesión creada manualmente para hoy.',
     confidence: 100
   };
+
+  customWorkoutDraft = null;
   renderWorkout();
+  showToast('Personalizado preparado. Completa el check-in.', 'success');
 }
 
 function removeCustomSessionExercise(index) {
