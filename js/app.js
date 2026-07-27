@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=331';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=331';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=331';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34a';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34a';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34a';
 import {
   buildCalendar,
   calculateStreak,
@@ -12,13 +12,18 @@ import {
   formatWeight,
   lastExercisePerformance,
   personalRecords,
-  progressionRecommendation,
   recentExerciseIds,
   sessionVolume,
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=331';
+} from './stats.js?v=34a';
+import {
+  analyzeCompletedSession,
+  analyzeExerciseTrend,
+  buildCoachDashboard,
+  progressionRecommendation
+} from './coach.js?v=34a';
 import {
   clamp,
   clone,
@@ -34,10 +39,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=331';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=331';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=331';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=331';
+} from './utils.js?v=34a';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34a';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34a';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34a';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -47,7 +52,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=331';
+} from './photo-progress.js?v=34a';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -256,6 +261,7 @@ function renderHome() {
   const todayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   const nextExerciseCount = state.activeWorkout?.exercises?.length || nextDay?.exercises?.length || 0;
   const estimatedMinutes = Number(state.profile.minutes || 45);
+  const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
 
   app.innerHTML = `
     <section class="page home-page premium-home">
@@ -287,6 +293,31 @@ function renderHome() {
         <div class="progress-orbit" style="--progress:${percentage * 3.6}deg" aria-label="${percentage}% del objetivo semanal">
           <div><strong>${percentage}%</strong><small>semana</small></div>
         </div>
+      </section>
+
+      <section class="coach-command-card coach-tone-${coach.tone}">
+        <div class="coach-command-header">
+          <div class="coach-identity"><span class="coach-mark">MFP</span><span><small>ENTRENADOR</small><strong>Análisis local</strong></span></div>
+          <span class="coach-confidence"><i></i> Confianza ${coach.confidenceLabel.toLowerCase()}</span>
+        </div>
+        <div class="coach-command-main">
+          <div>
+            <p class="eyebrow">${coach.nextDay ? `Próxima sesión · ${esc(coach.nextDay.name)}` : 'Análisis de entrenamiento'}</p>
+            <h2>${esc(coach.headline)}</h2>
+            <p>${esc(coach.description)}</p>
+          </div>
+          <div class="coach-score-ring" style="--coach-score:${coach.confidence * 3.6}deg"><strong>${coach.confidence}%</strong><small>datos</small></div>
+        </div>
+        ${coach.primary ? `<div class="coach-primary-focus">
+          <span class="coach-status-icon coach-status-${coach.primary.tone}">${coach.primary.icon}</span>
+          <div><small>${esc(coach.primary.label)} · ${esc(coach.primary.exerciseName)}</small><strong>${esc(coach.primary.nextGoal)}</strong></div>
+        </div>` : ''}
+        <div class="coach-command-metrics">
+          <span><strong>${coach.progressCount}</strong><small>señales positivas</small></span>
+          <span><strong>${coach.attentionCount}</strong><small>puntos a revisar</small></span>
+          <span><strong>${coach.weekly.adherence}%</strong><small>objetivo semanal</small></span>
+        </div>
+        <button class="coach-open-button" type="button" data-action="coach-details"><span>Ver análisis completo</span><b>→</b></button>
       </section>
 
       <section class="weekly-performance-card">
@@ -698,6 +729,76 @@ function keepCurrentConfiguration() {
   save();
   setView('home');
   showToast('Configuración actual conservada.', 'success');
+}
+
+
+function openCoachDetails() {
+  const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
+  const weekly = coach.weekly;
+  const wrapper = openModal(`<div class="modal-header coach-modal-header">
+      <div>
+        <div class="coach-modal-brand"><span>MFP</span><small>ENTRENADOR · ANÁLISIS LOCAL</small></div>
+        <h2>${esc(coach.headline)}</h2>
+        <p class="muted">${esc(coach.description)}</p>
+      </div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <section class="coach-overview-grid">
+      <article><small>Confianza del análisis</small><strong>${coach.confidence}%</strong><span>${esc(coach.confidenceLabel)}</span></article>
+      <article><small>Ejercicios analizados</small><strong>${coach.analysedCount}</strong><span>de ${coach.insights.length || 0}</span></article>
+      <article><small>Adherencia semanal</small><strong>${weekly.adherence}%</strong><span>${weekly.sessions}/${weekly.goal} sesiones</span></article>
+      <article><small>Mejoras esta semana</small><strong>${weekly.improvedExercises}</strong><span>${weekly.records} récord${weekly.records === 1 ? '' : 's'}</span></article>
+    </section>
+
+    <section class="coach-weekly-panel">
+      <div><p class="eyebrow">Lectura semanal</p><h3>${weekly.sessions >= weekly.goal ? 'Objetivo completado' : 'Semana en curso'}</h3><p>${esc(weekly.recommendation)}</p></div>
+      <div class="coach-weekly-facts">
+        <span><small>Tiempo entrenado</small><strong>${weekly.totalMinutes} min</strong></span>
+        <span><small>Mayor progreso</small><strong>${weekly.strongest ? esc(weekly.strongest.name) : 'Aún sin comparación'}</strong></span>
+        <span><small>Menor presencia</small><strong>${weekly.leastWorked ? esc(weekly.leastWorked.muscle) : '—'}</strong></span>
+      </div>
+    </section>
+
+    <section class="coach-next-session">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Próxima sesión</p><h3>${esc(coach.nextDay?.name || 'Sin sesión preparada')}</h3></div>
+        <span class="pill">${coach.insights.length} ejercicios</span>
+      </div>
+      ${coach.insights.length ? `<div class="coach-insight-list">${coach.insights.map(coachInsightHtml).join('')}</div>` : '<div class="coach-empty-analysis"><p>Crea una rutina o registra una sesión para obtener recomendaciones.</p></div>'}
+    </section>
+
+    <section class="coach-method-note">
+      <strong>Cómo se calcula</strong>
+      <p>My Fit Plan compara carga, repeticiones, series completadas, volumen y esfuerzo percibido. Utiliza reglas de doble progresión y tendencias de las últimas sesiones. No diagnostica lesiones ni sustituye a un entrenador presencial.</p>
+    </section>
+
+    <div class="modal-actions">
+      <button class="button button-secondary" type="button" data-close-modal>Cerrar</button>
+      <button class="button button-primary" type="button" id="coachStartSession" ${coach.nextDay ? '' : 'disabled'}>Empezar próxima sesión</button>
+    </div>`, { wide: true });
+
+  wrapper.querySelector('#coachStartSession')?.addEventListener('click', () => {
+    wrapper._closeModal();
+    setView('workout');
+  });
+}
+
+function coachInsightHtml(insight) {
+  const metrics = insight.metrics || {};
+  const latestLabel = insight.latest
+    ? `${metrics.weight ? `${formatWeight(metrics.weight)} kg · ` : ''}${metrics.totalReps || 0} reps totales`
+    : 'Sin datos anteriores';
+  return `<article class="coach-insight coach-insight-${insight.tone}">
+    <span class="coach-insight-icon">${insight.icon}</span>
+    <div class="coach-insight-copy">
+      <div class="coach-insight-top"><span>${esc(insight.label)}</span><small>${insight.confidence}% confianza</small></div>
+      <h4>${esc(insight.exerciseName)}</h4>
+      <strong>${esc(insight.title)}</strong>
+      <p>${esc(insight.text)}</p>
+      <div class="coach-insight-bottom"><span>${esc(latestLabel)}</span><b>${esc(insight.nextGoal)}</b></div>
+    </div>
+  </article>`;
 }
 
 function weeklyMessage(completed, goal) {
@@ -1933,6 +2034,7 @@ async function handleAppClick(event) {
     'onboarding-finish': finishOnboarding,
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
+    'coach-details': openCoachDetails,
     'quick-weight': openWeightModal,
     'body-progress-home': () => { setView('profile'); showProfileTab('body'); },
     'body-progress-new': openBodyProgressForm,
@@ -2734,7 +2836,13 @@ function finishWorkout() {
 
 function openSessionCompleted(session) {
   let destination = 'home';
-  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p></div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
+  const coachUpdate = analyzeCompletedSession(state.history, session, state.customExercises);
+  const coachBlock = coachUpdate.primary ? `<section class="completion-coach-block">
+    <div class="coach-identity"><span class="coach-mark">MFP</span><span><small>LECTURA DEL ENTRENADOR</small><strong>${esc(coachUpdate.headline)}</strong></span></div>
+    <div class="completion-coach-insight"><span class="coach-status-icon coach-status-${coachUpdate.primary.tone}">${coachUpdate.primary.icon}</span><div><strong>${esc(coachUpdate.primary.exerciseName)} · ${esc(coachUpdate.primary.title)}</strong><p>${esc(coachUpdate.primary.nextGoal)}</p></div></div>
+    <div class="completion-coach-counts"><span>${coachUpdate.positiveCount} señales positivas</span><span>${coachUpdate.attentionCount} puntos a revisar</span></div>
+  </section>` : '';
+  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p></div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
     onClose: () => setView(destination)
   });
   wrapper.querySelector('#completedContinue').addEventListener('click', () => {
