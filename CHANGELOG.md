@@ -1,3 +1,15 @@
+# My Fit Plan v3.4C
+
+- Rediseña por completo la entrada de Entrenar.
+- La próxima sesión de la rutina pasa a ser la opción principal.
+- Añade una sesión recomendada según el trabajo de los últimos siete días.
+- Añade un constructor profesional de entrenamiento personalizado.
+- Permite ordenar ejercicios y editar series, repeticiones y descansos.
+- Mantiene el check-in adaptativo después de elegir la sesión.
+- Las alternativas no modifican ni avanzan la rutina.
+- Guarda el origen de cada sesión en el historial.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4B
 
 - Añade check-in previo de tiempo, energía, sueño y molestias.

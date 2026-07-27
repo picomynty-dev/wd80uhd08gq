@@ -1,19 +1,19 @@
-# My Fit Plan v3.4B · Entrenamiento adaptativo
+# My Fit Plan v3.4C · Selector de entrenamiento
 
-## Nuevo check-in antes de entrenar
-- Tiempo disponible: 25, 40, 60 minutos o sesión completa.
-- Energía: baja, normal o alta.
-- Sueño: malo, normal o bueno.
-- Molestias: ninguna, leves o importantes.
+## Nuevo flujo de Entrenar
+1. Tu próxima sesión de rutina aparece como opción principal.
+2. My Fit Plan propone una alternativa basada en la frecuencia muscular y
+   el tiempo transcurrido desde cada sesión.
+3. El entrenamiento personalizado queda como opción secundaria y voluntaria.
+4. Después de elegir una sesión se abre el check-in adaptativo de v3.4B.
 
-## Adaptación temporal
-- Mantiene los primeros ejercicios principales.
-- Reduce accesorios y series cuando el tiempo es limitado.
-- Ajusta descansos de accesorios sin reducir en exceso los movimientos principales.
-- Modera el volumen cuando energía o sueño son bajos.
-- No modifica la rutina permanente.
-- Permite restaurar la sesión completa antes de registrar series.
-- Guarda el contexto del check-in junto al entrenamiento.
+## Constructor personalizado
+- Nombre de sesión.
+- Ejercicios desde la biblioteca.
+- Orden manual.
+- Series, rango de repeticiones y descansos.
+- Sesión temporal: se registra en el historial, pero no cambia la rutina.
 
-La aplicación no genera automáticamente una sesión cuando el usuario indica
-molestias importantes. No diagnostica lesiones.
+Las sesiones recomendadas y personalizadas no avanzan automáticamente el orden
+de la rutina activa. Solo una sesión iniciada desde “Tu rutina” avanza al día
+siguiente.
