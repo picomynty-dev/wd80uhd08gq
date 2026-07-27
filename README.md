@@ -1,19 +1,12 @@
-# My Fit Plan v3.4C.4 · Recomendación honesta
+# My Fit Plan v3.4C.5 · Parche del check-in personalizado
 
-## Nuevo criterio
-La app ya no considera que “recomendar” significa crear obligatoriamente una
-sesión diferente.
+Corrige el flujo del entrenamiento personalizado:
 
-- La rutina es la recomendación predeterminada cuando no existe un conflicto
-  claro de recuperación.
-- Solo se recomienda una alternativa cuando la misma sesión o sus principales
-  grupos musculares se trabajaron demasiado recientemente.
-- El usuario puede explorar una alternativa voluntariamente.
-- Las alternativas pueden conservar hasta dos ejercicios de la rutina cuando
-  siguen teniendo sentido; no cambian por cambiar.
+1. El usuario termina de configurar ejercicios, series y descansos.
+2. Pulsa “Continuar al check-in”.
+3. El borrador se copia a una selección temporal.
+4. El constructor se cierra.
+5. Se abre correctamente el check-in de tiempo, energía, sueño y molestias.
 
-## Diseño
-- La tarjeta derecha se convierte en una tarjeta de decisión del entrenador.
-- Cuando la rutina es lo mejor, no repite toda la lista de ejercicios.
-- Se corrigen el ancho, el desbordamiento de etiquetas y los botones.
-- La alternativa usa una estructura compacta y coherente.
+La rutina activa no se modifica y el entrenamiento personalizado sigue siendo
+una sesión temporal.

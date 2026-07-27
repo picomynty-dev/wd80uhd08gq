@@ -1,3 +1,11 @@
+# My Fit Plan v3.4C.5
+
+- Corrige el botón “Continuar al check-in” del entrenamiento personalizado.
+- Evita que el constructor vuelva a renderizarse después de pulsar continuar.
+- Copia el borrador antes de cerrarlo para no perder ejercicios ni ajustes.
+- Añade una confirmación visual al abrir el check-in.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4C.4
 
 - La rutina puede ser la recomendación del entrenador.
