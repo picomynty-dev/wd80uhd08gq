@@ -1,3 +1,13 @@
+# My Fit Plan v3.4C.7
+
+- Separa rutina, My Fit Plan y personalizado en tres flujos distintos.
+- La rutina empieza directamente.
+- El check-in pasa a pertenecer solo a “Entrenamiento My Fit Plan”.
+- El personalizado empieza directamente después del constructor.
+- Cambia “Continuar al check-in” por “Empezar entrenamiento”.
+- Las sesiones My Fit Plan y personalizadas no avanzan la rutina.
+- Renueva el diseño del selector y la caché PWA.
+
 # My Fit Plan v3.4C.6
 
 - Repara el acceso al check-in personalizado.

@@ -5426,3 +5426,158 @@ button::-moz-focus-inner {
     gap: 7px;
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.4C.7 · Tres flujos separados
+   ========================================================= */
+.workout-selector-grid-v347 {
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, .82fr);
+  align-items: stretch;
+}
+
+.training-option-mfp {
+  position: relative;
+  display: grid;
+  gap: 15px;
+  align-content: start;
+  overflow: hidden;
+  min-width: 0;
+  border-color: rgba(59,130,246,.25);
+  background:
+    radial-gradient(circle at 94% 5%, rgba(59,130,246,.16), transparent 37%),
+    var(--surface);
+}
+
+.training-option-mfp::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  bottom: -120px;
+  width: 240px;
+  height: 240px;
+  border: 1px solid rgba(96,165,250,.10);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.training-option-mfp > * {
+  position: relative;
+  z-index: 1;
+}
+
+.training-option-mfp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.training-option-mfp-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 9px;
+}
+
+.training-option-mfp-brand > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.training-option-mfp-brand small {
+  color: #93c5fd;
+  font-size: .48rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+
+.training-option-mfp-brand strong {
+  overflow: hidden;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mfp-checkin-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 6px;
+}
+
+.mfp-checkin-features span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid rgba(96,165,250,.16);
+  border-radius: 12px;
+  background: rgba(59,130,246,.065);
+}
+
+.mfp-checkin-features i {
+  color: #60a5fa;
+  font-size: .52rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.mfp-checkin-features strong {
+  font-size: .57rem;
+  line-height: 1.3;
+}
+
+.mfp-base-session {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-2);
+}
+
+.mfp-base-session small {
+  color: var(--muted);
+  font-size: .5rem;
+  text-transform: uppercase;
+}
+
+.mfp-base-session strong {
+  font-size: .72rem;
+}
+
+.mfp-base-session span {
+  color: var(--muted);
+  font-size: .57rem;
+}
+
+.training-option-custom-v347 {
+  border-color: rgba(var(--accent-rgb),.20);
+  background:
+    radial-gradient(circle at 0% 100%, rgba(var(--accent-rgb),.10), transparent 36%),
+    var(--surface);
+}
+
+.readiness-source-pill.source-mfp {
+  border-color: rgba(59,130,246,.25);
+  background: rgba(59,130,246,.10);
+  color: #93c5fd;
+}
+
+@media (max-width: 880px) {
+  .workout-selector-grid-v347 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .mfp-checkin-features {
+    grid-template-columns: 1fr;
+  }
+
+  .mfp-checkin-features span {
+    grid-template-columns: 28px minmax(0,1fr);
+    align-items: center;
+  }
+}

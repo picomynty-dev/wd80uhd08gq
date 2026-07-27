@@ -1,9 +1,14 @@
-# My Fit Plan v3.4C.6
+# My Fit Plan v3.4C.7 · Flujos separados
 
-Parche completo para el entrenamiento personalizado y las tarjetas.
+## Tu rutina
+Empieza directamente con la próxima sesión y avanza el orden de la rutina al
+finalizar.
 
-- El botón Continuar al check-in tiene un listener directo.
-- El check-in se renderiza directamente, sin volver al constructor.
-- Se eliminan los rectángulos blancos/grises de los títulos.
-- Biblioteca y constructor recuperan sus tarjetas oscuras.
-- Se realiza una limpieza única de cachés antiguas sin borrar datos personales.
+## Entrenamiento My Fit Plan
+Abre el check-in de tiempo, energía, sueño y molestias. My Fit Plan utiliza las
+respuestas para adaptar o crear la sesión de ese día. No avanza la rutina.
+
+## Entrenamiento personalizado
+El usuario elige y configura todos los ejercicios. Al pulsar “Empezar
+entrenamiento”, la sesión comienza directamente, sin check-in ni adaptación.
+No modifica ni avanza la rutina.
