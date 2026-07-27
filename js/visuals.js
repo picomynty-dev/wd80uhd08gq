@@ -97,6 +97,19 @@ function bodyMap(exercise) {
 }
 
 export function exerciseVisual(exercise, { large = false } = {}) {
+  if (exercise?.realMotion && exercise?.media?.poster) {
+    const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
+    const secondary = (exercise.secondaryMuscles || []).join(' · ');
+    return `<div class="exercise-visual real-motion-preview ${large ? 'exercise-visual-large' : ''}">
+      <img src="${esc(exercise.media.poster)}" alt="Vista anatómica de ${esc(exercise.name || 'ejercicio')}" loading="lazy">
+      <div class="real-motion-preview-shade"></div>
+      <span class="real-motion-preview-label">REAL MOTION</span>
+      <div class="real-motion-preview-muscles">
+        <span class="primary"><i></i><small>Principal</small><strong>${esc(primary)}</strong></span>
+        ${secondary ? `<span class="secondary"><i></i><small>Secundarios</small><strong>${esc(secondary)}</strong></span>` : ''}
+      </div>
+    </div>`;
+  }
   const type = exercise.visualType || exercise.movement || 'full_body';
   return `<div class="exercise-visual ${large ? 'exercise-visual-large' : ''}">
     <div class="movement-panel"><svg viewBox="0 0 100 100" role="img" aria-label="Ilustración orientativa de ${esc(exercise.name || 'ejercicio')}">${movementPose(type)}</svg><small>Movimiento</small></div>
@@ -107,6 +120,61 @@ export function exerciseVisual(exercise, { large = false } = {}) {
 export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
   const media = exercise?.media;
   const reduceMotion = Boolean(options.reduceMotion);
+
+  if (exercise?.realMotion && media?.video) {
+    const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
+    const secondary = (exercise.secondaryMuscles || []).join(' · ');
+    const stepA = exercise.steps?.[0] || 'Ajusta la posición antes de iniciar.';
+    const stepB = exercise.steps?.[1] || 'Mantén una trayectoria estable.';
+    const stepC = exercise.steps?.[exercise.steps.length - 1] || 'Completa el recorrido con control.';
+
+    return `<section class="premium-exercise-visual real-motion-unified" data-premium-visual="${esc(exerciseId)}">
+      <div class="real-motion-stage">
+        <video data-motion-video muted loop playsinline preload="auto"
+          poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'}
+          aria-label="Demostración anatómica Real Motion de ${esc(exercise.name)}">
+          <source src="${esc(media.video)}" type="video/mp4">
+        </video>
+        <div class="motion-media-error" data-motion-error hidden>
+          <strong>No se pudo cargar Real Motion</strong>
+          <small>Recarga la ficha y vuelve a intentarlo.</small>
+        </div>
+        <span class="real-motion-watermark">REAL MOTION · PILOTO</span>
+        <button type="button" class="motion-fullscreen" data-motion-fullscreen aria-label="Ver a pantalla completa">⛶</button>
+      </div>
+
+      <div class="real-motion-muscle-strip">
+        <span class="primary"><i></i><small>Músculo principal</small><strong>${esc(primary)}</strong></span>
+        ${secondary ? `<span class="secondary"><i></i><small>Secundarios</small><strong>${esc(secondary)}</strong></span>` : ''}
+      </div>
+
+      <div class="motion-controls premium-motion-controls" aria-label="Controles de demostración">
+        <button type="button" data-motion-toggle>❚❚ <span>Pausar</span></button>
+        <button type="button" data-motion-replay>↺ <span>Repetir</span></button>
+        <div class="motion-speed" role="group" aria-label="Velocidad">
+          <button type="button" data-motion-speed="0.75">0,75×</button>
+          <button type="button" class="active" data-motion-speed="1">1×</button>
+          <button type="button" data-motion-speed="1.25">1,25×</button>
+        </div>
+      </div>
+
+      <div class="real-motion-technique">
+        <article><span>01</span><div><strong>Posición</strong><p>${esc(stepA)}</p></div></article>
+        <article><span>02</span><div><strong>Recorrido</strong><p>${esc(stepB)}</p></div></article>
+        <article><span>03</span><div><strong>Control</strong><p>${esc(stepC)}</p></div></article>
+      </div>
+
+      ${(exercise.breathing || exercise.tempo) ? `<div class="movement-cue-strip premium-motion-cues">
+        ${exercise.breathing ? `<span><small>Respiración</small><strong>${esc(exercise.breathing)}</strong></span>` : ''}
+        ${exercise.tempo ? `<span><small>Ritmo</small><strong>${esc(exercise.tempo)}</strong></span>` : ''}
+      </div>` : ''}
+
+      <p class="visual-swipe-hint">
+        El modelo anatómico es una demostración orientativa. Rojo: músculo principal. Naranja: musculatura secundaria.
+      </p>
+    </section>`;
+  }
+
   if (media?.video) {
     const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
     const secondary = (exercise.secondaryMuscles || []).join(' · ');

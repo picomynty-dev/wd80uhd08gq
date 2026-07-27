@@ -1,8 +1,9 @@
 'use strict';
 
-import { getPremiumMotionAsset } from './media-bundle-pro-v3222.js?v=3222';
+import { getPremiumMotionAsset } from './media-bundle-pro-v3222.js?v=323a';
+import { getRealMotionAsset, realMotionAssetIds } from './real-motion-bundle-v323a.js?v=323a';
 
-const media = (id) => getPremiumMotionAsset(id) || ({
+const media = (id) => getRealMotionAsset(id) || getPremiumMotionAsset(id) || ({
   video: new URL(`../assets/motion-pro/${id}.mp4`, import.meta.url).href,
   poster: new URL(`../assets/posters-pro/${id}.jpg`, import.meta.url).href
 });
@@ -10,11 +11,40 @@ const media = (id) => getPremiumMotionAsset(id) || ({
 const premium = (id, data) => ({
   ...data,
   premium: true,
-  premiumTier: 'motion',
+  premiumTier: realMotionAssetIds.includes(id) ? 'real-motion' : 'motion',
+  realMotion: realMotionAssetIds.includes(id),
   media: media(id)
 });
 
 export const premiumExerciseData = {
+  bird_dog: premium('bird_dog', {
+    englishName: 'Bird Dog',
+    level: 'Principiante',
+    movementType: 'Estabilidad contralateral',
+    primaryMuscles: ['Core'],
+    secondaryMuscles: ['Glúteos', 'Deltoides'],
+    summary: 'Ejercicio de estabilidad a cuatro apoyos que coordina brazo y pierna contrarios sin permitir que la pelvis rote.',
+    steps: [
+      'Coloca las manos debajo de los hombros y las rodillas debajo de las caderas.',
+      'Activa el abdomen antes de separar una mano y la pierna contraria.',
+      'Extiende brazo y pierna hasta formar una línea larga, sin arquear la zona lumbar.',
+      'Regresa lentamente y repite con el lado contrario.'
+    ],
+    mistakes: [
+      'Girar la pelvis al extender la pierna.',
+      'Elevar la pierna por encima de la cadera.',
+      'Perder la posición del abdomen y arquear la espalda.',
+      'Realizar el movimiento demasiado rápido.'
+    ],
+    tips: [
+      'Imagina que llevas un vaso sobre la zona lumbar y no quieres derramarlo.',
+      'Alarga el cuerpo en lugar de buscar altura.',
+      'Reduce el recorrido si no puedes mantener la pelvis estable.'
+    ],
+    breathing: 'Expulsa el aire mientras extiendes y respira de forma continua al mantener la postura.',
+    tempo: 'Extensión lenta · pausa de 1 segundo · regreso controlado'
+  }),
+
   barbell_bench_press: premium('barbell_bench_press', {
     englishName: 'Barbell Bench Press', level: 'Intermedio', movementType: 'Empuje horizontal',
     primaryMuscles: ['Pectoral mayor'], secondaryMuscles: ['Tríceps', 'Deltoides anterior'],

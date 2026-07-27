@@ -1,5 +1,5 @@
-import { extraExerciseLibrary } from './exercises-extra.js?v=3222';
-import { premiumExerciseData } from './premium-data.js?v=3222';
+import { extraExerciseLibrary } from './exercises-extra.js?v=323a';
+import { premiumExerciseData } from './premium-data.js?v=323a';
 
 'use strict';
 
@@ -267,6 +267,7 @@ function normalizeExerciseData(id, exercise = {}) {
     alternativeReasons: exercise.alternativeReasons || {},
     premium: Boolean(exercise.premium),
     premiumTier: exercise.premiumTier || '',
+    realMotion: Boolean(exercise.realMotion),
     media: exercise.media || null,
     custom: Boolean(exercise.custom)
   };

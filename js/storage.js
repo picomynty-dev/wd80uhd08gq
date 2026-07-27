@@ -3,7 +3,7 @@ import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
 export const STORAGE_KEY = 'myFitPlanStateV322';
 export const LEGACY_KEYS = ['myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.2.2.2';
+export const APP_VERSION = '3.2.3A';
 
 export const defaultSettings = {
   accent: 'custom',
