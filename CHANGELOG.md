@@ -1,3 +1,16 @@
+# My Fit Plan v3.4C.3
+
+- Añade memoria real de recomendaciones.
+- Excluye por completo los ejercicios de la sesión principal.
+- Excluye las propuestas vistas al pulsar “Otra distinta”.
+- Conserva hasta 16 recomendaciones anteriores para aumentar la rotación.
+- Reduce la repetición de patrones de movimiento.
+- Rehace todas las tarjetas de Biblioteca.
+- Elimina los palitos de las tarjetas y fichas sin vídeo.
+- Unifica proporciones, botones, alturas y jerarquía visual.
+- Añade fallback limpio para pósteres que no carguen.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4C.2
 
 - Sustituye la selección de días existentes por un generador dinámico.

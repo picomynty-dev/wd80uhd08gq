@@ -1,16 +1,17 @@
-# My Fit Plan v3.4C.2 · Recomendaciones dinámicas
+# My Fit Plan v3.4C.3 · Biblioteca Pro
 
-La sesión recomendada ya no copia uno de los días existentes de la rutina.
+## Recomendaciones
+- Cero ejercicios compartidos con la próxima sesión.
+- Cero ejercicios compartidos con las propuestas vistas durante la rotación.
+- Memoria persistente de las últimas 16 recomendaciones.
+- Rotación de enfoque muscular.
+- Penalización de patrones y ejercicios utilizados recientemente.
+- Botón “Otra distinta”.
 
-## Nuevo generador
-- Construye la sesión desde la biblioteca completa de ejercicios.
-- Excluye todos los ejercicios de la próxima sesión de rutina.
-- Evita los usados en las últimas recomendaciones.
-- Penaliza ejercicios realizados en las sesiones recientes.
-- Respeta el material disponible y el nivel del usuario.
-- Elige el enfoque menos trabajado durante la semana.
-- Varía patrones de movimiento dentro de la misma sesión.
-- Incluye un botón “Otra” para generar una propuesta distinta al instante.
-
-La recomendación permanece como una sesión temporal y nunca avanza ni modifica
-la rutina activa.
+## Biblioteca
+- Todas las tarjetas tienen la misma estructura y proporción.
+- Los ejercicios sin vídeo usan una portada técnica profesional.
+- Desaparece el bloque partido de palitos y muñeco.
+- Las fichas sin vídeo usan una cabecera coherente con músculos y movimiento.
+- Acciones y alturas corregidas.
+- Los pósteres que fallen muestran una portada limpia en lugar de un icono roto.
