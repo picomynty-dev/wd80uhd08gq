@@ -2295,3 +2295,220 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
   .premium-motion-keys { grid-template-columns: 1fr; }
   .premium-motion-keys article { grid-template-columns: 28px 1fr; padding: 9px; }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.2.3A · Real Motion
+   ========================================================= */
+.real-motion-preview {
+  position: relative;
+  display: block;
+  min-height: 180px;
+  overflow: hidden;
+  background: #101319;
+}
+.real-motion-preview > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  max-height: none;
+  object-fit: cover;
+}
+.real-motion-preview-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.02) 35%,rgba(3,6,11,.86) 100%),
+    linear-gradient(90deg,rgba(3,6,11,.18),transparent 52%);
+}
+.real-motion-preview-label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 999px;
+  background: rgba(5,9,16,.72);
+  color: #fff;
+  font-size: .52rem;
+  font-weight: 950;
+  letter-spacing: .09em;
+  backdrop-filter: blur(10px);
+}
+.real-motion-preview-muscles {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.real-motion-preview-muscles > span {
+  display: grid;
+  grid-template-columns: 8px auto;
+  grid-template-areas: "dot label" "dot value";
+  column-gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(4,8,14,.78);
+  color: #fff;
+  backdrop-filter: blur(9px);
+}
+.real-motion-preview-muscles i,
+.real-motion-muscle-strip i {
+  grid-area: dot;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 15px currentColor;
+}
+.real-motion-preview-muscles .primary i,
+.real-motion-muscle-strip .primary i { color: #ef4444; background: #ef4444; }
+.real-motion-preview-muscles .secondary i,
+.real-motion-muscle-strip .secondary i { color: #f97316; background: #f97316; }
+.real-motion-preview-muscles small {
+  grid-area: label;
+  color: #aab3c0;
+  font-size: .43rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.real-motion-preview-muscles strong {
+  grid-area: value;
+  overflow: hidden;
+  font-size: .56rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.real-motion-unified {
+  display: grid;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  background: linear-gradient(155deg,#121721,#080c13);
+  box-shadow: 0 24px 70px rgba(0,0,0,.34);
+}
+.real-motion-stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 18px;
+  background: #111318;
+}
+.real-motion-stage video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #111318;
+}
+.real-motion-watermark {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  background: rgba(5,8,13,.68);
+  color: #fff;
+  font-size: .5rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  backdrop-filter: blur(10px);
+}
+.real-motion-muscle-strip {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+}
+.real-motion-muscle-strip > span {
+  display: grid;
+  grid-template-columns: 10px minmax(0,1fr);
+  grid-template-areas: "dot label" "dot value";
+  column-gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+}
+.real-motion-muscle-strip small {
+  grid-area: label;
+  color: #8f9bad;
+  font-size: .48rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.real-motion-muscle-strip strong {
+  grid-area: value;
+  margin-top: 2px;
+  color: #f8fafc;
+  font-size: .68rem;
+  line-height: 1.25;
+}
+.real-motion-technique {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+}
+.real-motion-technique article {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 14px;
+  background: rgba(255,255,255,.027);
+}
+.real-motion-technique article > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(var(--accent-rgb),.13);
+  color: var(--accent);
+  font-size: .54rem;
+  font-weight: 950;
+}
+.real-motion-technique strong { color: var(--text); font-size: .68rem; }
+.real-motion-technique p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: .59rem;
+  line-height: 1.4;
+}
+[data-theme="light"] .real-motion-unified {
+  border-color: #d8dee8;
+  background: linear-gradient(155deg,#fff,#f2f5f9);
+}
+[data-theme="light"] .real-motion-muscle-strip > span,
+[data-theme="light"] .real-motion-technique article {
+  border-color: #dfe4ec;
+  background: #f7f9fc;
+}
+[data-theme="light"] .real-motion-muscle-strip strong { color: #111827; }
+
+@media (min-width: 760px) {
+  .real-motion-stage { aspect-ratio: 16 / 11; max-height: 650px; }
+}
+@media (max-width: 620px) {
+  .real-motion-unified { padding: 7px; border-radius: 18px; }
+  .real-motion-stage { border-radius: 15px; }
+  .real-motion-watermark { top: 8px; left: 8px; }
+  .real-motion-muscle-strip { grid-template-columns: 1fr; }
+  .real-motion-technique { grid-template-columns: 1fr; }
+  .real-motion-technique article { padding: 9px; }
+  .real-motion-preview { min-height: 164px; }
+  .real-motion-preview > img { min-height: 164px; }
+}

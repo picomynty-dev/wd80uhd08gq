@@ -1,3 +1,15 @@
+# My Fit Plan v3.2.3A · Real Motion
+
+- Nuevo estándar visual anatómico semirrealista.
+- Cinco ejercicios piloto completamente rehechos.
+- El músculo principal se integra en rojo en el movimiento.
+- Los secundarios se integran en naranja.
+- Nueva tarjeta visual en la biblioteca; desaparecen los palitos en los pilotos.
+- Visor Real Motion con pausa, repetición, velocidad y pantalla completa.
+- Recursos integrados mediante Blob URLs para evitar rutas rotas.
+- Migración automática de los datos anteriores.
+- Nueva caché PWA.
+
 # My Fit Plan 3.2.2.2
 
 - Corrige definitivamente la reproducción de Premium Motion.
