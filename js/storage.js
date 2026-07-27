@@ -1,9 +1,10 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
+import { normalizePlanner } from './calendar-planner.js?v=35';
 
-export const STORAGE_KEY = 'myFitPlanStateV34D';
-export const LEGACY_KEYS = ['myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.4D';
+export const STORAGE_KEY = 'myFitPlanStateV35';
+export const LEGACY_KEYS = ['myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.5';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -19,7 +20,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 350,
+  schemaVersion: 360,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -30,6 +31,7 @@ export const defaultState = {
   activeFolderId: null,
   activeRoutineId: null,
   nextWorkoutIndex: 0,
+  planner: null,
   activeWorkout: null,
   history: [],
   customExercises: [],
@@ -124,7 +126,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 350,
+    schemaVersion: 360,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -143,11 +145,18 @@ export function normalizeState(saved = {}) {
     bodyProgress: normalizeBodyProgress(saved.bodyProgress),
     photoPrivacy: normalizePhotoPrivacy(saved.photoPrivacy),
     nextWorkoutIndex: Number(saved.nextWorkoutIndex) || 0,
+    planner: null,
     createdAt: saved.createdAt || (profile ? new Date().toISOString() : null),
     updatedAt: saved.updatedAt || new Date().toISOString()
   };
 
   if (profile && !normalized.plan && normalized.onboardingCompleted) normalized.plan = buildPlan(profile);
+  normalized.planner = normalizePlanner(
+    saved.planner,
+    profile || {},
+    normalized.nextWorkoutIndex,
+    normalized.plan?.id || ''
+  );
   normalized.activeWorkout = normalizeActiveWorkout(saved.activeWorkout, normalized.plan, profile || {});
 
   if (normalized.plan?.days?.length) normalized.nextWorkoutIndex %= normalized.plan.days.length;
@@ -300,6 +309,8 @@ function normalizeActiveWorkout(workout, plan, profile) {
     sessionSource: workout.sessionSource || 'routine',
     sourceLabel: workout.sourceLabel || 'Tu rutina',
     sourceReason: workout.sourceReason || '',
+    scheduledDate: workout.scheduledDate || '',
+    plannerOccurrenceId: workout.plannerOccurrenceId || '',
     name: workout.name || planDay?.name || 'Entrenamiento',
     startedAt: workout.startedAt || new Date().toISOString(),
     notes: workout.notes || '',
@@ -377,6 +388,11 @@ function normalizeHistorySession(session) {
     sessionSource: session.sessionSource || 'routine',
     sourceLabel: session.sourceLabel || 'Tu rutina',
     sourceReason: session.sourceReason || '',
+    scheduledDate: session.scheduledDate || '',
+    plannerOccurrenceId: session.plannerOccurrenceId || '',
+    planDayId: session.planDayId || '',
+    planDayIndex: Number.isInteger(session.planDayIndex) ? session.planDayIndex : null,
+    sourcePlanDayIndex: Number.isInteger(session.sourcePlanDayIndex) ? session.sourcePlanDayIndex : null,
     readiness: session.readiness || null,
     adaptation: session.adaptation || null,
     exercises,

@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34d';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34d';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34d';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=35';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=35';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=35';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,20 +17,35 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34d';
+} from './stats.js?v=35';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34d';
+} from './coach.js?v=35';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34d';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34d';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=34d';
+} from './adaptive.js?v=35';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=35';
+import {
+  WEEKDAY_LABELS,
+  buildPlannerSummary,
+  createDefaultPlanner,
+  buildPlannerWeek,
+  findNextOccurrence,
+  formatPlannerDate,
+  getMissedOccurrences,
+  movePlannerOccurrence,
+  occurrencesForDate,
+  plannerWeekOffsetDate,
+  skipPlannerOccurrence,
+  smartReplanMissed,
+  updatePlannerSchedule
+} from './calendar-planner.js?v=35';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=35';
 import {
   clamp,
   clone,
@@ -46,10 +61,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34d';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34d';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34d';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34d';
+} from './utils.js?v=35';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=35';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=35';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=35';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -59,7 +74,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34d';
+} from './photo-progress.js?v=35';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -91,6 +106,7 @@ let currentRecommendation = null;
 let recommendationCacheKey = '';
 let recommendationPreviewHistory = [];
 let showOptionalAlternative = false;
+let plannerWeekOffset = 0;
 
 init();
 
@@ -148,10 +164,12 @@ function setView(view) {
     showOptionalAlternative = false;
   }
   currentView = view;
-  document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === view));
+  const activeNav = view === 'calendar' ? 'plan' : view;
+  document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === activeNav));
   const renderers = {
     home: renderHome,
     plan: renderPlan,
+    calendar: renderCalendarPlanner,
     workout: renderWorkout,
     library: renderLibrary,
     profile: renderProfile
@@ -159,6 +177,18 @@ function setView(view) {
   (renderers[view] || renderHome)();
   app.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: state.settings.reduceMotion ? 'auto' : 'smooth' });
+}
+
+function ensurePlanner() {
+  if (!state.plan?.days?.length) return null;
+  if (!state.planner || state.planner.planId !== state.plan.id) {
+    state.planner = createDefaultPlanner(
+      state.profile || {},
+      state.nextWorkoutIndex,
+      state.plan.id
+    );
+  }
+  return state.planner;
 }
 
 function save() {
@@ -281,6 +311,8 @@ function renderHome() {
   const nextExerciseCount = state.activeWorkout?.exercises?.length || nextDay?.exercises?.length || 0;
   const estimatedMinutes = Number(state.profile.minutes || 45);
   const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
+  ensurePlanner();
+  const plannerSummary = buildPlannerSummary(state.planner, state.plan, state.history);
 
   app.innerHTML = `
     <section class="page home-page premium-home">
@@ -339,6 +371,25 @@ function renderHome() {
         <button class="coach-open-button" type="button" data-action="coach-details"><span>Ver análisis completo</span><b>→</b></button>
       </section>
 
+      <section class="planner-home-card">
+        <div class="planner-home-header">
+          <div class="planner-home-brand"><span class="planner-home-icon">◷</span><div><p class="eyebrow">Planificación inteligente</p><h2>${plannerSummary.next ? esc(plannerSummary.next.name) : 'Organiza tu semana'}</h2></div></div>
+          <button class="button button-secondary button-small" type="button" data-nav-local="calendar">Abrir calendario</button>
+        </div>
+        <div class="planner-home-main">
+          <div>
+            <strong>${plannerSummary.next ? `${formatPlannerDate(plannerSummary.next.date)} · ${esc(plannerSummary.next.preferredTime)}` : 'Sin próxima sesión'}</strong>
+            <p>${esc(plannerSummary.message)}</p>
+          </div>
+          <div class="planner-home-stats">
+            <span><strong>${plannerSummary.week.completed}</strong><small>completadas</small></span>
+            <span class="${plannerSummary.missed.length ? 'has-alert' : ''}"><strong>${plannerSummary.missed.length}</strong><small>pendientes</small></span>
+            <span><strong>${plannerSummary.adherence}%</strong><small>cumplimiento</small></span>
+          </div>
+        </div>
+        ${plannerMiniWeekHtml(plannerSummary.week)}
+      </section>
+
       <section class="weekly-performance-card">
         <div class="section-title-row">
           <div><p class="eyebrow">Ritmo semanal</p><h2>Constancia</h2></div>
@@ -366,6 +417,7 @@ function renderHome() {
         <button class="quick-launch-card" type="button" data-action="body-progress-home"><span class="quick-launch-icon">◫</span><span><strong>Progreso físico</strong><small>Fotos, medidas y comparación</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-nav-local="library"><span class="quick-launch-icon">⌕</span><span><strong>Buscar ejercicio</strong><small>Más de 280 opciones</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-nav-local="plan"><span class="quick-launch-icon">▤</span><span><strong>Editar mi plan</strong><small>Series, reps y orden</small></span><b>→</b></button>
+        <button class="quick-launch-card" type="button" data-nav-local="calendar"><span class="quick-launch-icon">▦</span><span><strong>Planificar semana</strong><small>Calendario y sesiones pendientes</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-action="go-history"><span class="quick-launch-icon">◷</span><span><strong>Ver historial</strong><small>Sesiones y récords</small></span><b>→</b></button>
       </section>
     </section>`;
@@ -944,6 +996,267 @@ function planDayDuration(day) {
   return Math.max(10, Math.round(exerciseSeconds / 60));
 }
 
+
+function plannerMiniWeekHtml(week) {
+  return `<div class="planner-mini-week">${week.days.map((day) => {
+    const occurrence = day.occurrences.find((item) => !['moved', 'skipped'].includes(item.status)) || day.occurrences[0];
+    const status = occurrence?.status || 'rest';
+    return `<button type="button" class="planner-mini-day status-${status} ${day.today ? 'is-today' : ''}" data-nav-local="calendar">
+      <small>${day.short}</small>
+      <strong>${day.dayNumber}</strong>
+      <i>${status === 'completed' ? '✓' : status === 'missed' ? '!' : occurrence ? '•' : ''}</i>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function renderCalendarPlanner() {
+  if (!state.plan?.days?.length) {
+    app.innerHTML = `<section class="page"><div class="card locked-card"><h1>Primero crea una rutina</h1><p class="muted">El calendario necesita una rutina activa para distribuir sus sesiones.</p><button class="button button-primary" type="button" data-nav-local="plan">Ir a mis rutinas</button></div></section>`;
+    return;
+  }
+
+  ensurePlanner();
+  const weekDate = plannerWeekOffsetDate(plannerWeekOffset);
+  const week = buildPlannerWeek(state.planner, state.plan, state.history, weekDate);
+  const summary = buildPlannerSummary(state.planner, state.plan, state.history);
+  const missed = summary.missed;
+  const next = summary.next;
+
+  app.innerHTML = `<section class="page planner-page">
+    <header class="planner-hero">
+      <div class="planner-hero-top">
+        <button class="planner-back-button" type="button" data-nav-local="plan">←</button>
+        <div class="planner-hero-brand"><span class="coach-mark">MFP</span><span><small>PLANIFICACIÓN INTELIGENTE</small><strong>${esc(state.plan.name || 'Rutina activa')}</strong></span></div>
+        <button class="button button-secondary button-small" type="button" data-action="planner-settings">Configurar semana</button>
+      </div>
+      <div class="planner-hero-copy">
+        <div>
+          <p class="eyebrow">Tu semana real</p>
+          <h1>Entrena con orden, incluso cuando cambian tus planes.</h1>
+          <p>${esc(summary.message)} Las sesiones movidas conservan el orden de la rutina y las omitidas no bloquean el calendario.</p>
+        </div>
+        <div class="planner-hero-score">
+          <strong>${summary.adherence}%</strong>
+          <small>cumplimiento semanal</small>
+        </div>
+      </div>
+      <div class="planner-hero-metrics">
+        <span><strong>${week.completed}</strong><small>completadas esta semana</small></span>
+        <span class="${missed.length ? 'alert' : ''}"><strong>${missed.length}</strong><small>sesiones pendientes</small></span>
+        <span><strong>${next ? formatPlannerDate(next.date, { weekday: 'short', day: 'numeric', month: 'short' }) : '—'}</strong><small>próxima sesión</small></span>
+      </div>
+    </header>
+
+    <section class="planner-toolbar">
+      <button class="planner-week-arrow" type="button" data-action="planner-prev-week" aria-label="Semana anterior">←</button>
+      <div><p class="eyebrow">Semana</p><h2>${esc(week.label)}</h2></div>
+      <button class="planner-week-arrow" type="button" data-action="planner-next-week" aria-label="Semana siguiente">→</button>
+      <button class="button button-ghost button-small" type="button" data-action="planner-today">Hoy</button>
+    </section>
+
+    <section class="planner-week-grid">
+      ${week.days.map(plannerDayHtml).join('')}
+    </section>
+
+    ${missed.length ? `<section class="planner-recovery-panel">
+      <div class="planner-recovery-heading">
+        <div><p class="eyebrow">Sesiones pendientes</p><h2>Recupera la semana sin desordenar tu rutina</h2><p>My Fit Plan puede buscar huecos libres con descanso suficiente.</p></div>
+        <button class="button button-primary" type="button" data-action="planner-smart-replan">Reorganizar automáticamente</button>
+      </div>
+      <div class="planner-missed-list">${missed.slice(0, 6).map(plannerMissedHtml).join('')}</div>
+    </section>` : `<section class="planner-clear-panel"><span>✓</span><div><strong>Calendario al día</strong><p>No hay sesiones perdidas pendientes de recolocar.</p></div></section>`}
+
+    <section class="planner-next-panel">
+      <div class="section-title-row"><div><p class="eyebrow">Próximos pasos</p><h2>Agenda de entrenamiento</h2></div><span class="pill">${esc(state.planner.preferredTime)}</span></div>
+      ${plannerUpcomingHtml()}
+    </section>
+  </section>`;
+}
+
+function plannerDayHtml(day) {
+  return `<article class="planner-day-card ${day.today ? 'is-today' : ''}">
+    <header><span><small>${day.short}</small><strong>${day.dayNumber}</strong></span><em>${esc(day.monthLabel)}</em></header>
+    <div class="planner-day-events">
+      ${day.occurrences.length ? day.occurrences.map(plannerOccurrenceHtml).join('') : '<div class="planner-rest-day"><span>Descanso</span><small>Sin sesión programada</small></div>'}
+    </div>
+  </article>`;
+}
+
+function plannerOccurrenceHtml(item) {
+  const labels = {
+    completed: 'Completada',
+    missed: 'Pendiente',
+    today: 'Hoy',
+    planned: 'Programada',
+    moved: 'Reprogramada',
+    skipped: 'Omitida'
+  };
+  return `<div class="planner-event status-${item.status}">
+    <div class="planner-event-top"><span>${labels[item.status] || 'Sesión'}</span><small>${esc(item.preferredTime)}</small></div>
+    <strong>${esc(item.name)}</strong>
+    <small>${item.status === 'moved' ? `Movida al ${formatPlannerDate(item.movedTo, { weekday: 'short', day: 'numeric', month: 'short' })}` : esc(item.focus || 'Rutina')}</small>
+    ${['today', 'planned', 'missed'].includes(item.status) ? `<div class="planner-event-actions">
+      <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Entrenar</button>
+      <button type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
+      <button type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
+    </div>` : ''}
+  </div>`;
+}
+
+function plannerMissedHtml(item) {
+  return `<article>
+    <span class="planner-missed-date"><strong>${new Date(`${item.date}T12:00:00`).getDate()}</strong><small>${new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(new Date(`${item.date}T12:00:00`))}</small></span>
+    <div><strong>${esc(item.name)}</strong><small>${formatPlannerDate(item.date)}</small></div>
+    <div class="planner-missed-actions">
+      <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Hacer ahora</button>
+      <button type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
+      <button type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
+    </div>
+  </article>`;
+}
+
+function plannerUpcomingHtml() {
+  const items = [];
+  for (let offset = 0; offset < 35 && items.length < 4; offset += 1) {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    for (const occurrence of occurrencesForDate(state.planner, state.plan, state.history, date)) {
+      if (['today', 'planned', 'missed'].includes(occurrence.status)) items.push(occurrence);
+      if (items.length >= 4) break;
+    }
+  }
+  return items.length ? `<div class="planner-upcoming-list">${items.map((item, index) => `<article>
+    <span>${String(index + 1).padStart(2, '0')}</span>
+    <div><strong>${esc(item.name)}</strong><small>${formatPlannerDate(item.date)} · ${esc(item.preferredTime)}</small></div>
+    <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Preparar</button>
+  </article>`).join('')}</div>` : emptyState('Sin próximas sesiones', 'Configura tus días de entrenamiento para crear la agenda.');
+}
+
+function openPlannerSettings() {
+  const planner = ensurePlanner();
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Planificación semanal</p><h2>Elige tus días habituales</h2><p class="muted small">Al guardar, el calendario empezará desde la próxima fecha disponible y conservará tu historial.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="plannerSettingsForm" class="planner-settings-form">
+      <fieldset><legend>Días de entrenamiento</legend><div class="planner-weekday-picker">
+        ${WEEKDAY_LABELS.map((day) => `<label><input type="checkbox" name="weekday" value="${day.value}" ${planner.weekdays.includes(day.value) ? 'checked' : ''}><span><strong>${day.short}</strong><small>${day.label}</small></span></label>`).join('')}
+      </div></fieldset>
+      <label class="field"><span>Hora habitual</span><input type="time" name="preferredTime" value="${esc(planner.preferredTime)}"></label>
+      <div class="planner-settings-note"><span>i</span><p>La rutina rota de forma continua: si tienes cuatro entrenamientos y entrenas tres días por semana, el cuarto continúa la semana siguiente.</p></div>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Guardar planificación</button></div>
+    </form>`, { wide: true });
+
+  wrapper.querySelector('#plannerSettingsForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const weekdays = data.getAll('weekday').map(Number);
+    if (!weekdays.length) return showToast('Selecciona al menos un día.', 'danger');
+    state.planner = updatePlannerSchedule(state.planner, {
+      weekdays,
+      preferredTime: data.get('preferredTime'),
+      nextWorkoutIndex: state.nextWorkoutIndex,
+      planId: state.plan?.id || ''
+    });
+    plannerWeekOffset = 0;
+    save();
+    wrapper._closeModal();
+    renderCalendarPlanner();
+    showToast('Calendario actualizado.', 'success');
+  });
+}
+
+function plannerOccurrenceFromTarget(target) {
+  return {
+    id: target.dataset.id,
+    date: target.dataset.date,
+    originalDate: target.dataset.originalDate || target.dataset.date,
+    planDayIndex: Number(target.dataset.day)
+  };
+}
+
+function startPlannerOccurrence(target) {
+  const occurrence = plannerOccurrenceFromTarget(target);
+  const day = state.plan?.days?.[occurrence.planDayIndex];
+  if (!day?.exercises?.length) return showToast('Esta sesión no tiene ejercicios.', 'danger');
+
+  const start = () => {
+    state.nextWorkoutIndex = occurrence.planDayIndex;
+    const workout = createActiveWorkout(occurrence.planDayIndex, {
+      dayOverride: day,
+      sessionSource: 'routine',
+      sourceLabel: 'Calendario',
+      sourceReason: `Sesión programada para ${formatPlannerDate(occurrence.date)}.`,
+      sourcePlanDayIndex: occurrence.planDayIndex,
+      scheduledDate: occurrence.date,
+      plannerOccurrenceId: occurrence.id
+    });
+    if (!workout) return showToast('No se pudo preparar la sesión.', 'danger');
+    save();
+    setView('workout');
+    showToast('Sesión del calendario preparada.', 'success');
+  };
+
+  if (state.activeWorkout) {
+    confirmAction({
+      title: 'Cambiar de sesión',
+      message: 'Ya existe un entrenamiento en curso. Para abrir esta sesión habrá que descartarlo.',
+      confirmLabel: 'Cambiar sesión',
+      danger: true,
+      onConfirm: () => {
+        clearRestTimer();
+        state.activeWorkout = null;
+        start();
+      }
+    });
+  } else start();
+}
+
+function openPlannerMove(target) {
+  const occurrence = plannerOccurrenceFromTarget(target);
+  const defaultDate = isoDay(new Date());
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Reprogramar sesión</p><h2>Mover ${esc(state.plan.days[occurrence.planDayIndex]?.name || 'entrenamiento')}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="plannerMoveForm" class="form-grid">
+      <label class="field"><span>Nueva fecha</span><input type="date" name="targetDate" min="${defaultDate}" value="${defaultDate}" required></label>
+      <p class="privacy-note">La sesión conserva su posición en la rutina. El calendario mostrará el cambio en la fecha original.</p>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Mover sesión</button></div>
+    </form>`);
+
+  wrapper.querySelector('#plannerMoveForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const targetDate = new FormData(event.currentTarget).get('targetDate');
+    state.planner = movePlannerOccurrence(state.planner, occurrence, targetDate);
+    save();
+    wrapper._closeModal();
+    renderCalendarPlanner();
+    showToast('Sesión reprogramada.', 'success');
+  });
+}
+
+function skipPlannerTarget(target) {
+  const occurrence = plannerOccurrenceFromTarget(target);
+  const name = state.plan?.days?.[occurrence.planDayIndex]?.name || 'esta sesión';
+  confirmAction({
+    title: 'Omitir sesión',
+    message: `Se marcará ${name} como omitida. La siguiente fecha continuará con el día siguiente de la rotación.`,
+    confirmLabel: 'Omitir',
+    danger: true,
+    onConfirm: () => {
+      state.planner = skipPlannerOccurrence(state.planner, occurrence);
+      save();
+      renderCalendarPlanner();
+      showToast('Sesión omitida.');
+    }
+  });
+}
+
+function replanMissedSessions() {
+  const result = smartReplanMissed(state.planner, state.plan, state.history);
+  if (!result.moved.length) return showToast('No hay sesiones pendientes que recolocar.');
+  state.planner = result.planner;
+  plannerWeekOffset = 0;
+  save();
+  renderCalendarPlanner();
+  showToast(`${result.moved.length} sesión${result.moved.length === 1 ? '' : 'es'} reprogramada${result.moved.length === 1 ? '' : 's'}.`, 'success');
+}
+
 function renderPlan() {
   if (!state.profile) return renderLocked('Primero configura My Fit Plan.', 'Completa el onboarding para crear o importar tus primeras rutinas.');
   ensureRoutineLibrary();
@@ -956,6 +1269,7 @@ function renderPlan() {
     <section class="page routines-page">
       <header class="routines-header">
         <div><p class="eyebrow">Tu espacio de entrenamiento</p><h1>Planes y rutinas</h1><p class="muted">Organiza carpetas, combina plantillas y construye entrenamientos completamente tuyos.</p></div>
+        <button class="button button-secondary" type="button" data-nav-local="calendar">▦ Ver calendario</button>
         <button class="button button-primary" type="button" data-action="create-folder">＋ Carpeta</button>
       </header>
 
@@ -1542,6 +1856,8 @@ function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
             : 'Personalizado'
     ),
     sourceReason: options.sourceReason || '',
+    scheduledDate: options.scheduledDate || '',
+    plannerOccurrenceId: options.plannerOccurrenceId || '',
     name: day.name,
     startedAt: new Date().toISOString(),
     notes: '',
@@ -2779,6 +3095,14 @@ async function handleAppClick(event) {
     'custom-session-move': () => moveCustomSessionExercise(Number(target.dataset.index), target.dataset.direction),
     'custom-session-cancel': cancelCustomSessionBuilder,
     'coach-details': openCoachDetails,
+    'planner-settings': openPlannerSettings,
+    'planner-prev-week': () => { plannerWeekOffset -= 1; renderCalendarPlanner(); },
+    'planner-next-week': () => { plannerWeekOffset += 1; renderCalendarPlanner(); },
+    'planner-today': () => { plannerWeekOffset = 0; renderCalendarPlanner(); },
+    'planner-start': () => startPlannerOccurrence(target),
+    'planner-move': () => openPlannerMove(target),
+    'planner-skip': () => skipPlannerTarget(target),
+    'planner-smart-replan': replanMissedSessions,
     'workout-adaptation-details': openWorkoutAdaptationDetails,
     'restore-full-workout': restoreFullWorkout,
     'quick-weight': openWeightModal,
@@ -3631,6 +3955,11 @@ function finishWorkout() {
     sessionSource: workout.sessionSource || 'routine',
     sourceLabel: workout.sourceLabel || 'Tu rutina',
     sourceReason: workout.sourceReason || '',
+    scheduledDate: workout.scheduledDate || '',
+    plannerOccurrenceId: workout.plannerOccurrenceId || '',
+    planDayId: workout.planDayId || '',
+    planDayIndex: Number.isInteger(workout.planDayIndex) ? workout.planDayIndex : null,
+    sourcePlanDayIndex: Number.isInteger(workout.sourcePlanDayIndex) ? workout.sourcePlanDayIndex : null,
     readiness: workout.readiness || null,
     adaptation: workout.adaptation ? {
       mode: workout.adaptation.mode,
@@ -3992,7 +4321,7 @@ function updateLiveDuration() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34d', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=35', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
