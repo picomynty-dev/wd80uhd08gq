@@ -4555,3 +4555,42 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
     display: none;
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.4C.2 · Recomendaciones dinámicas
+   ========================================================= */
+.training-recommendation-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.training-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(96,165,250,.22);
+  border-radius: 999px;
+  background: rgba(59,130,246,.08);
+  color: #93c5fd;
+  font-size: .56rem;
+  font-weight: 900;
+}
+.training-refresh-button:hover {
+  background: rgba(59,130,246,.14);
+}
+.training-option-recommended .training-reason-tags span:first-child {
+  border: 1px solid rgba(34,197,94,.22);
+  background: rgba(34,197,94,.1);
+  color: #86efac;
+}
+@media (max-width: 520px) {
+  .training-refresh-button span {
+    display: none;
+  }
+  .training-recommendation-tools {
+    gap: 4px;
+  }
+}

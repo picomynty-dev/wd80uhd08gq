@@ -1,3 +1,15 @@
+# My Fit Plan v3.4C.2
+
+- Sustituye la selección de días existentes por un generador dinámico.
+- Utiliza los 283 ejercicios de la biblioteca como candidatos.
+- Excluye los ejercicios de la próxima sesión.
+- Evita las últimas recomendaciones y penaliza repeticiones recientes.
+- Respeta material, experiencia y duración preferida.
+- Genera enfoques de empuje, tirón, pierna, torso, cuerpo completo y core.
+- Añade el botón “Otra” para cambiar de propuesta inmediatamente.
+- Conserva el origen y el contexto adaptativo al recargar la aplicación.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4C
 
 - Rediseña por completo la entrada de Entrenar.

@@ -1,19 +1,16 @@
-# My Fit Plan v3.4C · Selector de entrenamiento
+# My Fit Plan v3.4C.2 · Recomendaciones dinámicas
 
-## Nuevo flujo de Entrenar
-1. Tu próxima sesión de rutina aparece como opción principal.
-2. My Fit Plan propone una alternativa basada en la frecuencia muscular y
-   el tiempo transcurrido desde cada sesión.
-3. El entrenamiento personalizado queda como opción secundaria y voluntaria.
-4. Después de elegir una sesión se abre el check-in adaptativo de v3.4B.
+La sesión recomendada ya no copia uno de los días existentes de la rutina.
 
-## Constructor personalizado
-- Nombre de sesión.
-- Ejercicios desde la biblioteca.
-- Orden manual.
-- Series, rango de repeticiones y descansos.
-- Sesión temporal: se registra en el historial, pero no cambia la rutina.
+## Nuevo generador
+- Construye la sesión desde la biblioteca completa de ejercicios.
+- Excluye todos los ejercicios de la próxima sesión de rutina.
+- Evita los usados en las últimas recomendaciones.
+- Penaliza ejercicios realizados en las sesiones recientes.
+- Respeta el material disponible y el nivel del usuario.
+- Elige el enfoque menos trabajado durante la semana.
+- Varía patrones de movimiento dentro de la misma sesión.
+- Incluye un botón “Otra” para generar una propuesta distinta al instante.
 
-Las sesiones recomendadas y personalizadas no avanzan automáticamente el orden
-de la rutina activa. Solo una sesión iniciada desde “Tu rutina” avanza al día
-siguiente.
+La recomendación permanece como una sesión temporal y nunca avanza ni modifica
+la rutina activa.
