@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=33';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=33';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=33';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=331';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=331';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=331';
 import {
   buildCalendar,
   calculateStreak,
@@ -18,7 +18,7 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=33';
+} from './stats.js?v=331';
 import {
   clamp,
   clone,
@@ -34,10 +34,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=33';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=33';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=33';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=33';
+} from './utils.js?v=331';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=331';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=331';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=331';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -47,7 +47,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=33';
+} from './photo-progress.js?v=331';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1278,7 +1278,8 @@ function profileBodyHtml() {
       </div>
       <div class="body-progress-actions">
         <button class="button button-primary" type="button" data-action="body-progress-new">＋ Nueva revisión</button>
-        <button class="button button-secondary" type="button" data-action="body-progress-compare" ${entries.length >= 2 ? '' : 'disabled'}>Comparar</button>
+        <button class="button button-secondary" type="button" data-action="body-progress-compare" ${entries.length >= 2 ? '' : 'disabled'}>Comparar revisiones</button>
+        <button class="button button-secondary body-free-compare-button" type="button" data-action="body-progress-free-compare">Comparación libre</button>
       </div>
     </section>
 
@@ -1520,6 +1521,155 @@ function bodyMeasurementsTable(entry) {
   const values = Object.entries(entry.measurements || {}).filter(([,value]) => numberValue(value) > 0);
   if (!values.length) return '<p class="muted body-no-measures">No se registraron medidas en esta revisión.</p>';
   return `<div class="body-measure-table">${values.map(([key,value]) => `<span><small>${labels[key]}</small><strong>${formatWeight(value)} cm</strong></span>`).join('')}</div>`;
+}
+
+
+function openFreePhotoCompare() {
+  let photoAUrl = '';
+  let photoBUrl = '';
+  let fitMode = 'contain';
+
+  const wrapper = openModal(`<div class="modal-header">
+      <div>
+        <p class="eyebrow">Comparación libre</p>
+        <h2>Compara dos fotografías cualesquiera</h2>
+        <p class="muted small">No tienen que pertenecer a una revisión ni estar clasificadas como frontal, lateral o posterior.</p>
+      </div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <section class="free-compare-upload-grid">
+      ${freeCompareUpload('A', 'Primera fotografía')}
+      ${freeCompareUpload('B', 'Segunda fotografía')}
+    </section>
+
+    <section class="free-compare-toolbar">
+      <label>
+        <span>Ajuste de imagen</span>
+        <select id="freeCompareFit">
+          <option value="contain">Ver completa</option>
+          <option value="cover">Rellenar y recortar</option>
+        </select>
+      </label>
+      <button class="button button-secondary" type="button" id="swapFreeCompare" disabled>⇄ Intercambiar</button>
+    </section>
+
+    <div id="freeCompareCanvas">
+      <div class="free-compare-empty">
+        <div>◫</div>
+        <h3>Selecciona dos fotografías</h3>
+        <p>Pueden ser imágenes nuevas, antiguas, de otra postura o de cualquier ángulo.</p>
+      </div>
+    </div>
+
+    <p class="privacy-note free-compare-note">Las fotografías se usan solamente durante esta comparación. No se guardan en My Fit Plan ni se suben a ningún servidor.</p>`,
+    {
+      wide: true,
+      onClose: () => {
+        if (photoAUrl) URL.revokeObjectURL(photoAUrl);
+        if (photoBUrl) URL.revokeObjectURL(photoBUrl);
+      }
+    }
+  );
+
+  const canvas = wrapper.querySelector('#freeCompareCanvas');
+  const swapButton = wrapper.querySelector('#swapFreeCompare');
+  const fitSelect = wrapper.querySelector('#freeCompareFit');
+
+  const updateUploadPreview = (slot, url) => {
+    const upload = wrapper.querySelector(`[data-free-upload="${slot}"]`);
+    const image = upload?.querySelector('img');
+    if (!upload || !image) return;
+    image.src = url;
+    image.hidden = false;
+    upload.classList.add('has-preview');
+  };
+
+  const render = () => {
+    swapButton.disabled = !(photoAUrl && photoBUrl);
+    if (!(photoAUrl && photoBUrl)) return;
+
+    canvas.innerHTML = `<section class="free-compare-results">
+      <div class="free-compare-side">
+        <figure>
+          <img src="${photoAUrl}" alt="Primera fotografía" style="object-fit:${fitMode}">
+          <figcaption><strong>Foto A</strong><small>Primera imagen</small></figcaption>
+        </figure>
+        <figure>
+          <img src="${photoBUrl}" alt="Segunda fotografía" style="object-fit:${fitMode}">
+          <figcaption><strong>Foto B</strong><small>Segunda imagen</small></figcaption>
+        </figure>
+      </div>
+
+      <div class="free-compare-slider-wrap">
+        <div class="free-before-after-slider" data-free-slider>
+          <img class="free-after-image" src="${photoBUrl}" alt="Segunda fotografía" style="object-fit:${fitMode}">
+          <div class="free-before-layer" style="width:50%">
+            <img src="${photoAUrl}" alt="Primera fotografía" style="object-fit:${fitMode}">
+          </div>
+          <span class="free-slider-line" style="left:50%"><i>↔</i></span>
+        </div>
+        <label class="body-slider-control">
+          <span>Desliza para comparar</span>
+          <input type="range" min="0" max="100" value="50" id="freeCompareRange">
+        </label>
+      </div>
+    </section>`;
+
+    const range = canvas.querySelector('#freeCompareRange');
+    range.addEventListener('input', () => {
+      const value = range.value;
+      canvas.querySelector('.free-before-layer').style.width = `${value}%`;
+      canvas.querySelector('.free-slider-line').style.left = `${value}%`;
+    });
+  };
+
+  wrapper.querySelectorAll('input[data-free-photo]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file || !String(file.type || '').startsWith('image/')) {
+        showToast('Selecciona una imagen válida.', 'danger');
+        return;
+      }
+
+      const slot = input.dataset.freePhoto;
+      const nextUrl = URL.createObjectURL(file);
+
+      if (slot === 'A') {
+        if (photoAUrl) URL.revokeObjectURL(photoAUrl);
+        photoAUrl = nextUrl;
+      } else {
+        if (photoBUrl) URL.revokeObjectURL(photoBUrl);
+        photoBUrl = nextUrl;
+      }
+
+      updateUploadPreview(slot, nextUrl);
+      render();
+    });
+  });
+
+  fitSelect.addEventListener('change', () => {
+    fitMode = fitSelect.value === 'cover' ? 'cover' : 'contain';
+    render();
+  });
+
+  swapButton.addEventListener('click', () => {
+    [photoAUrl, photoBUrl] = [photoBUrl, photoAUrl];
+    updateUploadPreview('A', photoAUrl);
+    updateUploadPreview('B', photoBUrl);
+    render();
+  });
+}
+
+function freeCompareUpload(slot, label) {
+  return `<label class="free-compare-upload" data-free-upload="${slot}">
+    <input type="file" accept="image/*" data-free-photo="${slot}">
+    <img alt="Previsualización ${esc(label.toLowerCase())}" hidden>
+    <span class="free-compare-upload-icon">＋</span>
+    <strong>${esc(label)}</strong>
+    <small>Elegir desde el dispositivo</small>
+    <b>Foto ${slot}</b>
+  </label>`;
 }
 
 function openBodyProgressCompare() {
@@ -1787,6 +1937,7 @@ async function handleAppClick(event) {
     'body-progress-home': () => { setView('profile'); showProfileTab('body'); },
     'body-progress-new': openBodyProgressForm,
     'body-progress-compare': openBodyProgressCompare,
+    'body-progress-free-compare': openFreePhotoCompare,
     'body-progress-open': () => openBodyProgressEntry(target.dataset.id),
     'body-progress-lock': openPhotoPrivacySettings,
     'body-progress-lock-now': () => { photoVaultUnlocked = false; showProfileTab('body'); },
