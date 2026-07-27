@@ -1,3 +1,12 @@
+# My Fit Plan v3.2.3B
+
+- Rehace la estética de las tarjetas en Biblioteca y Plan visual.
+- Los 30 ejercicios animados usan ahora una preview completa con póster.
+- Se elimina el aspecto roto o partido de las tarjetas premium.
+- Mantiene los 5 pilotos Real Motion con modelo anatómico mejorado.
+- Conserva el resto de vídeos Premium Motion para cubrir los ejercicios esenciales.
+- Renueva la caché de la PWA.
+
 # My Fit Plan v3.2.3A · Real Motion
 
 - Nuevo estándar visual anatómico semirrealista.
