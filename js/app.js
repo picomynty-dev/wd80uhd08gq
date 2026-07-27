@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c2';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c2';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c2';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c';
+} from './stats.js?v=34c2';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c';
+} from './coach.js?v=34c2';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c';
-import { buildRecommendedSession } from './session-selector.js?v=34c';
+} from './adaptive.js?v=34c2';
+import { buildRecommendedSession } from './session-selector.js?v=34c2';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c';
+} from './utils.js?v=34c2';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c2';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c2';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c2';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c';
+} from './photo-progress.js?v=34c2';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -85,6 +85,7 @@ let photoVaultUnlocked = false;
 let bodyMetric = 'waist';
 let pendingWorkoutSelection = null;
 let customWorkoutDraft = null;
+let recommendationVariant = 0;
 
 init();
 
@@ -1081,7 +1082,9 @@ function recommendedSelection() {
     state.plan,
     state.history,
     state.nextWorkoutIndex,
-    state.customExercises
+    state.customExercises,
+    state.profile,
+    recommendationVariant
   );
 }
 
@@ -1126,12 +1129,15 @@ function renderWorkoutSelector() {
       <article class="training-option-card training-option-recommended ${recommendedDay ? '' : 'training-option-disabled'}">
         <div class="training-option-top">
           <span class="training-option-badge recommendation"><i></i> RECOMENDADA POR MFP</span>
-          ${recommended ? `<span class="training-confidence">${recommended.confidence}% datos</span>` : ''}
+          <div class="training-recommendation-tools">
+            ${recommended ? `<span class="training-confidence">${recommended.confidence}% datos</span>` : ''}
+            <button type="button" class="training-refresh-button" data-action="training-refresh-recommended" aria-label="Crear otra recomendación">↻ <span>Otra</span></button>
+          </div>
         </div>
         <div class="training-option-copy">
           <p class="eyebrow">Alternativa inteligente</p>
-          <h2>${recommendedDay ? esc(recommended.originalDayName || recommendedDay.name) : 'Necesita una rutina activa'}</h2>
-          <p>${recommended ? esc(recommended.reason) : 'My Fit Plan necesita ejercicios de referencia para proponer una alternativa coherente.'}</p>
+          <h2>${recommendedDay ? esc(recommended.originalDayName || recommendedDay.name) : 'No se pudo crear una alternativa'}</h2>
+          <p>${recommended ? esc(recommended.reason) : 'Revisa el material disponible en tu perfil o añade más ejercicios a la biblioteca.'}</p>
         </div>
         ${recommendedDay ? workoutOptionPreview(recommendedDay, true) : ''}
         ${recommended ? `<div class="training-reason-tags">${recommended.tags.map((tag) => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
@@ -2555,6 +2561,11 @@ async function handleAppClick(event) {
     'home-workout': () => setView('workout'),
     'training-routine': () => chooseTrainingOption('routine'),
     'training-recommended': () => chooseTrainingOption('recommended'),
+    'training-refresh-recommended': () => {
+      recommendationVariant += 1;
+      renderWorkoutSelector();
+      showToast('Nueva propuesta generada.', 'success');
+    },
     'training-custom': startCustomWorkoutBuilder,
     'workout-selector-back': backToWorkoutSelector,
     'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),

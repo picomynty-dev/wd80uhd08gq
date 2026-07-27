@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV34C';
-export const LEGACY_KEYS = ['myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.4C';
+export const STORAGE_KEY = 'myFitPlanStateV34C2';
+export const LEGACY_KEYS = ['myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.4C.2';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -19,7 +19,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 342,
+  schemaVersion: 344,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -123,7 +123,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 342,
+    schemaVersion: 344,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -278,12 +278,18 @@ function normalizeActiveWorkout(workout, plan, profile) {
   const exercises = Array.isArray(workout.exercises) ? workout.exercises : [];
   return {
     id: workout.id || uid('session'),
-    planDayIndex,
+    planDayIndex: Number.isInteger(workout.planDayIndex) ? workout.planDayIndex : null,
+    sourcePlanDayIndex: Number.isInteger(workout.sourcePlanDayIndex) ? workout.sourcePlanDayIndex : null,
     planDayId: workout.planDayId || planDay?.id || null,
+    sessionSource: workout.sessionSource || 'routine',
+    sourceLabel: workout.sourceLabel || 'Tu rutina',
+    sourceReason: workout.sourceReason || '',
     name: workout.name || planDay?.name || 'Entrenamiento',
     startedAt: workout.startedAt || new Date().toISOString(),
     notes: workout.notes || '',
     restTimer: workout.restTimer || null,
+    readiness: workout.readiness || null,
+    adaptation: workout.adaptation || null,
     exercises: exercises.map((item, exerciseIndex) => normalizeWorkoutExercise(item, rules, exerciseIndex))
   };
 }
@@ -352,6 +358,11 @@ function normalizeHistorySession(session) {
     completedCount: Number(session.completedCount || exercises.length),
     totalCount: Number(session.totalCount || exercises.length),
     notes: session.notes || '',
+    sessionSource: session.sessionSource || 'routine',
+    sourceLabel: session.sourceLabel || 'Tu rutina',
+    sourceReason: session.sourceReason || '',
+    readiness: session.readiness || null,
+    adaptation: session.adaptation || null,
     exercises,
     volume: Number(session.volume || 0),
     prs: Array.isArray(session.prs) ? session.prs : []
