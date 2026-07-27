@@ -1,3 +1,13 @@
+# My Fit Plan v3.3.1
+
+- Rediseña la barra de pestañas del perfil para eliminar el espacio vacío.
+- Añade Comparación libre para dos fotografías cualesquiera.
+- No obliga a clasificar las imágenes como frontal, lateral o posterior.
+- Incluye comparación lado a lado y deslizador.
+- Permite intercambiar ambas imágenes y elegir entre contener o recortar.
+- Las fotos temporales no se guardan.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.3
 
 - Nuevo apartado Cuerpo dentro de Perfil.
