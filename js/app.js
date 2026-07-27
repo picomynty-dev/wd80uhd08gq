@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=3222';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=3222';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=3222';
 import {
   buildCalendar,
   calculateStreak,
@@ -18,7 +18,7 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js';
+} from './stats.js?v=3222';
 import {
   clamp,
   clone,
@@ -34,10 +34,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js';
-import { searchExerciseEntries, suggestedSearches } from './search.js';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js';
+} from './utils.js?v=3222';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=3222';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=3222';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=3222';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');

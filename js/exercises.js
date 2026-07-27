@@ -1,5 +1,5 @@
-import { extraExerciseLibrary } from './exercises-extra.js';
-import { premiumExerciseData } from './premium-data.js';
+import { extraExerciseLibrary } from './exercises-extra.js?v=3222';
+import { premiumExerciseData } from './premium-data.js?v=3222';
 
 'use strict';
 
