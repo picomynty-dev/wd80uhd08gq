@@ -1,16 +1,17 @@
-# My Fit Plan v3.4D · Biblioteca y técnica profesional
+# My Fit Plan v3.5 · Calendario y planificación inteligente
 
-## Biblioteca Pro
-- Filtros por músculo, material, nivel, patrón y disponibilidad.
-- Indicadores de calidad, animación y compatibilidad con el material del perfil.
-- Eliminación de duplicados exactos en resultados.
+## Funciones
+- Calendario semanal de lunes a domingo.
+- Rotación continua de los días de la rutina.
+- Configuración de días y hora habitual.
+- Detección automática de sesiones perdidas.
+- Reprogramación manual.
+- Reorganización automática en huecos libres.
+- Opción de omitir una sesión.
+- Inicio directo desde el calendario.
+- Vinculación de la sesión terminada con su fecha programada.
+- Resumen semanal en Inicio.
+- Conservación completa de historial, rutinas, fotografías y ajustes.
 
-## Fichas técnicas
-- Preparación, ejecución y regreso.
-- Respiración, ritmo, puntos clave y errores frecuentes.
-- Músculos principales y secundarios.
-- Historial personal y récords.
-
-## Sustituciones inteligentes
-- Clasificación por patrón, músculo, nivel y material disponible.
-- Recomendaciones destacadas al cambiar ejercicios en plan o entrenamiento.
+La planificación empieza desde la próxima fecha disponible al activarse. No
+marca sesiones antiguas de forma retroactiva.

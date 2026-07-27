@@ -1,3 +1,16 @@
+# My Fit Plan v3.5
+
+- Añade calendario semanal inteligente.
+- Distribuye la rutina en rotación continua.
+- Detecta sesiones perdidas desde la activación del calendario.
+- Permite entrenar, mover u omitir cada sesión.
+- Añade reorganización automática de pendientes.
+- Vincula entrenamientos con la fecha programada.
+- Añade tarjeta semanal en Inicio.
+- Añade acceso desde Inicio y Plan.
+- Migra automáticamente los datos anteriores.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4D
 
 - Rehace la Biblioteca como Biblioteca Pro.
