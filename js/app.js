@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c5';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c5';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c5';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c6';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c6';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c6';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c5';
+} from './stats.js?v=34c6';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c5';
+} from './coach.js?v=34c6';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c5';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c5';
+} from './adaptive.js?v=34c6';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c6';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c5';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c5';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c5';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c5';
+} from './utils.js?v=34c6';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c6';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c6';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c6';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c5';
+} from './photo-progress.js?v=34c6';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1353,9 +1353,15 @@ function renderCustomWorkoutBuilder() {
 
     <div class="custom-session-actions">
       <button class="button button-secondary" type="button" data-action="custom-session-cancel">Cancelar</button>
-      <button class="button button-primary custom-session-continue" type="button" data-action="custom-session-continue" ${draft.exercises.length ? '' : 'disabled'}>Continuar al check-in <span>→</span></button>
+      <button id="customSessionContinue" class="button button-primary custom-session-continue" type="button" ${draft.exercises.length ? '' : 'disabled'}>Continuar al check-in <span>→</span></button>
     </div>
   </section>`;
+
+  document.querySelector('#customSessionContinue')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    continueCustomSession();
+  });
 }
 
 function customSessionExerciseHtml(item, index, total) {
@@ -1391,27 +1397,31 @@ function continueCustomSession() {
     return;
   }
 
-  // Copiar el borrador antes de cerrarlo. Mientras customWorkoutDraft siga
-  // activo, renderWorkout vuelve a mostrar el constructor en lugar del check-in.
   const completedDraft = clone(customWorkoutDraft);
-  const name = String(completedDraft.name || '').trim() || 'Entrenamiento personalizado';
-
-  pendingWorkoutSelection = {
+  const selection = {
     source: 'custom',
     sourceLabel: 'Personalizado',
     planDayIndex: null,
     day: {
-      id: completedDraft.id,
-      name,
+      id: completedDraft.id || uid('custom-session'),
+      name: String(completedDraft.name || '').trim() || 'Entrenamiento personalizado',
       exercises: clone(completedDraft.exercises)
     },
     reason: 'Sesión creada manualmente para hoy.',
     confidence: 100
   };
 
+  pendingWorkoutSelection = selection;
   customWorkoutDraft = null;
-  renderWorkout();
-  showToast('Personalizado preparado. Completa el check-in.', 'success');
+
+  try {
+    renderPreWorkoutCheckin(selection);
+    showToast('Personalizado preparado. Completa el check-in.', 'success');
+  } catch (error) {
+    console.error('No se pudo abrir el check-in personalizado:', error);
+    pendingWorkoutSelection = selection;
+    showToast('No se pudo abrir el check-in. Recarga y vuelve a intentarlo.', 'danger');
+  }
 }
 
 function removeCustomSessionExercise(index) {
@@ -2700,7 +2710,6 @@ async function handleAppClick(event) {
     'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),
     'custom-session-remove': () => removeCustomSessionExercise(Number(target.dataset.index)),
     'custom-session-move': () => moveCustomSessionExercise(Number(target.dataset.index), target.dataset.direction),
-    'custom-session-continue': continueCustomSession,
     'custom-session-cancel': cancelCustomSessionBuilder,
     'coach-details': openCoachDetails,
     'workout-adaptation-details': openWorkoutAdaptationDetails,
@@ -3951,7 +3960,7 @@ function updateLiveDuration() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js');
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34c6', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
