@@ -1,17 +1,25 @@
-# My Fit Plan v3.5 · Calendario y planificación inteligente
+# My Fit Plan v3.6 · Progresión automática y cargas inteligentes
 
-## Funciones
-- Calendario semanal de lunes a domingo.
-- Rotación continua de los días de la rutina.
-- Configuración de días y hora habitual.
-- Detección automática de sesiones perdidas.
-- Reprogramación manual.
-- Reorganización automática en huecos libres.
-- Opción de omitir una sesión.
-- Inicio directo desde el calendario.
-- Vinculación de la sesión terminada con su fecha programada.
-- Resumen semanal en Inicio.
-- Conservación completa de historial, rutinas, fotografías y ajustes.
+## Motor de progresión
+- Analiza hasta ocho sesiones comparables por ejercicio.
+- Aplica doble progresión por carga y repeticiones.
+- Sugiere subir, mantener o reducir la carga.
+- Ajusta objetivos de ejercicios por tiempo y peso corporal.
+- Tiene en cuenta RIR y el check-in del día.
+- Detecta estancamientos de tres sesiones.
+- Muestra nivel de confianza y evidencias.
 
-La planificación empieza desde la próxima fecha disponible al activarse. No
-marca sesiones antiguas de forma retroactiva.
+## Descarga inteligente
+- Observa sueño, energía, molestias, densidad de entrenamiento y caídas de
+  rendimiento.
+- Nunca se aplica automáticamente.
+- Al aceptarla reduce aproximadamente un 10 % la carga y una serie por
+  ejercicio solo durante la sesión actual.
+
+## Historial avanzado
+- Mejor carga.
+- 1RM estimado.
+- Mejor volumen.
+- Tendencia gráfica.
+- Últimas cinco referencias.
+- Panel general de progresión en Inicio.

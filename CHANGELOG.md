@@ -1,3 +1,16 @@
+# My Fit Plan v3.6
+
+- Añade motor de doble progresión.
+- Recomienda peso, series y rango de repeticiones.
+- Añade botón para aplicar el objetivo.
+- Detecta mejoras, regresiones y estancamientos.
+- Integra el check-in en la decisión de carga.
+- Añade descarga inteligente reversible.
+- Añade gráfico y métricas avanzadas por ejercicio.
+- Añade panel de progresión en Inicio.
+- Guarda la descarga junto al historial.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.5
 
 - Añade calendario semanal inteligente.
