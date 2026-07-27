@@ -1,6 +1,8 @@
 'use strict';
 
-const media = (id) => ({
+import { premiumMotionAssets } from './media-bundle-pro.js';
+
+const media = (id) => premiumMotionAssets[id] || ({
   video: new URL(`../assets/motion-pro/${id}.mp4`, import.meta.url).href,
   poster: new URL(`../assets/posters-pro/${id}.jpg`, import.meta.url).href
 });
