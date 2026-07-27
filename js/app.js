@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c3';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c3';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c3';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c4';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c4';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c4';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c3';
+} from './stats.js?v=34c4';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c3';
+} from './coach.js?v=34c4';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c3';
-import { buildRecommendedSession } from './session-selector.js?v=34c3';
+} from './adaptive.js?v=34c4';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c4';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c3';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c3';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c3';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c3';
+} from './utils.js?v=34c4';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c4';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c4';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c4';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c3';
+} from './photo-progress.js?v=34c4';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -89,6 +89,7 @@ let recommendationVariant = 0;
 let currentRecommendation = null;
 let recommendationCacheKey = '';
 let recommendationPreviewHistory = [];
+let showOptionalAlternative = false;
 
 init();
 
@@ -143,6 +144,7 @@ function setView(view) {
   if (view !== 'workout' && !state.activeWorkout) {
     pendingWorkoutSelection = null;
     customWorkoutDraft = null;
+    showOptionalAlternative = false;
   }
   currentView = view;
   document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === view));
@@ -1126,8 +1128,21 @@ function rotateRecommendedSession() {
   recommendationVariant += 1;
   currentRecommendation = null;
   recommendationCacheKey = '';
+  showOptionalAlternative = true;
   renderWorkoutSelector();
-  showToast('Nueva propuesta sin repetir la anterior.', 'success');
+  showToast('Nueva alternativa preparada.', 'success');
+}
+
+function showAlternativeOption() {
+  showOptionalAlternative = true;
+  currentRecommendation = null;
+  recommendationCacheKey = '';
+  renderWorkoutSelector();
+}
+
+function restoreCoachRecommendation() {
+  showOptionalAlternative = false;
+  renderWorkoutSelector();
 }
 
 function rememberRecommendedSession(selection) {
@@ -1148,15 +1163,24 @@ function rememberRecommendedSession(selection) {
 
 function renderWorkoutSelector() {
   const routine = routineSelection();
-  const recommended = recommendedSelection();
+  const alternative = recommendedSelection();
+  const coachChoice = evaluateTrainingChoice({
+    routine,
+    alternative,
+    history: state.history,
+    customExercises: state.customExercises,
+    weeklyGoal: state.profile?.days || state.plan?.days?.length || 3
+  });
   const routineDay = routine?.day;
-  const recommendedDay = recommended?.day;
+  const displayAlternative = showOptionalAlternative || coachChoice.mode === 'alternative';
+  const displayedSelection = displayAlternative ? alternative : routine;
+  const displayedDay = displayedSelection?.day;
 
   app.innerHTML = `<section class="page workout-selector-page">
     <header class="workout-selector-hero">
       <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Elige cómo quieres empezar</strong></span></div>
       <h1>Tu entrenamiento, primero.</h1>
-      <p>Continúa con tu rutina habitual, acepta una alternativa recomendada o crea una sesión libre cuando realmente la necesites.</p>
+      <p>La app respeta tu planificación. Solo propone una alternativa cuando existe un motivo real o cuando tú decides explorar otra opción.</p>
     </header>
 
     <section class="workout-selector-grid">
@@ -1184,22 +1208,48 @@ function renderWorkoutSelector() {
         <button class="button button-primary" type="button" data-nav="plan">Ir a mis rutinas</button>
       </article>`}
 
-      <article class="training-option-card training-option-recommended ${recommendedDay ? '' : 'training-option-disabled'}">
-        <div class="training-option-top">
-          <span class="training-option-badge recommendation"><i></i> RECOMENDADA POR MFP</span>
-          <div class="training-recommendation-tools">
-            ${recommended ? `<span class="training-confidence">${recommended.confidence}% datos</span>` : ''}
-            <button type="button" class="training-refresh-button" data-action="training-refresh-recommended" aria-label="Crear otra recomendación">↻ <span>Otra distinta</span></button>
+      <article class="training-option-card training-coach-card coach-choice-${displayAlternative ? 'alternative' : 'routine'}">
+        <div class="coach-choice-header">
+          <div class="coach-choice-brand">
+            <span class="coach-mark">MFP</span>
+            <div><small>RECOMENDACIÓN DEL ENTRENADOR</small><strong>${esc(displayAlternative ? (showOptionalAlternative ? 'Alternativa opcional' : coachChoice.eyebrow) : coachChoice.eyebrow)}</strong></div>
           </div>
+          <span class="training-confidence">${displayAlternative ? alternative?.confidence || 60 : coachChoice.confidence}% datos</span>
         </div>
-        <div class="training-option-copy">
-          <p class="eyebrow">Alternativa inteligente</p>
-          <h2>${recommendedDay ? esc(recommended.originalDayName || recommendedDay.name) : 'No se pudo crear una alternativa'}</h2>
-          <p>${recommended ? esc(recommended.reason) : 'No hay suficientes ejercicios compatibles para crear una alternativa profesional.'}</p>
-        </div>
-        ${recommendedDay ? workoutOptionPreview(recommendedDay, true) : ''}
-        ${recommended ? `<div class="training-reason-tags">${recommended.tags.map((tag) => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
-        <button class="button button-secondary button-block" type="button" data-action="training-recommended" ${recommendedDay ? '' : 'disabled'}>Ver sesión recomendada</button>
+
+        ${displayAlternative && displayedDay ? `
+          <div class="coach-choice-copy">
+            <span class="coach-choice-state alternative">ALTERNATIVA</span>
+            <h2>${esc(displayedDay.name)}</h2>
+            <p>${esc(showOptionalAlternative ? alternative.reason : coachChoice.reason)}</p>
+          </div>
+          ${workoutOptionPreview(displayedDay, true)}
+          <div class="coach-choice-facts compact">
+            ${(alternative?.tags || []).slice(0,3).map((tag) => `<span><small>Dato</small><strong>${esc(tag)}</strong></span>`).join('')}
+          </div>
+          <div class="coach-choice-actions">
+            <button class="button button-primary button-block" type="button" data-action="training-recommended">Preparar alternativa</button>
+            <button class="button button-ghost button-block" type="button" data-action="training-refresh-recommended">↻ Generar otra</button>
+            <button class="coach-text-action" type="button" data-action="training-restore-coach">Volver a la recomendación del entrenador</button>
+          </div>
+        ` : `
+          <div class="coach-choice-copy">
+            <span class="coach-choice-state routine">RUTINA RECOMENDADA</span>
+            <h2>${esc(coachChoice.title)}</h2>
+            <p>${esc(coachChoice.reason)}</p>
+          </div>
+          <div class="coach-choice-verdict">
+            <span>✓</span>
+            <div><small>Decisión</small><strong>No cambiar por cambiar</strong><p>Tu sesión programada sigue siendo la referencia principal.</p></div>
+          </div>
+          <div class="coach-choice-facts">
+            ${(coachChoice.facts || []).map((fact) => `<span><small>${esc(fact.label)}</small><strong>${esc(fact.value)}</strong></span>`).join('')}
+          </div>
+          <div class="coach-choice-actions">
+            <button class="button button-primary button-block" type="button" data-action="training-routine">Preparar mi rutina</button>
+            <button class="button button-secondary button-block" type="button" data-action="training-show-alternative">Explorar una alternativa</button>
+          </div>
+        `}
       </article>
 
       <article class="training-option-card training-option-custom">
@@ -1220,7 +1270,7 @@ function renderWorkoutSelector() {
 
     <section class="training-selector-note">
       <span>i</span>
-      <p><strong>La opción principal siempre será tu rutina.</strong> Las sesiones recomendadas y personalizadas son alternativas puntuales y no cambian automáticamente tu planificación.</p>
+      <p><strong>Recomendar no significa cambiar.</strong> My Fit Plan mantiene tu rutina cuando sigue siendo la mejor decisión y presenta alternativas solo cuando existe un motivo o tú las solicitas.</p>
     </section>
   </section>`;
 }
@@ -2635,6 +2685,8 @@ async function handleAppClick(event) {
     'training-routine': () => chooseTrainingOption('routine'),
     'training-recommended': () => chooseTrainingOption('recommended'),
     'training-refresh-recommended': rotateRecommendedSession,
+    'training-show-alternative': showAlternativeOption,
+    'training-restore-coach': restoreCoachRecommendation,
     'training-custom': startCustomWorkoutBuilder,
     'workout-selector-back': backToWorkoutSelector,
     'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),

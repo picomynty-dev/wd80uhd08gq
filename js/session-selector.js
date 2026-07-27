@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise } from './exercises.js?v=34c3';
-import { createPlanExercise, trainingRules } from './plans.js?v=34c3';
-import { numberValue } from './utils.js?v=34c3';
+import { getAllExercises, getExercise } from './exercises.js?v=34c4';
+import { createPlanExercise, trainingRules } from './plans.js?v=34c4';
+import { numberValue } from './utils.js?v=34c4';
 
 const FOCUS_PROFILES = [
   {
@@ -56,7 +56,7 @@ const FOCUS_PROFILES = [
 ];
 
 function sessionDate(session) {
-  return new Date(session.finishedAt || session.startedAt || 0);
+  return new Date(session?.finishedAt || session?.startedAt || 0);
 }
 
 function dayStamp() {
@@ -248,6 +248,8 @@ function candidateScore({
   recent,
   selectedFamilies,
   softExcludedIds,
+  mainExerciseIds,
+  selectedMainCount,
   seed,
   slotIndex
 }) {
@@ -266,6 +268,10 @@ function candidateScore({
   else if (recent.lastSix.has(id)) score -= 14;
   if (recent.completedRecommended.has(id)) score -= 55;
   if (softExcludedIds.has(id)) score -= 70;
+  if (mainExerciseIds.has(id)) {
+    score -= 28;
+    if (selectedMainCount >= 2) score -= 500;
+  }
 
   const family = movementFamily(exercise);
   if (family && selectedFamilies.has(family)) score -= 34;
@@ -319,6 +325,7 @@ function selectExercises({
   mandatoryExcludedIds,
   memoryExcludedIds,
   softExcludedIds,
+  mainExerciseIds,
   muscleCounts,
   recent,
   profile,
@@ -328,6 +335,7 @@ function selectExercises({
   const selected = [];
   const selectedIds = new Set();
   const selectedFamilies = new Set();
+  let selectedMainCount = 0;
   const rules = trainingRules(profile);
   const pool = buildPool({
     library,
@@ -352,6 +360,8 @@ function selectExercises({
           recent,
           selectedFamilies,
           softExcludedIds,
+          mainExerciseIds,
+          selectedMainCount,
           seed,
           slotIndex
         })
@@ -367,6 +377,7 @@ function selectExercises({
 
     selectedIds.add(choice.id);
     selectedFamilies.add(movementFamily(choice.exercise));
+    if (mainExerciseIds.has(choice.id)) selectedMainCount += 1;
 
     const compound = slotIndex <= 1
       || /(press|remo|jalón|dominada|sentadilla|prensa|peso muerto|zancada|hip thrust)/i.test(choice.exercise.name);
@@ -386,6 +397,132 @@ function signatureFromIds(ids = []) {
 function recommendationName(focus, variant) {
   const suffixes = ['Equilibrada', 'Rotación', 'Alternativa', 'Nueva selección', 'Variante'];
   return `${focus.name} · ${suffixes[variant % suffixes.length]}`;
+}
+
+
+function hoursSince(date) {
+  if (!date || Number.isNaN(date.getTime())) return Infinity;
+  return Math.max(0, (Date.now() - date.getTime()) / 3600000);
+}
+
+function sessionExerciseIds(session) {
+  return new Set((session?.exercises || []).map((item) => item.exerciseId).filter(Boolean));
+}
+
+function overlapRatio(first = new Set(), second = new Set()) {
+  if (!first.size || !second.size) return 0;
+  const overlap = [...first].filter((id) => second.has(id)).length;
+  return overlap / Math.min(first.size, second.size);
+}
+
+function routineMuscles(day, customExercises = []) {
+  return new Set(
+    (day?.exercises || [])
+      .map((item) => broadMuscle(getExercise(item.exerciseId, customExercises).muscle))
+      .filter(Boolean)
+  );
+}
+
+function sessionMuscles(session, customExercises = []) {
+  return new Set(
+    (session?.exercises || [])
+      .map((item) => broadMuscle(getExercise(item.exerciseId, customExercises).muscle))
+      .filter(Boolean)
+  );
+}
+
+export function evaluateTrainingChoice({
+  routine,
+  alternative,
+  history = [],
+  customExercises = [],
+  weeklyGoal = 3
+}) {
+  if (!routine?.day?.exercises?.length) {
+    return {
+      mode: alternative?.day?.exercises?.length ? 'alternative' : 'none',
+      confidence: 35,
+      title: alternative?.day?.name || 'Sin sesión preparada',
+      eyebrow: 'RECOMENDACIÓN DEL ENTRENADOR',
+      reason: alternative
+        ? 'No hay una rutina activa completa, así que se propone una sesión temporal.'
+        : 'Crea una rutina para recibir una recomendación útil.',
+      facts: []
+    };
+  }
+
+  const routineIds = exerciseIds(routine.day);
+  const routineMuscleSet = routineMuscles(routine.day, customExercises);
+  const sortedHistory = [...history].sort((a, b) => sessionDate(b) - sessionDate(a));
+  const lastSession = sortedHistory[0] || null;
+
+  const lastSameRoutine = sortedHistory.find((session) => {
+    if (session.planDayId && routine.day.id && session.planDayId === routine.day.id) return true;
+    if (String(session.name || '').trim().toLowerCase() === String(routine.day.name || '').trim().toLowerCase()) return true;
+    return overlapRatio(routineIds, sessionExerciseIds(session)) >= 0.6;
+  }) || null;
+
+  const sameRoutineHours = hoursSince(sessionDate(lastSameRoutine));
+  const recentLimit = Date.now() - 40 * 3600000;
+  const recentSessions = sortedHistory.filter((session) => sessionDate(session).getTime() >= recentLimit);
+  const recentMuscles = new Set();
+  recentSessions.forEach((session) => {
+    sessionMuscles(session, customExercises).forEach((muscle) => recentMuscles.add(muscle));
+  });
+
+  const muscleOverlap = routineMuscleSet.size
+    ? [...routineMuscleSet].filter((muscle) => recentMuscles.has(muscle)).length / routineMuscleSet.size
+    : 0;
+
+  const startOfCurrentWeek = new Date();
+  const currentDay = startOfCurrentWeek.getDay() || 7;
+  startOfCurrentWeek.setHours(0, 0, 0, 0);
+  startOfCurrentWeek.setDate(startOfCurrentWeek.getDate() - currentDay + 1);
+  const sessionsThisWeek = sortedHistory.filter((session) => sessionDate(session) >= startOfCurrentWeek).length;
+  const adherencePending = Math.max(0, numberValue(weeklyGoal, 3) - sessionsThisWeek);
+
+  const strongRecoveryConflict = sameRoutineHours < 30
+    || (recentSessions.length > 0 && muscleOverlap >= 0.75);
+  const moderateRecoveryConflict = sameRoutineHours < 42
+    || (recentSessions.length > 0 && muscleOverlap >= 0.5);
+
+  if (alternative?.day?.exercises?.length && strongRecoveryConflict) {
+    return {
+      mode: 'alternative',
+      confidence: 88,
+      title: alternative.day.name,
+      eyebrow: 'ALTERNATIVA RECOMENDADA',
+      reason: sameRoutineHours < 30
+        ? `La sesión ${routine.day.name} se realizó hace aproximadamente ${Math.max(1, Math.round(sameRoutineHours))} horas. Conviene evitar repetirla tan pronto.`
+        : 'La mayor parte de los grupos de la próxima rutina ya se trabajaron durante las últimas 40 horas.',
+      facts: [
+        { label: 'Recuperación', value: 'Mejor alternativa' },
+        { label: 'Rutina', value: 'Se conserva pendiente' },
+        { label: 'Coincidencias', value: `${alternative.overlapWithMain || 0} ejercicios` }
+      ]
+    };
+  }
+
+  const confidence = history.length
+    ? moderateRecoveryConflict ? 78 : 92
+    : 82;
+
+  return {
+    mode: 'routine',
+    confidence,
+    title: `Sigue con ${routine.day.name}`,
+    eyebrow: 'MEJOR OPCIÓN HOY',
+    reason: !history.length
+      ? 'Tu rutina ya contiene una progresión ordenada. Sin historial suficiente, respetar su secuencia es la recomendación más fiable.'
+      : moderateRecoveryConflict
+        ? 'Existe algo de trabajo reciente parecido, pero no hay una señal suficientemente fuerte para sustituir la sesión programada.'
+        : 'No hay un conflicto claro de recuperación. Mantener la secuencia de tu rutina aporta más valor que cambiar ejercicios por cambiar.',
+    facts: [
+      { label: 'Planificación', value: 'Secuencia correcta' },
+      { label: 'Objetivo semanal', value: adherencePending ? `${adherencePending} pendientes` : 'Completado' },
+      { label: 'Recuperación', value: moderateRecoveryConflict ? 'Vigilar sensaciones' : 'Sin conflicto claro' }
+    ]
+  };
 }
 
 export function buildRecommendedSession(
@@ -415,9 +552,9 @@ export function buildRecommendedSession(
 
   const persistentIds = setFromHistory(recommendationHistory, 'exerciseIds', 5);
   const softPersistentIds = setFromHistory(recommendationHistory, 'exerciseIds', 10);
-  const mandatoryExcludedIds = new Set([...nextExerciseIds, ...excludedExerciseIds]);
+  const mandatoryExcludedIds = new Set([...excludedExerciseIds]);
   const memoryExcludedIds = new Set([...persistentIds, ...recent.completedRecommended]);
-  const softExcludedIds = new Set([...softPersistentIds, ...recent.lastTwo]);
+  const softExcludedIds = new Set([...softPersistentIds, ...recent.lastTwo, ...nextExerciseIds]);
 
   const seed = `${dayStamp()}|${plan.id || plan.name}|${history.length}|${safeNext}|${variant}|${[...excludedExerciseIds].sort().join(',')}`;
   const enrichedNextDay = {
@@ -444,6 +581,7 @@ export function buildRecommendedSession(
     mandatoryExcludedIds,
     memoryExcludedIds,
     softExcludedIds,
+    mainExerciseIds: nextExerciseIds,
     muscleCounts,
     recent,
     profile,
@@ -479,14 +617,18 @@ export function buildRecommendedSession(
       exercises
     },
     originalDayName: recommendationName(focus, variant),
-    reason: `Creada ahora con ${exercises.length} ejercicios. No comparte ejercicios con tu sesión principal y rota respecto a las propuestas anteriores.`,
+    reason: overlapWithMain
+      ? `Creada con ${exercises.length} ejercicios. Conserva ${overlapWithMain} movimiento${overlapWithMain === 1 ? '' : 's'} útil${overlapWithMain === 1 ? '' : 'es'} de tu rutina y cambia el resto.`
+      : `Creada con ${exercises.length} ejercicios como alternativa completa a la sesión programada.`,
     muscles: focus.muscles,
     confidence,
     overlapWithMain,
     overlapWithPreview,
     overlapWithRecentMemory,
     tags: [
-      `${overlapWithMain} repetidos con principal`,
+      overlapWithMain
+        ? `${overlapWithMain} coincidencia${overlapWithMain === 1 ? '' : 's'} útil${overlapWithMain === 1 ? '' : 'es'}`
+        : 'Alternativa completa',
       `${overlapWithPreview} repetidos con propuestas vistas`,
       focus.name,
       `${confidence}% de confianza`
