@@ -97,13 +97,15 @@ function bodyMap(exercise) {
 }
 
 export function exerciseVisual(exercise, { large = false } = {}) {
-  if (exercise?.realMotion && exercise?.media?.poster) {
+  if (exercise?.media?.poster) {
     const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
     const secondary = (exercise.secondaryMuscles || []).join(' · ');
-    return `<div class="exercise-visual real-motion-preview ${large ? 'exercise-visual-large' : ''}">
+    const tierLabel = exercise?.realMotion ? 'REAL MOTION' : 'PREMIUM MOTION';
+    const tierClass = exercise?.realMotion ? 'real-motion-preview' : 'motion-preview-card';
+    return `<div class="exercise-visual motion-preview ${tierClass} ${large ? 'exercise-visual-large' : ''}">
       <img src="${esc(exercise.media.poster)}" alt="Vista anatómica de ${esc(exercise.name || 'ejercicio')}" loading="lazy">
       <div class="real-motion-preview-shade"></div>
-      <span class="real-motion-preview-label">REAL MOTION</span>
+      <span class="real-motion-preview-label">${tierLabel}</span>
       <div class="real-motion-preview-muscles">
         <span class="primary"><i></i><small>Principal</small><strong>${esc(primary)}</strong></span>
         ${secondary ? `<span class="secondary"><i></i><small>Secundarios</small><strong>${esc(secondary)}</strong></span>` : ''}
