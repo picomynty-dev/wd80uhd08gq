@@ -1,3 +1,11 @@
+# My Fit Plan 3.2.2.1
+
+- Integra internamente los 30 vídeos Premium Motion y sus pósteres.
+- Evita fallos por carpetas `assets` ausentes, mal subidas o anidadas.
+- Mantiene una ruta externa de respaldo.
+- Renueva la caché de la PWA.
+- Conserva todos los datos de versiones anteriores.
+
 # Cambios 3.2.1
 
 - Recursos multimedia integrados en `js/media-bundle.js`.
