@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=35';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=35';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=35';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=36';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=36';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=36';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=35';
+} from './stats.js?v=36';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
-  buildCoachDashboard,
-  progressionRecommendation
-} from './coach.js?v=35';
+  buildCoachDashboard
+} from './coach.js?v=36';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=35';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=35';
+} from './adaptive.js?v=36';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=36';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -44,8 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=35';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=35';
+} from './calendar-planner.js?v=36';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=36';
+import {
+  applyDeloadToWorkout,
+  buildDeloadRecommendation,
+  buildExerciseProgression,
+  buildExerciseProgressionHistory,
+  buildProgressionDashboard
+} from './progression-engine.js?v=36';
 import {
   clamp,
   clone,
@@ -61,10 +67,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=35';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=35';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=35';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=35';
+} from './utils.js?v=36';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=36';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=36';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=36';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -74,7 +80,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=35';
+} from './photo-progress.js?v=36';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -311,6 +317,7 @@ function renderHome() {
   const nextExerciseCount = state.activeWorkout?.exercises?.length || nextDay?.exercises?.length || 0;
   const estimatedMinutes = Number(state.profile.minutes || 45);
   const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
+  const progressionDashboard = buildProgressionDashboard(state.history, state.plan, state.customExercises);
   ensurePlanner();
   const plannerSummary = buildPlannerSummary(state.planner, state.plan, state.history);
 
@@ -369,6 +376,20 @@ function renderHome() {
           <span><strong>${coach.weekly.adherence}%</strong><small>objetivo semanal</small></span>
         </div>
         <button class="coach-open-button" type="button" data-action="coach-details"><span>Ver análisis completo</span><b>→</b></button>
+      </section>
+
+      <section class="progression-home-card">
+        <div class="progression-home-header">
+          <div class="progression-home-brand"><span class="progression-home-icon">↗</span><div><p class="eyebrow">Progresión automática</p><h2>${progressionDashboard.ready ? `${progressionDashboard.ready} ejercicio${progressionDashboard.ready === 1 ? '' : 's'} listo${progressionDashboard.ready === 1 ? '' : 's'} para subir` : 'Objetivos de carga actualizados'}</h2></div></div>
+          <button class="button button-secondary button-small" type="button" data-action="progression-dashboard">Ver análisis</button>
+        </div>
+        <div class="progression-home-stats">
+          <span class="is-ready"><strong>${progressionDashboard.ready}</strong><small>subir carga</small></span>
+          <span><strong>${progressionDashboard.improving}</strong><small>mejorando</small></span>
+          <span class="${progressionDashboard.attention ? 'has-alert' : ''}"><strong>${progressionDashboard.attention}</strong><small>a revisar</small></span>
+          <span><strong>${progressionDashboard.baseline}</strong><small>sin referencia</small></span>
+        </div>
+        ${progressionDashboard.top[0] ? `<div class="progression-home-focus"><span class="coach-status-icon coach-status-${progressionDashboard.top[0].tone}">${progressionDashboard.top[0].icon}</span><div><small>PRÓXIMA ACCIÓN</small><strong>${esc(progressionDashboard.top[0].exerciseName)} · ${esc(progressionDashboard.top[0].title)}</strong><p>${esc(progressionDashboard.top[0].nextGoal)}</p></div></div>` : ''}
       </section>
 
       <section class="planner-home-card">
@@ -2100,6 +2121,7 @@ function renderWorkout() {
   const percentage = allSets.length ? Math.round((doneSets / allSets.length) * 100) : 0;
   const elapsed = Math.max(0, Math.floor((Date.now() - new Date(workout.startedAt).getTime()) / 1000));
   const finishedExercises = workout.exercises.filter((exercise) => exercise.sets.length && completedSets(exercise).length === exercise.sets.length).length;
+  const deload = buildDeloadRecommendation(state.history, state.plan, state.profile, state.customExercises);
 
   app.innerHTML = `
     <section class="page workout-page premium-workout-page">
@@ -2126,6 +2148,17 @@ function renderWorkout() {
         <div class="active-adaptation-actions">
           <button type="button" class="button button-ghost button-small" data-action="workout-adaptation-details">Ver ajustes</button>
           ${workout.adaptation.mode === 'adaptive' && !doneSets ? '<button type="button" class="button button-secondary button-small" data-action="restore-full-workout">Restaurar completa</button>' : ''}
+        </div>
+      </section>` : ''}
+
+      ${deload.recommended ? `<section class="deload-workout-banner ${workout.deload?.applied ? 'is-applied' : ''}">
+        <div class="deload-workout-copy">
+          <span class="deload-workout-icon">${workout.deload?.applied ? '✓' : '↘'}</span>
+          <div><small>${workout.deload?.applied ? 'DESCARGA APLICADA' : 'SEÑAL DE RECUPERACIÓN'}</small><strong>${workout.deload?.applied ? 'Carga y volumen reducidos para esta sesión' : esc(deload.title)}</strong><p>${workout.deload?.applied ? 'Puedes continuar con los objetivos ajustados.' : esc(deload.text)}</p></div>
+        </div>
+        <div class="deload-workout-actions">
+          <button class="button button-ghost button-small" type="button" data-action="deload-details">Ver motivos</button>
+          ${!workout.deload?.applied && !doneSets ? '<button class="button button-secondary button-small" type="button" data-action="apply-deload">Aplicar descarga</button>' : ''}
         </div>
       </section>` : ''}
 
@@ -2158,9 +2191,86 @@ function renderWorkout() {
   updateLiveDuration();
 }
 
+
+function progressionWorkoutCardHtml(recommendation, exerciseIndex) {
+  if (!recommendation) return '';
+  const canApply = recommendation.suggestedWeight !== null
+    || recommendation.suggestedRepMin !== recommendation.repMin
+    || recommendation.suggestedRepMax !== recommendation.repMax
+    || recommendation.suggestedSets !== recommendation.targetSets;
+  const targetWeight = recommendation.suggestedWeight !== null
+    ? `${formatWeight(recommendation.suggestedWeight)} kg`
+    : recommendation.latest?.topWeight > 0
+      ? `${formatWeight(recommendation.latest.topWeight)} kg`
+      : 'Carga técnica';
+  const targetRange = recommendation.unit === 'sec'
+    ? `${recommendation.suggestedRepMin}–${recommendation.suggestedRepMax} s`
+    : `${recommendation.suggestedRepMin}–${recommendation.suggestedRepMax} reps`;
+
+  return `<section class="progression-target-card progression-${recommendation.tone}">
+    <div class="progression-target-heading">
+      <div class="progression-target-status"><span>${recommendation.icon}</span><div><small>OBJETIVO DE HOY · ${recommendation.confidence}% confianza</small><strong>${esc(recommendation.title)}</strong></div></div>
+      <button class="progression-detail-button" type="button" data-action="progression-details" data-exercise="${exerciseIndex}">Tendencia →</button>
+    </div>
+    <div class="progression-target-metrics">
+      <span><small>Carga</small><strong>${esc(targetWeight)}</strong></span>
+      <span><small>Objetivo</small><strong>${esc(targetRange)}</strong></span>
+      <span><small>Series</small><strong>${recommendation.suggestedSets}</strong></span>
+    </div>
+    <p>${esc(recommendation.text)}</p>
+    <div class="progression-target-footer">
+      <span><small>Última sesión</small><strong>${esc(recommendation.latestSummary)}</strong></span>
+      ${canApply ? `<button class="button button-secondary button-small" type="button" data-action="apply-progression-target" data-exercise="${exerciseIndex}">Aplicar objetivo</button>` : ''}
+    </div>
+  </section>`;
+}
+
+function progressionChartSvg(historyData) {
+  const points = historyData.points || [];
+  if (points.length < 2) {
+    return `<div class="progression-chart-empty"><span>◎</span><p>Completa al menos dos sesiones para mostrar una curva.</p></div>`;
+  }
+  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+  return `<svg class="progression-chart" viewBox="0 0 100 100" role="img" aria-label="Evolución del ejercicio">
+    <line x1="7" y1="86" x2="93" y2="86"></line>
+    <line x1="7" y1="18" x2="7" y2="86"></line>
+    <path d="${path}"></path>
+    ${points.map((point) => `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="2.6"></circle>`).join('')}
+  </svg>`;
+}
+
+function exerciseProgressionHistoryHtml(id, target) {
+  const progression = buildExerciseProgression(state.history, target, state.customExercises);
+  const historyData = buildExerciseProgressionHistory(state.history, id, state.customExercises);
+  const performances = historyData.performances;
+
+  return `<section class="exercise-progression-panel">
+    <div class="exercise-progression-heading">
+      <div><p class="eyebrow">PROGRESIÓN INTELIGENTE</p><h3>${esc(progression.title)}</h3><p>${esc(progression.nextGoal)}</p></div>
+      <span class="progression-trend-badge trend-${historyData.tone}">${esc(historyData.trend)}</span>
+    </div>
+    <div class="exercise-progression-metrics">
+      <span><small>Mejor carga</small><strong>${historyData.bestWeight ? `${formatWeight(historyData.bestWeight)} kg` : '—'}</strong></span>
+      <span><small>1RM estimado</small><strong>${historyData.bestE1rm ? `${formatWeight(historyData.bestE1rm)} kg` : '—'}</strong></span>
+      <span><small>Mejor volumen</small><strong>${historyData.bestVolume ? `${formatWeight(historyData.bestVolume)} kg` : '—'}</strong></span>
+      <span><small>Referencias</small><strong>${performances.length}</strong></span>
+    </div>
+    <div class="exercise-progression-chart-shell">
+      <div><small>${historyData.weighted ? 'Índice de fuerza estimada' : 'Repeticiones totales'}</small>${progressionChartSvg(historyData)}</div>
+      <div class="exercise-progression-recommendation progression-${progression.tone}"><span>${progression.icon}</span><div><small>Siguiente objetivo</small><strong>${esc(progression.title)}</strong><p>${esc(progression.text)}</p></div></div>
+    </div>
+    ${performances.length ? `<div class="exercise-progression-sessions">${performances.slice(0, 5).map((performance) => `<article><span><strong>${formatDate(performance.date)}</strong><small>${performance.completedSets} series</small></span><b>${performance.topWeight ? `${formatWeight(performance.topWeight)} kg` : `${performance.totalReps} ${performance.unit === 'sec' ? 's' : 'reps'}`}</b><em>${performance.volume ? `${formatWeight(performance.volume)} kg vol.` : `${performance.totalReps} total`}</em></article>`).join('')}</div>` : '<p class="muted">Todavía no hay sesiones registradas para este ejercicio.</p>'}
+  </section>`;
+}
+
 function renderWorkoutExercise(item, index) {
   const exercise = getExercise(item.exerciseId, state.customExercises);
-  const recommendation = progressionRecommendation(state.history, item, state.customExercises);
+  const recommendation = buildExerciseProgression(
+    state.history,
+    item,
+    state.customExercises,
+    { readiness: state.activeWorkout?.readiness || {} }
+  );
   const last = lastExercisePerformance(state.history, item.exerciseId);
   const completed = completedSets(item).length;
   const isDone = item.sets.length > 0 && completed === item.sets.length;
@@ -2181,7 +2291,7 @@ function renderWorkoutExercise(item, index) {
     <div class="exercise-accordion-body" ${collapsed ? 'hidden' : ''}>
       ${state.settings.showTips ? `<div class="exercise-coach-line"><span>TIP</span><p>${esc(exercise.summary)}</p></div>` : ''}
       ${last ? `<div class="last-session-premium-box"><div><span>ÚLTIMA VEZ</span>${renderLastSets(last.exercise)}</div></div>` : ''}
-      ${recommendation ? `<div class="recommendation premium-recommendation recommendation-${recommendation.tone}"><div><span class="coach-badge">COACH</span><strong>${esc(recommendation.title)}</strong><p>${esc(recommendation.text)}</p></div>${recommendation.suggestedWeight ? `<button class="button button-secondary button-small" type="button" data-action="apply-suggested-weight" data-exercise="${index}" data-weight="${recommendation.suggestedWeight}">Aplicar ${formatWeight(recommendation.suggestedWeight)} kg</button>` : ''}</div>` : ''}
+      ${progressionWorkoutCardHtml(recommendation, index)}
 
       <div class="sets-table premium-sets" role="table" aria-label="Series de ${esc(exercise.name)}">
         <div class="set-row set-header" role="row"><span>Serie</span><span>Peso kg</span><span>${item.unit === 'sec' ? 'Seg.' : 'Reps'}</span><span>Reserva</span><span>Hecha</span><span></span></div>
@@ -3141,6 +3251,11 @@ async function handleAppClick(event) {
     'manual-rest': () => manualRest(Number(target.dataset.exercise)),
     'remove-set': () => removeSet(Number(target.dataset.exercise), Number(target.dataset.set)),
     'apply-suggested-weight': () => applySuggestedWeight(Number(target.dataset.exercise), numberValue(target.dataset.weight)),
+    'apply-progression-target': () => applyProgressionTarget(Number(target.dataset.exercise)),
+    'progression-details': () => openWorkoutProgressionDetails(Number(target.dataset.exercise)),
+    'progression-dashboard': openProgressionDashboard,
+    'apply-deload': applyWorkoutDeload,
+    'deload-details': openDeloadDetails,
     'picker-workout-add': () => openExercisePicker({ mode: 'workout-add' }),
     'picker-workout-replace': () => openExercisePicker({ mode: 'workout-replace', exerciseIndex: Number(target.dataset.exercise) }),
     'remove-workout-exercise': () => removeWorkoutExercise(Number(target.dataset.exercise)),
@@ -3708,7 +3823,13 @@ function openExerciseDetails(id) {
         <button class="button button-secondary" type="button" data-premium-add-workout="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Añadir al entreno</button>
       </section>
 
-      ${exerciseHistoryHtml(last, record, exercise)}
+      ${exerciseProgressionHistoryHtml(id, {
+        exerciseId: id,
+        targetSets: last?.exercise?.targetSets || 3,
+        repMin: last?.exercise?.repMin || 8,
+        repMax: last?.exercise?.repMax || 12,
+        unit: last?.exercise?.unit || 'reps'
+      })}
 
       <section class="premium-content-section technique-pro-section">
         <div class="premium-section-heading"><span>01</span><div><p class="eyebrow">Ejecución</p><h3>Tres fases claras</h3></div></div>
@@ -3852,6 +3973,122 @@ function removeSet(exerciseIndex, setIndex) {
   save(); renderWorkout();
 }
 
+
+function applyProgressionTarget(exerciseIndex) {
+  const item = state.activeWorkout?.exercises?.[exerciseIndex];
+  if (!item) return;
+
+  const progression = buildExerciseProgression(
+    state.history,
+    item,
+    state.customExercises,
+    { readiness: state.activeWorkout?.readiness || {} }
+  );
+  const hasCompleted = completedSets(item).length > 0;
+
+  if (progression.suggestedWeight !== null) {
+    item.sets.forEach((set) => {
+      if (!set.completed) set.weight = progression.suggestedWeight;
+    });
+  }
+
+  if (!hasCompleted) {
+    item.repMin = progression.suggestedRepMin;
+    item.repMax = progression.suggestedRepMax;
+
+    while (item.sets.length < progression.suggestedSets) {
+      item.sets.push({
+        id: uid('set'),
+        weight: progression.suggestedWeight ?? item.sets.at(-1)?.weight ?? '',
+        reps: '',
+        rir: '',
+        completed: false,
+        completedAt: null
+      });
+    }
+    while (item.sets.length > progression.suggestedSets && item.sets.length > 1) {
+      item.sets.pop();
+    }
+    item.targetSets = item.sets.length;
+  }
+
+  save();
+  renderWorkout();
+  showToast('Objetivo de progresión aplicado.', 'success');
+}
+
+function openWorkoutProgressionDetails(exerciseIndex) {
+  const item = state.activeWorkout?.exercises?.[exerciseIndex];
+  if (!item) return;
+  const exercise = getExercise(item.exerciseId, state.customExercises);
+  const progression = buildExerciseProgression(
+    state.history,
+    item,
+    state.customExercises,
+    { readiness: state.activeWorkout?.readiness || {} }
+  );
+  const historyData = buildExerciseProgressionHistory(
+    state.history,
+    item.exerciseId,
+    state.customExercises
+  );
+
+  openModal(`<div class="modal-header"><div><p class="eyebrow">PROGRESIÓN AUTOMÁTICA</p><h2>${esc(exercise.name)}</h2><p class="muted">${progression.sessionsAnalyzed} referencias analizadas · ${progression.confidence}% de confianza</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <section class="progression-modal-verdict progression-${progression.tone}"><span>${progression.icon}</span><div><small>${esc(progression.label)}</small><strong>${esc(progression.title)}</strong><p>${esc(progression.text)}</p></div></section>
+    <section class="progression-modal-target"><span><small>Carga sugerida</small><strong>${progression.suggestedWeight !== null ? `${formatWeight(progression.suggestedWeight)} kg` : 'Según técnica'}</strong></span><span><small>Rango</small><strong>${progression.suggestedRepMin}–${progression.suggestedRepMax} ${progression.unit === 'sec' ? 's' : 'reps'}</strong></span><span><small>Series</small><strong>${progression.suggestedSets}</strong></span></section>
+    <section class="progression-modal-chart"><div><p class="eyebrow">TENDENCIA</p><h3>${esc(historyData.trend)}</h3></div>${progressionChartSvg(historyData)}</section>
+    <section class="progression-evidence-list">${progression.evidence.map((item) => `<p><span>✓</span>${esc(item)}</p>`).join('')}</section>
+    <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cerrar</button><button class="button button-primary" type="button" data-action="apply-progression-target" data-exercise="${exerciseIndex}" data-close-modal>Aplicar objetivo</button></div>`, { wide: true });
+}
+
+function openProgressionDashboard() {
+  const dashboard = buildProgressionDashboard(
+    state.history,
+    state.plan,
+    state.customExercises
+  );
+
+  openModal(`<div class="modal-header"><div><p class="eyebrow">PROGRESIÓN AUTOMÁTICA</p><h2>Estado de tu rutina</h2><p class="muted">Cada recomendación utiliza las últimas sesiones comparables del ejercicio.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <section class="progression-dashboard-summary"><span class="ready"><strong>${dashboard.ready}</strong><small>listos para subir</small></span><span><strong>${dashboard.improving}</strong><small>mejorando</small></span><span class="${dashboard.attention ? 'attention' : ''}"><strong>${dashboard.attention}</strong><small>a revisar</small></span><span><strong>${dashboard.baseline}</strong><small>sin referencia</small></span></section>
+    <div class="progression-dashboard-list">${dashboard.top.length ? dashboard.top.map((item) => `<article class="progression-dashboard-item progression-${item.tone}"><span>${item.icon}</span><div><small>${esc(item.exerciseName)} · ${item.confidence}% confianza</small><strong>${esc(item.title)}</strong><p>${esc(item.nextGoal)}</p></div><button type="button" data-open-exercise="${esc(item.exerciseId)}">Ficha</button></article>`).join('') : '<p class="muted">Añade ejercicios a una rutina para empezar el análisis.</p>'}</div>`, { wide: true });
+  wrapper.querySelectorAll('[data-open-exercise]').forEach((button) => button.addEventListener('click', () => {
+    wrapper._closeModal();
+    openExerciseDetails(button.dataset.openExercise);
+  }));
+}
+
+function applyWorkoutDeload() {
+  const workout = state.activeWorkout;
+  if (!workout) return;
+  const recommendation = buildDeloadRecommendation(
+    state.history,
+    state.plan,
+    state.profile,
+    state.customExercises
+  );
+  if (!recommendation.recommended) return showToast('No hay una descarga recomendada ahora.');
+
+  state.activeWorkout = applyDeloadToWorkout(workout, recommendation);
+  save();
+  renderWorkout();
+  showToast('Descarga aplicada solo a esta sesión.', 'success');
+}
+
+function openDeloadDetails() {
+  const recommendation = buildDeloadRecommendation(
+    state.history,
+    state.plan,
+    state.profile,
+    state.customExercises
+  );
+  openModal(`<div class="modal-header"><div><p class="eyebrow">RECUPERACIÓN</p><h2>${esc(recommendation.title)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <section class="deload-detail-score severity-${recommendation.severity}"><span>${recommendation.score}</span><div><small>ÍNDICE DE FATIGA</small><strong>${recommendation.recommended ? 'Conviene reducir temporalmente' : 'Sin señal suficiente'}</strong><p>${esc(recommendation.text)}</p></div></section>
+    <section class="deload-detail-metrics"><span><strong>${recommendation.recentSessions}</strong><small>sesiones recientes</small></span><span><strong>${recommendation.lowReadiness}</strong><small>check-ins bajos</small></span><span><strong>${recommendation.regressions}</strong><small>caídas de rendimiento</small></span><span><strong>${recommendation.repeatedPlateaus}</strong><small>estancamientos</small></span></section>
+    <div class="deload-reasons">${recommendation.reasons.length ? recommendation.reasons.map((reason) => `<p><span>•</span>${esc(reason)}</p>`).join('') : '<p>No hay señales negativas suficientes.</p>'}</div>
+    <p class="privacy-note">La descarga nunca se aplica sola. Si la aceptas, reduce aproximadamente un 10 % la carga y una serie por ejercicio únicamente en la sesión actual.</p>
+    <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cerrar</button>${recommendation.recommended && !state.activeWorkout?.deload?.applied ? '<button class="button button-primary" type="button" data-action="apply-deload" data-close-modal>Aplicar descarga</button>' : ''}</div>`);
+}
+
 function applySuggestedWeight(exerciseIndex, weight) {
   state.activeWorkout.exercises[exerciseIndex].sets.forEach((set) => { if (!set.completed) set.weight = weight; });
   save(); renderWorkout(); showToast('Peso sugerido aplicado.');
@@ -3961,6 +4198,7 @@ function finishWorkout() {
     planDayIndex: Number.isInteger(workout.planDayIndex) ? workout.planDayIndex : null,
     sourcePlanDayIndex: Number.isInteger(workout.sourcePlanDayIndex) ? workout.sourcePlanDayIndex : null,
     readiness: workout.readiness || null,
+    deload: workout.deload || null,
     adaptation: workout.adaptation ? {
       mode: workout.adaptation.mode,
       originalMinutes: workout.adaptation.originalMinutes,
@@ -4003,10 +4241,13 @@ function openSessionCompleted(session) {
   const adaptationTag = session.adaptation?.mode === 'adaptive'
     ? `<span class="completion-adaptation-tag">Sesión adaptada · ${session.adaptation.adaptedMinutes} min estimados</span>`
     : '';
+  const deloadTag = session.deload?.applied
+    ? '<span class="completion-deload-tag">Descarga aplicada</span>'
+    : '';
   const sourceTag = session.sessionSource && session.sessionSource !== 'routine'
     ? `<span class="completion-source-tag">${session.sessionSource === 'recommended' ? 'Recomendada por MFP' : 'Entrenamiento personalizado'}</span>`
     : '';
-  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}${sourceTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
+  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}${deloadTag}${sourceTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
     onClose: () => setView(destination)
   });
   wrapper.querySelector('#completedContinue').addEventListener('click', () => {
@@ -4321,7 +4562,7 @@ function updateLiveDuration() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=35', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=36', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

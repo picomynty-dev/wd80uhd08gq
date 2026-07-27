@@ -1,10 +1,10 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
-import { normalizePlanner } from './calendar-planner.js?v=35';
+import { normalizePlanner } from './calendar-planner.js?v=36';
 
-export const STORAGE_KEY = 'myFitPlanStateV35';
-export const LEGACY_KEYS = ['myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.5';
+export const STORAGE_KEY = 'myFitPlanStateV36';
+export const LEGACY_KEYS = ['myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.6';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -20,7 +20,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 360,
+  schemaVersion: 370,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -126,7 +126,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 360,
+    schemaVersion: 370,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -316,6 +316,7 @@ function normalizeActiveWorkout(workout, plan, profile) {
     notes: workout.notes || '',
     restTimer: workout.restTimer || null,
     readiness: workout.readiness || null,
+    deload: workout.deload || null,
     adaptation: workout.adaptation || null,
     exercises: exercises.map((item, exerciseIndex) => normalizeWorkoutExercise(item, rules, exerciseIndex))
   };
@@ -394,6 +395,7 @@ function normalizeHistorySession(session) {
     planDayIndex: Number.isInteger(session.planDayIndex) ? session.planDayIndex : null,
     sourcePlanDayIndex: Number.isInteger(session.sourcePlanDayIndex) ? session.sourcePlanDayIndex : null,
     readiness: session.readiness || null,
+    deload: session.deload || null,
     adaptation: session.adaptation || null,
     exercises,
     volume: Number(session.volume || 0),
