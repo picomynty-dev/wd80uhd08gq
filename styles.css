@@ -3102,3 +3102,369 @@ html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="
     --free-compare-width: calc(100vw - 42px);
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v3.4A · Entrenador inteligente
+   ========================================================= */
+.coach-command-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(var(--accent-rgb),.17), transparent 34%),
+    linear-gradient(145deg,#151b27,#0a0f18);
+  box-shadow: 0 24px 70px rgba(0,0,0,.24);
+}
+.coach-command-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+}
+.coach-tone-success::before { background: #22c55e; }
+.coach-tone-attention::before { background: #f59e0b; }
+.coach-command-header,
+.coach-command-main,
+.coach-command-metrics,
+.coach-primary-focus {
+  position: relative;
+  z-index: 1;
+}
+.coach-command-header,
+.coach-command-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.coach-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.coach-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: .66rem;
+  font-weight: 1000;
+  letter-spacing: -.03em;
+  box-shadow: 0 10px 28px rgba(var(--accent-rgb),.24);
+}
+.coach-identity > span:last-child {
+  display: grid;
+  gap: 1px;
+}
+.coach-identity small {
+  color: var(--muted);
+  font-size: .48rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+.coach-identity strong { font-size: .76rem; }
+.coach-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  font-size: .59rem;
+  font-weight: 800;
+}
+.coach-confidence i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 12px #22c55e;
+}
+.coach-command-main h2 {
+  max-width: 720px;
+  margin: 4px 0 7px;
+  font-size: clamp(1.35rem,3vw,2.15rem);
+}
+.coach-command-main p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.coach-score-ring {
+  --coach-score: 0deg;
+  display: grid;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  place-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center,#101621 61%,transparent 62%),
+    conic-gradient(var(--accent) var(--coach-score),rgba(255,255,255,.09) 0);
+  text-align: center;
+}
+.coach-score-ring strong { font-size: 1.25rem; }
+.coach-score-ring small { color: var(--muted); font-size: .52rem; }
+.coach-primary-focus {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 15px;
+  background: rgba(255,255,255,.03);
+}
+.coach-primary-focus > div { display: grid; gap: 3px; }
+.coach-primary-focus small { color: var(--muted); font-size: .58rem; }
+.coach-primary-focus strong { line-height: 1.35; }
+.coach-status-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 950;
+}
+.coach-status-success { background: rgba(34,197,94,.13); color: #4ade80; }
+.coach-status-warning,
+.coach-status-attention { background: rgba(245,158,11,.13); color: #fbbf24; }
+.coach-command-metrics {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+.coach-command-metrics span {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 13px;
+  background: rgba(255,255,255,.025);
+}
+.coach-command-metrics strong { font-size: 1rem; }
+.coach-command-metrics small { color: var(--muted); font-size: .58rem; }
+.coach-open-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgba(var(--accent-rgb),.24);
+  border-radius: 14px;
+  background: rgba(var(--accent-rgb),.08);
+  color: var(--text);
+  font-weight: 900;
+}
+.coach-open-button b { color: var(--accent); font-size: 1.1rem; }
+
+.coach-modal-header { align-items: flex-start; }
+.coach-modal-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.coach-modal-brand span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: .56rem;
+  font-weight: 1000;
+}
+.coach-modal-brand small {
+  color: var(--accent);
+  font-size: .54rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+.coach-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 8px;
+}
+.coach-overview-grid article {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.coach-overview-grid small { color: var(--muted); font-size: .58rem; }
+.coach-overview-grid strong { font-size: 1.2rem; }
+.coach-overview-grid span { color: var(--muted); font-size: .62rem; }
+.coach-weekly-panel {
+  display: grid;
+  grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--surface);
+}
+.coach-weekly-panel p { color: var(--muted); }
+.coach-weekly-facts {
+  display: grid;
+  gap: 7px;
+}
+.coach-weekly-facts span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.coach-weekly-facts small { color: var(--muted); }
+.coach-next-session { margin-top: 17px; }
+.coach-insight-list { display: grid; gap: 9px; }
+.coach-insight {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.coach-insight-success { border-color: rgba(34,197,94,.2); }
+.coach-insight-warning,
+.coach-insight-attention { border-color: rgba(245,158,11,.24); }
+.coach-insight-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 950;
+}
+.coach-insight-copy { display: grid; gap: 4px; min-width: 0; }
+.coach-insight-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.coach-insight-top span {
+  color: var(--accent);
+  font-size: .54rem;
+  font-weight: 950;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.coach-insight-top small { color: var(--muted); font-size: .55rem; }
+.coach-insight-copy h4 { margin: 0; }
+.coach-insight-copy > strong { font-size: .72rem; }
+.coach-insight-copy > p { margin: 0; color: var(--muted); font-size: .66rem; line-height: 1.5; }
+.coach-insight-bottom {
+  display: grid;
+  grid-template-columns: minmax(0,.7fr) minmax(0,1.3fr);
+  gap: 7px;
+  margin-top: 4px;
+}
+.coach-insight-bottom span,
+.coach-insight-bottom b {
+  padding: 7px 8px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-size: .57rem;
+  line-height: 1.35;
+}
+.coach-insight-bottom span { color: var(--muted); }
+.coach-method-note {
+  margin-top: 15px;
+  padding: 13px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.coach-method-note p { margin: 4px 0 0; color: var(--muted); font-size: .64rem; line-height: 1.5; }
+.coach-empty-analysis { padding: 28px; color: var(--muted); text-align: center; }
+
+.completion-coach-block {
+  display: grid;
+  gap: 11px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(var(--accent-rgb),.18);
+  border-radius: 16px;
+  background: rgba(var(--accent-rgb),.05);
+}
+.completion-coach-insight {
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+}
+.completion-coach-insight p { margin: 3px 0 0; color: var(--muted); font-size: .64rem; }
+.completion-coach-counts { display: flex; flex-wrap: wrap; gap: 7px; }
+.completion-coach-counts span {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .56rem;
+}
+
+[data-theme="light"] .coach-command-card {
+  border-color: #dce2eb;
+  background:
+    radial-gradient(circle at 88% 8%,rgba(var(--accent-rgb),.12),transparent 34%),
+    linear-gradient(145deg,#fff,#f2f5f9);
+}
+[data-theme="light"] .coach-score-ring {
+  background:
+    radial-gradient(circle at center,#fff 61%,transparent 62%),
+    conic-gradient(var(--accent) var(--coach-score),#dde3ec 0);
+}
+
+@media (max-width: 760px) {
+  .coach-command-card { padding: 17px; border-radius: 20px; }
+  .coach-command-main { align-items: flex-start; }
+  .coach-score-ring { flex-basis: 78px; width: 78px; height: 78px; }
+  .coach-command-metrics { grid-template-columns: 1fr 1fr 1fr; }
+  .coach-overview-grid { grid-template-columns: 1fr 1fr; }
+  .coach-weekly-panel { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .coach-command-header { align-items: flex-start; }
+  .coach-confidence { font-size: .52rem; }
+  .coach-command-main { display: grid; grid-template-columns: minmax(0,1fr) 70px; gap: 8px; }
+  .coach-command-main h2 { font-size: 1.3rem; }
+  .coach-score-ring { width: 68px; height: 68px; }
+  .coach-score-ring strong { font-size: 1rem; }
+  .coach-primary-focus { grid-template-columns: 36px minmax(0,1fr); padding: 10px; }
+  .coach-status-icon { width: 34px; height: 34px; }
+  .coach-command-metrics span { padding: 8px; }
+  .coach-command-metrics small { font-size: .49rem; }
+  .coach-overview-grid { grid-template-columns: 1fr 1fr; }
+  .coach-insight { grid-template-columns: 36px minmax(0,1fr); padding: 10px; }
+  .coach-insight-icon { width: 34px; height: 34px; }
+  .coach-insight-bottom { grid-template-columns: 1fr; }
+}

@@ -1,3 +1,16 @@
+# My Fit Plan v3.4A
+
+- Añade un motor profesional de progresión.
+- Analiza las últimas seis referencias por ejercicio.
+- Detecta aumento de carga, mejora, consolidación, estancamiento y regresión.
+- Añade confianza del análisis según la cantidad de datos.
+- Nueva tarjeta del Entrenador en Inicio.
+- Panel completo de la próxima sesión.
+- Resumen semanal con adherencia, récords, mejoras y distribución.
+- Lectura del entrenador al finalizar una sesión.
+- Mantiene intactas las fotografías privadas y las rutinas.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.3.1
 
 - Rediseña la barra de pestañas del perfil para eliminar el espacio vacío.
