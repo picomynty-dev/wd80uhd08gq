@@ -1,3 +1,11 @@
+# My Fit Plan 3.2.2.2
+
+- Corrige definitivamente la reproducción de Premium Motion.
+- Convierte los vídeos integrados en Blob URLs compatibles con Safari y Chrome.
+- Fuerza la actualización de todos los módulos críticos.
+- Renueva la caché de la PWA.
+- Conserva los datos de versiones anteriores.
+
 # My Fit Plan 3.2.2.1
 
 - Integra internamente los 30 vídeos Premium Motion y sus pósteres.
