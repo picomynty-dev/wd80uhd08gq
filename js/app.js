@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34b';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34b';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34b';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34b';
+} from './stats.js?v=34c';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34b';
+} from './coach.js?v=34c';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34b';
+} from './adaptive.js?v=34c';
+import { buildRecommendedSession } from './session-selector.js?v=34c';
 import {
   clamp,
   clone,
@@ -44,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34b';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34b';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34b';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34b';
+} from './utils.js?v=34c';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -57,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34b';
+} from './photo-progress.js?v=34c';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -82,6 +83,8 @@ let planAccordionPlanId = null;
 let workoutAccordionSessionId = null;
 let photoVaultUnlocked = false;
 let bodyMetric = 'waist';
+let pendingWorkoutSelection = null;
+let customWorkoutDraft = null;
 
 init();
 
@@ -133,6 +136,10 @@ function setOnboardingMode(enabled) {
 
 function setView(view) {
   setOnboardingMode(false);
+  if (view !== 'workout' && !state.activeWorkout) {
+    pendingWorkoutSelection = null;
+    customWorkoutDraft = null;
+  }
   currentView = view;
   document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === view));
   const renderers = {
@@ -1053,11 +1060,278 @@ function renderPlanExercise(item, dayIndex, exerciseIndex, total) {
   </div>`;
 }
 
-function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
+
+function routineSelection(dayIndex = state.nextWorkoutIndex) {
   const days = state.plan?.days || [];
   if (!days.length) return null;
   const safeIndex = clamp(Number(dayIndex) || 0, 0, days.length - 1);
-  const day = days[safeIndex];
+  const day = clone(days[safeIndex]);
+  return {
+    source: 'routine',
+    sourceLabel: 'Tu rutina',
+    planDayIndex: safeIndex,
+    day,
+    reason: `Siguiente entrenamiento de ${state.plan?.name || 'tu rutina activa'}.`,
+    confidence: 100
+  };
+}
+
+function recommendedSelection() {
+  return buildRecommendedSession(
+    state.plan,
+    state.history,
+    state.nextWorkoutIndex,
+    state.customExercises
+  );
+}
+
+function renderWorkoutSelector() {
+  const routine = routineSelection();
+  const recommended = recommendedSelection();
+  const routineDay = routine?.day;
+  const recommendedDay = recommended?.day;
+
+  app.innerHTML = `<section class="page workout-selector-page">
+    <header class="workout-selector-hero">
+      <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Elige cómo quieres empezar</strong></span></div>
+      <h1>Tu entrenamiento, primero.</h1>
+      <p>Continúa con tu rutina habitual, acepta una alternativa recomendada o crea una sesión libre cuando realmente la necesites.</p>
+    </header>
+
+    <section class="workout-selector-grid">
+      ${routineDay ? `<article class="training-option-card training-option-primary">
+        <div class="training-option-top">
+          <span class="training-option-badge"><i></i> SIGUIENTE DE TU RUTINA</span>
+          <span class="training-option-number">${String((routine.planDayIndex || 0) + 1).padStart(2,'0')}</span>
+        </div>
+        <div class="training-option-copy">
+          <p class="eyebrow">${esc(state.plan?.name || 'Rutina activa')}</p>
+          <h2>${esc(routineDay.name)}</h2>
+          <p>${esc(routine.reason)}</p>
+        </div>
+        ${workoutOptionPreview(routineDay)}
+        <div class="training-option-footer">
+          <div class="training-option-stats">
+            <span><strong>${routineDay.exercises.length}</strong><small>ejercicios</small></span>
+            <span><strong>${estimatePlanMinutes(routineDay)}</strong><small>min aprox.</small></span>
+            <span><strong>${routineDay.exercises.reduce((sum,item) => sum + numberValue(item.targetSets,3),0)}</strong><small>series</small></span>
+          </div>
+          <button class="button button-primary training-primary-button" type="button" data-action="training-routine">Preparar esta sesión <span>→</span></button>
+        </div>
+      </article>` : `<article class="training-option-card training-option-primary training-option-disabled">
+        <div class="training-option-copy"><p class="eyebrow">Tu rutina</p><h2>No hay una sesión preparada</h2><p>Crea o activa una rutina para que aparezca aquí como opción principal.</p></div>
+        <button class="button button-primary" type="button" data-nav="plan">Ir a mis rutinas</button>
+      </article>`}
+
+      <article class="training-option-card training-option-recommended ${recommendedDay ? '' : 'training-option-disabled'}">
+        <div class="training-option-top">
+          <span class="training-option-badge recommendation"><i></i> RECOMENDADA POR MFP</span>
+          ${recommended ? `<span class="training-confidence">${recommended.confidence}% datos</span>` : ''}
+        </div>
+        <div class="training-option-copy">
+          <p class="eyebrow">Alternativa inteligente</p>
+          <h2>${recommendedDay ? esc(recommended.originalDayName || recommendedDay.name) : 'Necesita una rutina activa'}</h2>
+          <p>${recommended ? esc(recommended.reason) : 'My Fit Plan necesita ejercicios de referencia para proponer una alternativa coherente.'}</p>
+        </div>
+        ${recommendedDay ? workoutOptionPreview(recommendedDay, true) : ''}
+        ${recommended ? `<div class="training-reason-tags">${recommended.tags.map((tag) => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
+        <button class="button button-secondary button-block" type="button" data-action="training-recommended" ${recommendedDay ? '' : 'disabled'}>Ver sesión recomendada</button>
+      </article>
+
+      <article class="training-option-card training-option-custom">
+        <div class="custom-option-icon">＋</div>
+        <div class="training-option-copy">
+          <p class="eyebrow">Sesión libre</p>
+          <h2>Entrenamiento personalizado</h2>
+          <p>Crea una sesión puntual desde cero. No modifica tu rutina ni altera el orden de tu próximo entrenamiento.</p>
+        </div>
+        <ul class="custom-option-list">
+          <li>Elige ejercicios de la biblioteca</li>
+          <li>Ajusta series, repeticiones y descanso</li>
+          <li>Pasa después por el check-in adaptativo</li>
+        </ul>
+        <button class="button button-secondary button-block" type="button" data-action="training-custom">Crear personalizado</button>
+      </article>
+    </section>
+
+    <section class="training-selector-note">
+      <span>i</span>
+      <p><strong>La opción principal siempre será tu rutina.</strong> Las sesiones recomendadas y personalizadas son alternativas puntuales y no cambian automáticamente tu planificación.</p>
+    </section>
+  </section>`;
+}
+
+function workoutOptionPreview(day, compact = false) {
+  const entries = (day?.exercises || []).slice(0, compact ? 4 : 5);
+  return `<div class="training-exercise-preview">
+    ${entries.map((item,index) => {
+      const exercise = getExercise(item.exerciseId, state.customExercises);
+      return `<span><i>${String(index + 1).padStart(2,'0')}</i><b>${esc(exercise.name)}</b><small>${esc(exercise.muscle)}</small></span>`;
+    }).join('')}
+    ${(day?.exercises?.length || 0) > entries.length ? `<em>＋${day.exercises.length - entries.length} más</em>` : ''}
+  </div>`;
+}
+
+function chooseTrainingOption(source) {
+  const selection = source === 'recommended'
+    ? recommendedSelection()
+    : routineSelection();
+
+  if (!selection?.day?.exercises?.length) {
+    showToast('No hay una sesión disponible para esta opción.', 'danger');
+    return;
+  }
+
+  pendingWorkoutSelection = selection;
+  customWorkoutDraft = null;
+  renderWorkout();
+}
+
+function startCustomWorkoutBuilder() {
+  customWorkoutDraft = {
+    id: uid('custom-session'),
+    name: 'Entrenamiento personalizado',
+    exercises: []
+  };
+  pendingWorkoutSelection = null;
+  renderWorkout();
+}
+
+function renderCustomWorkoutBuilder() {
+  const draft = customWorkoutDraft;
+  if (!draft) return renderWorkoutSelector();
+
+  const duration = estimatePlanMinutes(draft);
+  const totalSets = draft.exercises.reduce((sum,item) => sum + numberValue(item.targetSets,3),0);
+
+  app.innerHTML = `<section class="page custom-session-page">
+    <header class="custom-session-header">
+      <button class="custom-session-back" type="button" data-action="custom-session-cancel">←</button>
+      <div><p class="eyebrow">Sesión libre</p><h1>Crear entrenamiento personalizado</h1><p>No se guardará dentro de tu rutina activa.</p></div>
+      <span class="custom-session-duration">${draft.exercises.length ? duration : 0}<small>min aprox.</small></span>
+    </header>
+
+    <section class="custom-session-name-card">
+      <label><span>Nombre de la sesión</span><input id="customSessionName" maxlength="60" value="${esc(draft.name)}" placeholder="Ej. Torso rápido"></label>
+      <div class="custom-session-summary"><span><strong>${draft.exercises.length}</strong><small>ejercicios</small></span><span><strong>${totalSets}</strong><small>series</small></span></div>
+    </section>
+
+    <section class="custom-session-workspace">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Constructor</p><h2>Ejercicios</h2></div>
+        <button class="button button-primary button-small" type="button" data-action="custom-session-add">＋ Añadir ejercicio</button>
+      </div>
+
+      ${draft.exercises.length ? `<div class="custom-session-list">
+        ${draft.exercises.map((item,index) => customSessionExerciseHtml(item,index,draft.exercises.length)).join('')}
+      </div>` : `<div class="custom-session-empty">
+        <span>＋</span>
+        <h3>Empieza eligiendo tus ejercicios</h3>
+        <p>Puedes añadirlos, ordenarlos y ajustar sus objetivos antes de pasar al check-in.</p>
+        <button class="button button-primary" type="button" data-action="custom-session-add">Abrir biblioteca</button>
+      </div>`}
+    </section>
+
+    <section class="custom-session-info">
+      <span>◎</span><p>Esta sesión es temporal. Al terminar, quedará registrada en tu historial, pero tu próxima sesión de rutina seguirá siendo la misma.</p>
+    </section>
+
+    <div class="custom-session-actions">
+      <button class="button button-secondary" type="button" data-action="custom-session-cancel">Cancelar</button>
+      <button class="button button-primary custom-session-continue" type="button" data-action="custom-session-continue" ${draft.exercises.length ? '' : 'disabled'}>Continuar al check-in <span>→</span></button>
+    </div>
+  </section>`;
+}
+
+function customSessionExerciseHtml(item, index, total) {
+  const exercise = getExercise(item.exerciseId, state.customExercises);
+  return `<article class="custom-session-exercise">
+    <div class="custom-session-exercise-main">
+      <span class="custom-session-index">${String(index + 1).padStart(2,'0')}</span>
+      <button type="button" data-action="exercise-details" data-id="${esc(item.exerciseId)}"><strong>${esc(exercise.name)}</strong><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small></button>
+      <div class="custom-session-order">
+        <button type="button" data-action="custom-session-move" data-index="${index}" data-direction="up" ${index === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" data-action="custom-session-move" data-index="${index}" data-direction="down" ${index === total - 1 ? 'disabled' : ''}>↓</button>
+        <button class="danger" type="button" data-action="custom-session-remove" data-index="${index}">×</button>
+      </div>
+    </div>
+    <div class="custom-session-targets">
+      <label><span>Series</span><input type="number" min="1" max="10" value="${item.targetSets}" data-action="custom-session-target" data-index="${index}" data-field="targetSets"></label>
+      <label><span>Mín.</span><input type="number" min="1" max="1000" value="${item.repMin}" data-action="custom-session-target" data-index="${index}" data-field="repMin"></label>
+      <label><span>Máx.</span><input type="number" min="1" max="1000" value="${item.repMax}" data-action="custom-session-target" data-index="${index}" data-field="repMax"></label>
+      <label><span>Descanso</span><input type="number" min="15" max="600" step="5" value="${item.restSeconds}" data-action="custom-session-target" data-index="${index}" data-field="restSeconds"></label>
+    </div>
+  </article>`;
+}
+
+function cancelCustomSessionBuilder() {
+  customWorkoutDraft = null;
+  pendingWorkoutSelection = null;
+  renderWorkout();
+}
+
+function continueCustomSession() {
+  if (!customWorkoutDraft?.exercises?.length) {
+    showToast('Añade al menos un ejercicio.', 'danger');
+    return;
+  }
+  const name = String(customWorkoutDraft.name || '').trim() || 'Entrenamiento personalizado';
+  pendingWorkoutSelection = {
+    source: 'custom',
+    sourceLabel: 'Personalizado',
+    planDayIndex: null,
+    day: {
+      id: customWorkoutDraft.id,
+      name,
+      exercises: clone(customWorkoutDraft.exercises)
+    },
+    reason: 'Sesión creada manualmente para hoy.',
+    confidence: 100
+  };
+  renderWorkout();
+}
+
+function removeCustomSessionExercise(index) {
+  if (!customWorkoutDraft?.exercises?.[index]) return;
+  customWorkoutDraft.exercises.splice(index,1);
+  renderCustomWorkoutBuilder();
+}
+
+function moveCustomSessionExercise(index, direction) {
+  if (!customWorkoutDraft) return;
+  const target = direction === 'up' ? index - 1 : index + 1;
+  if (target < 0 || target >= customWorkoutDraft.exercises.length) return;
+  [customWorkoutDraft.exercises[index],customWorkoutDraft.exercises[target]] =
+    [customWorkoutDraft.exercises[target],customWorkoutDraft.exercises[index]];
+  renderCustomWorkoutBuilder();
+}
+
+function updateCustomSessionTarget(target) {
+  const item = customWorkoutDraft?.exercises?.[Number(target.dataset.index)];
+  if (!item) return;
+  const field = target.dataset.field;
+  item[field] = numberValue(target.value);
+  if (field === 'repMin' && item.repMax < item.repMin) item.repMax = item.repMin;
+  if (field === 'repMax' && item.repMin > item.repMax) item.repMin = item.repMax;
+  renderCustomWorkoutBuilder();
+}
+
+function backToWorkoutSelector() {
+  pendingWorkoutSelection = null;
+  customWorkoutDraft = null;
+  renderWorkout();
+}
+
+function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
+  const days = state.plan?.days || [];
+  const hasOverride = Boolean(options.dayOverride);
+  if (!days.length && !hasOverride) return null;
+
+  const safeIndex = days.length
+    ? clamp(Number(dayIndex) || 0, 0, days.length - 1)
+    : null;
+  const day = clone(options.dayOverride || days[safeIndex]);
+  const sessionSource = options.sessionSource || 'routine';
   const readiness = options.readiness || null;
   const adaptation = readiness
     ? buildAdaptiveSession(day, readiness, state.customExercises)
@@ -1082,8 +1356,12 @@ function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
 
   state.activeWorkout = {
     id: uid('session'),
-    planDayIndex: safeIndex,
+    planDayIndex: sessionSource === 'routine' ? safeIndex : null,
+    sourcePlanDayIndex: Number.isInteger(options.sourcePlanDayIndex) ? options.sourcePlanDayIndex : safeIndex,
     planDayId: day.id,
+    sessionSource,
+    sourceLabel: options.sourceLabel || (sessionSource === 'routine' ? 'Tu rutina' : sessionSource === 'recommended' ? 'Recomendada por MFP' : 'Personalizado'),
+    sourceReason: options.sourceReason || '',
     name: day.name,
     startedAt: new Date().toISOString(),
     notes: '',
@@ -1120,21 +1398,32 @@ function workoutExerciseFromPlan(planItem) {
 }
 
 
-function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
-  const days = state.plan?.days || [];
-  const safeIndex = clamp(Number(dayIndex) || 0, 0, Math.max(0, days.length - 1));
-  const day = days[safeIndex];
-  if (!day) return renderLocked('No hay una sesión preparada.', 'Selecciona una rutina con al menos un entrenamiento.');
+function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
+  const resolved = selection?.day ? selection : routineSelection(
+    Number.isInteger(selection) ? selection : state.nextWorkoutIndex
+  );
+  const day = resolved?.day;
+  if (!day?.exercises?.length) return renderWorkoutSelector();
 
   const estimated = estimatePlanMinutes(day);
   const muscleNames = [...new Set(day.exercises.map((item) => getExercise(item.exerciseId, state.customExercises).muscle))].slice(0, 4);
+  const sourceEyebrow = resolved.source === 'routine'
+    ? 'TU PRÓXIMA SESIÓN'
+    : resolved.source === 'recommended'
+      ? 'SESIÓN RECOMENDADA'
+      : 'SESIÓN PERSONALIZADA';
 
   app.innerHTML = `<section class="page readiness-page">
     <header class="readiness-hero">
-      <div class="readiness-brand"><span class="coach-mark">MFP</span><span><small>PREPARACIÓN DE SESIÓN</small><strong>Entrenador adaptativo</strong></span></div>
-      <p class="eyebrow">Próxima sesión</p>
+      <div class="readiness-hero-top">
+        <button class="readiness-back-button" type="button" data-action="workout-selector-back">←</button>
+        <div class="readiness-brand"><span class="coach-mark">MFP</span><span><small>${sourceEyebrow}</small><strong>${esc(resolved.sourceLabel || 'Entrenador adaptativo')}</strong></span></div>
+        <span class="readiness-source-pill source-${esc(resolved.source || 'routine')}">${resolved.source === 'routine' ? 'Rutina' : resolved.source === 'recommended' ? 'Recomendada' : 'Personalizada'}</span>
+      </div>
+      <p class="eyebrow">${sourceEyebrow}</p>
       <h1>${esc(day.name)}</h1>
       <p>${day.exercises.length} ejercicios · ${estimated} min estimados · ${muscleNames.map(esc).join(' · ')}</p>
+      ${resolved.reason ? `<div class="readiness-selection-reason"><span>◎</span><p>${esc(resolved.reason)}</p></div>` : ''}
     </header>
 
     <form id="readinessForm" class="readiness-form">
@@ -1184,8 +1473,8 @@ function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
       <section id="readinessPreview" class="readiness-preview"></section>
 
       <div class="readiness-actions">
-        <button class="button button-secondary" type="button" data-nav="home">Volver</button>
-        <button class="button button-secondary" type="button" id="startOriginalWorkout">Usar sesión original</button>
+        <button class="button button-secondary" type="button" data-action="workout-selector-back">Cambiar sesión</button>
+        <button class="button button-secondary" type="button" id="startOriginalWorkout">Usar sesión completa</button>
         <button class="button button-primary readiness-start-button" type="submit">Crear sesión adaptada <span>→</span></button>
       </div>
     </form>
@@ -1220,7 +1509,7 @@ function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
       safety.innerHTML = `<strong>No se generará una sesión adaptada</strong><p>Si el dolor es intenso, repentino o cambia tu forma de moverte, pospón el entrenamiento y valora consultar con un profesional sanitario.</p>`;
       submitButton.disabled = true;
       originalButton.disabled = true;
-      preview.innerHTML = `<div class="readiness-blocked-preview"><span>!</span><div><strong>Prioriza la seguridad</strong><p>Puedes volver a Inicio y retomar el entrenamiento cuando las molestias importantes hayan desaparecido o hayan sido valoradas.</p></div></div>`;
+      preview.innerHTML = `<div class="readiness-blocked-preview"><span>!</span><div><strong>Prioriza la seguridad</strong><p>Puedes volver al selector y retomar el entrenamiento cuando las molestias importantes hayan desaparecido o hayan sido valoradas.</p></div></div>`;
       return;
     }
 
@@ -1239,12 +1528,26 @@ function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
     preview.innerHTML = readinessPreviewHtml(day, readiness, adaptation);
   };
 
+  const createSelectedWorkout = (readiness) => createActiveWorkout(
+    resolved.planDayIndex ?? state.nextWorkoutIndex,
+    {
+      readiness,
+      dayOverride: day,
+      sessionSource: resolved.source || 'routine',
+      sourceLabel: resolved.sourceLabel,
+      sourceReason: resolved.reason,
+      sourcePlanDayIndex: resolved.planDayIndex
+    }
+  );
+
   form.addEventListener('change', updatePreview);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const readiness = readValues();
-    const workout = createActiveWorkout(safeIndex, { readiness });
+    const workout = createSelectedWorkout(readiness);
     if (!workout) return updatePreview();
+    pendingWorkoutSelection = null;
+    customWorkoutDraft = null;
     renderWorkout();
     showToast('Sesión adaptada preparada.', 'success');
   });
@@ -1252,10 +1555,12 @@ function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
   originalButton.addEventListener('click', () => {
     const readiness = { ...readValues(), timeMode: 'full', minutes: estimated, originalRequested: true };
     if (readiness.discomfort === 'important') return updatePreview();
-    const workout = createActiveWorkout(safeIndex, { readiness });
+    const workout = createSelectedWorkout(readiness);
     if (!workout) return;
+    pendingWorkoutSelection = null;
+    customWorkoutDraft = null;
     renderWorkout();
-    showToast('Sesión original preparada.');
+    showToast('Sesión completa preparada.');
   });
 
   updatePreview();
@@ -1285,8 +1590,11 @@ function readinessPreviewHtml(day, readiness, adaptation) {
 }
 
 function renderWorkout() {
-  if (!state.plan?.days?.length) return renderLocked('No tienes días de entrenamiento.', 'Añade al menos un día con ejercicios desde el plan.');
-  if (!state.activeWorkout) return renderPreWorkoutCheckin(state.nextWorkoutIndex);
+  if (!state.activeWorkout) {
+    if (customWorkoutDraft) return renderCustomWorkoutBuilder();
+    if (pendingWorkoutSelection) return renderPreWorkoutCheckin(pendingWorkoutSelection);
+    return renderWorkoutSelector();
+  }
   const workout = state.activeWorkout;
   ensureWorkoutAccordionState(workout);
   const allSets = workout.exercises.flatMap((exercise) => exercise.sets);
@@ -1299,7 +1607,7 @@ function renderWorkout() {
     <section class="page workout-page premium-workout-page">
       <header class="workout-command-header">
         <div>
-          <p class="eyebrow"><span class="live-dot"></span> Entrenamiento en curso</p>
+          <p class="eyebrow"><span class="live-dot"></span> Entrenamiento en curso · ${esc(workout.sourceLabel || 'Tu rutina')}</p>
           <h1>${esc(workout.name)}</h1>
           <p>${finishedExercises} de ${workout.exercises.length} ejercicios completados</p>
         </div>
@@ -2245,6 +2553,15 @@ async function handleAppClick(event) {
     'onboarding-finish': finishOnboarding,
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
+    'training-routine': () => chooseTrainingOption('routine'),
+    'training-recommended': () => chooseTrainingOption('recommended'),
+    'training-custom': startCustomWorkoutBuilder,
+    'workout-selector-back': backToWorkoutSelector,
+    'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),
+    'custom-session-remove': () => removeCustomSessionExercise(Number(target.dataset.index)),
+    'custom-session-move': () => moveCustomSessionExercise(Number(target.dataset.index), target.dataset.direction),
+    'custom-session-continue': continueCustomSession,
+    'custom-session-cancel': cancelCustomSessionBuilder,
     'coach-details': openCoachDetails,
     'workout-adaptation-details': openWorkoutAdaptationDetails,
     'restore-full-workout': restoreFullWorkout,
@@ -2318,6 +2635,7 @@ function handleAppChange(event) {
     if (checked.length > 3) { target.checked = false; showToast('Puedes priorizar hasta 3 zonas.', 'danger'); return; }
   }
   if (target.matches('[data-action="plan-target"]')) updatePlanTarget(target);
+  if (target.matches('[data-action="custom-session-target"]')) updateCustomSessionTarget(target);
   if (target.matches('[data-action="set-field"]')) updateSetField(target);
   if (target.id === 'libraryMuscle') { libraryFilters.muscle = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; libraryPageSize = 36; refreshLibraryResults(); }
@@ -2346,6 +2664,7 @@ function handleAppInput(event) {
     libraryPageSize = 36;
     debounceRefreshLibrary();
   }
+  if (target.id === 'customSessionName' && customWorkoutDraft) customWorkoutDraft.name = target.value;
   if (target.id === 'accentColorPicker') syncAccentControls(target.value);
   if (target.id === 'accentHexText') { const normalized = normalizeHexColor(target.value, ''); if (normalized) syncAccentControls(normalized, false); }
   if (['set-field','workout-notes','exercise-notes'].includes(target.dataset.action)) delayedSaveField(target);
@@ -2689,6 +3008,14 @@ function restoreRecommendedPlan() {
 }
 
 function startSpecificDay(dayIndex) {
+  const prepare = () => {
+    state.nextWorkoutIndex = dayIndex;
+    pendingWorkoutSelection = routineSelection(dayIndex);
+    customWorkoutDraft = null;
+    save();
+    setView('workout');
+  };
+
   if (state.activeWorkout) {
     return confirmAction({
       title: 'Cambiar de entrenamiento',
@@ -2698,15 +3025,11 @@ function startSpecificDay(dayIndex) {
       onConfirm: () => {
         clearRestTimer();
         state.activeWorkout = null;
-        state.nextWorkoutIndex = dayIndex;
-        save();
-        setView('workout');
+        prepare();
       }
     });
   }
-  state.nextWorkoutIndex = dayIndex;
-  save();
-  setView('workout');
+  prepare();
 }
 
 function openExercisePicker({ mode, dayIndex = null, exerciseIndex = null }) {
@@ -2736,7 +3059,7 @@ function openExercisePicker({ mode, dayIndex = null, exerciseIndex = null }) {
 }
 
 function pickerTitle(mode) {
-  return ({ 'plan-add':'Añadir al plan','plan-replace':'Cambiar ejercicio','workout-add':'Añadir a la sesión','workout-replace':'Cambiar ejercicio' })[mode] || 'Elegir ejercicio';
+  return ({ 'plan-add':'Añadir al plan','plan-replace':'Cambiar ejercicio','workout-add':'Añadir a la sesión','workout-replace':'Cambiar ejercicio','custom-session-add':'Añadir al personalizado' })[mode] || 'Elegir ejercicio';
 }
 
 function applyPickedExercise(id, context) {
@@ -2758,6 +3081,11 @@ function applyPickedExercise(id, context) {
     replacement.instanceId = current.instanceId;
     state.activeWorkout.exercises[context.exerciseIndex] = replacement;
     save(); renderWorkout(); showToast('Ejercicio cambiado.');
+  } else if (context.mode === 'custom-session-add') {
+    if (!customWorkoutDraft) startCustomWorkoutBuilder();
+    customWorkoutDraft.exercises.push(createPlanExercise(id, rules));
+    renderCustomWorkoutBuilder();
+    showToast('Ejercicio añadido al personalizado.', 'success');
   }
 }
 
@@ -3082,7 +3410,7 @@ function restoreFullWorkout() {
 
 function cancelWorkout() {
   confirmAction({ title: 'Cancelar entrenamiento', message: 'Se perderán las series registradas en esta sesión.', confirmLabel: 'Cancelar sesión', danger: true, onConfirm: () => {
-    clearRestTimer(); state.activeWorkout = null; save(); setView('home'); showToast('Sesión cancelada.');
+    clearRestTimer(); state.activeWorkout = null; pendingWorkoutSelection = null; customWorkoutDraft = null; save(); setView('home'); showToast('Sesión cancelada.');
   }});
 }
 
@@ -3104,6 +3432,9 @@ function finishWorkout() {
     completedCount: exercises.length,
     totalCount: workout.exercises.length,
     notes: workout.notes || '',
+    sessionSource: workout.sessionSource || 'routine',
+    sourceLabel: workout.sourceLabel || 'Tu rutina',
+    sourceReason: workout.sourceReason || '',
     readiness: workout.readiness || null,
     adaptation: workout.adaptation ? {
       mode: workout.adaptation.mode,
@@ -3123,8 +3454,12 @@ function finishWorkout() {
   session.volume = sessionVolume(session);
   session.prs = detectNewPrs(state.history, session, state.customExercises);
   state.history.unshift(session);
-  state.nextWorkoutIndex = state.plan.days.length ? (workout.planDayIndex + 1) % state.plan.days.length : 0;
+  if (workout.sessionSource === 'routine' && Number.isInteger(workout.planDayIndex) && state.plan?.days?.length) {
+    state.nextWorkoutIndex = (workout.planDayIndex + 1) % state.plan.days.length;
+  }
   state.activeWorkout = null;
+  pendingWorkoutSelection = null;
+  customWorkoutDraft = null;
   clearRestTimer();
   save();
   const message = session.prs.length ? `Sesión guardada con ${session.prs.length} nuevo récord.` : 'Entrenamiento registrado. Buen trabajo.';
@@ -3143,7 +3478,10 @@ function openSessionCompleted(session) {
   const adaptationTag = session.adaptation?.mode === 'adaptive'
     ? `<span class="completion-adaptation-tag">Sesión adaptada · ${session.adaptation.adaptedMinutes} min estimados</span>`
     : '';
-  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
+  const sourceTag = session.sessionSource && session.sessionSource !== 'routine'
+    ? `<span class="completion-source-tag">${session.sessionSource === 'recommended' ? 'Recomendada por MFP' : 'Entrenamiento personalizado'}</span>`
+    : '';
+  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}${sourceTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
     onClose: () => setView(destination)
   });
   wrapper.querySelector('#completedContinue').addEventListener('click', () => {
