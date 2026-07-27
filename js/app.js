@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c7';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c7';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c7';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34d';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34d';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34d';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,20 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c7';
+} from './stats.js?v=34d';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c7';
+} from './coach.js?v=34d';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c7';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34c7';
+} from './adaptive.js?v=34d';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=34d';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=34d';
 import {
   clamp,
   clone,
@@ -45,10 +46,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c7';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c7';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c7';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c7';
+} from './utils.js?v=34d';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34d';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34d';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34d';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +59,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c7';
+} from './photo-progress.js?v=34d';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -71,7 +72,7 @@ const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 let state = loadState();
 let currentView = 'home';
 let deferredInstallPrompt = null;
-let libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', level: 'Todos', mode: 'all' };
+let libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', level: 'Todos', movement: 'Todos', availability: 'Todos', mode: 'all' };
 let libraryPageSize = 36;
 let restInterval = null;
 let waitingServiceWorker = null;
@@ -1911,27 +1912,41 @@ function renderSetRow(set, exerciseIndex, setIndex, item) {
 
 function renderLibrary() {
   const all = getAllExercises(state.customExercises);
+  const quality = libraryQualitySummary(all, state.profile);
   const muscles = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.muscle).sort((a,b) => a.localeCompare(b,'es')))];
   const equipment = ['Todos', ...new Set(Object.values(all).map((exercise) => exercise.equipment).sort((a,b) => a.localeCompare(b,'es')))];
   const levels = ['Todos', 'Principiante', 'Intermedio', 'Avanzado'];
+  const movements = ['Todos', ...movementOptions(all)];
+  const availability = ['Todos', 'Mi material', 'Peso corporal', 'Con animación'];
   const suggestions = [...new Set([...(state.searchHistory || []).slice(0, 4), ...suggestedSearches(libraryFilters.query)])].slice(0, 6);
   app.innerHTML = `
-    <section class="page library-page">
-      <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
-      <button class="premium-pilot-banner media-banner" type="button" data-action="library-mode" data-mode="media">
-        <span class="pilot-banner-badge">30 PREMIUM MOTION</span>
-        <span><strong>Aprende viendo el recorrido</strong><small>Movimiento y activación muscular en un único visor, con técnica paso a paso.</small></span>
+    <section class="page library-page library-pro-page">
+      <div class="section-title-row"><div><p class="eyebrow">BIBLIOTECA PRO · ${quality.total} EJERCICIOS</p><h1>Técnica y sustituciones</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
+
+      <section class="library-quality-strip">
+        <span><strong>${quality.complete}</strong><small>fichas completas</small></span>
+        <span><strong>${quality.animated}</strong><small>con animación</small></span>
+        <span><strong>${quality.available}</strong><small>con tu material</small></span>
+        <span><strong>Smart</strong><small>sustituciones</small></span>
+      </section>
+
+      <button class="premium-pilot-banner media-banner library-pro-banner" type="button" data-action="library-mode" data-mode="media">
+        <span class="pilot-banner-badge">TÉCNICA VISUAL</span>
+        <span><strong>Aprende el movimiento y encuentra sustitutos útiles</strong><small>Fichas unificadas, errores comunes, puntos clave y alternativas clasificadas por patrón.</small></span>
         <b>→</b>
       </button>
-      <section class="card library-controls">
-        <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" type="search" placeholder="Ej. espalda con polea, sentadiya…" value="${esc(libraryFilters.query)}"></div>
+
+      <section class="card library-controls library-controls-pro">
+        <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" type="search" placeholder="Ej. tirón vertical con polea, glúteos sin máquina…" value="${esc(libraryFilters.query)}"></div>
         ${suggestions.length ? `<div class="search-suggestions">${suggestions.map((value) => `<button type="button" data-action="library-query" data-query="${esc(value)}">${esc(value)}</button>`).join('')}</div>` : ''}
-        <div class="filter-row filter-row-3">
-          <select id="libraryMuscle" class="filter-select" aria-label="Músculo">${muscles.map((value) => `<option ${value === libraryFilters.muscle ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
-          <select id="libraryEquipment" class="filter-select" aria-label="Material">${equipment.map((value) => `<option ${value === libraryFilters.equipment ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
-          <select id="libraryLevel" class="filter-select" aria-label="Nivel">${levels.map((value) => `<option ${value === libraryFilters.level ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select>
+        <div class="filter-row library-filter-grid">
+          <label><span>Músculo</span><select id="libraryMuscle" class="filter-select">${muscles.map((value) => `<option ${value === libraryFilters.muscle ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+          <label><span>Material</span><select id="libraryEquipment" class="filter-select">${equipment.map((value) => `<option ${value === libraryFilters.equipment ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+          <label><span>Nivel</span><select id="libraryLevel" class="filter-select">${levels.map((value) => `<option ${value === libraryFilters.level ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+          <label><span>Patrón</span><select id="libraryMovement" class="filter-select">${movements.map((value) => `<option ${value === libraryFilters.movement ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
+          <label><span>Disponibilidad</span><select id="libraryAvailability" class="filter-select">${availability.map((value) => `<option ${value === libraryFilters.availability ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
         </div>
-        <div class="segmented-control">
+        <div class="segmented-control library-mode-control">
           ${[['all','Todos'],['media','Animados'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
         </div>
       </section>
@@ -1944,26 +1959,31 @@ function libraryResultsHtml() {
   const all = getAllExercises(state.customExercises);
   const query = libraryFilters.query.trim();
   const recent = new Set(recentExerciseIds(state));
-  const profileEquipment = new Set(state.profile?.equipment || []);
   let entries = Object.entries(all).filter(([id, exercise]) => {
     if (libraryFilters.muscle !== 'Todos' && exercise.muscle !== libraryFilters.muscle) return false;
     if (libraryFilters.equipment !== 'Todos' && exercise.equipment !== libraryFilters.equipment) return false;
     if (libraryFilters.level !== 'Todos' && exercise.level !== libraryFilters.level) return false;
+    if (libraryFilters.movement !== 'Todos' && movementCategory(exercise) !== libraryFilters.movement) return false;
+    if (libraryFilters.availability === 'Mi material' && !equipmentAvailable(exercise, state.profile)) return false;
+    if (libraryFilters.availability === 'Peso corporal' && exercise.equipment !== 'Peso corporal') return false;
+    if (libraryFilters.availability === 'Con animación' && !exercise.media?.video) return false;
     if (libraryFilters.mode === 'media' && !exercise.media?.video) return false;
     if (libraryFilters.mode === 'favorites' && !state.favorites.includes(id)) return false;
     if (libraryFilters.mode === 'recent' && !recent.has(id)) return false;
     if (libraryFilters.mode === 'custom' && !exercise.custom) return false;
     return true;
   });
+  entries = deduplicateExerciseEntries(entries);
   entries = query
     ? searchExerciseEntries(entries, query, searchableExerciseText)
     : entries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'es'));
-  if (!entries.length) return emptyState('No hay coincidencias', 'La búsqueda admite errores de escritura. Prueba por músculo, material o movimiento.', '<button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
+  if (!entries.length) return emptyState('No hay coincidencias', 'Prueba otro músculo, material o patrón de movimiento.', '<button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
 
   const visible = entries.slice(0, libraryPageSize);
-  return `<div class="results-header"><p class="results-count"><strong>${entries.length}</strong> resultados${entries.length > visible.length ? ` · mostrando ${visible.length}` : ''}</p>${query ? `<button class="button button-ghost button-small" type="button" data-action="remember-search" data-query="${esc(query)}">Guardar búsqueda</button>` : ''}</div><div class="exercise-grid">${visible.map(([id, exercise]) => {
+  return `<div class="results-header"><p class="results-count"><strong>${entries.length}</strong> resultados${entries.length > visible.length ? ` · mostrando ${visible.length}` : ''}</p>${query ? `<button class="button button-ghost button-small" type="button" data-action="remember-search" data-query="${esc(query)}">Guardar búsqueda</button>` : ''}</div><div class="exercise-grid exercise-grid-pro">${visible.map(([id, exercise]) => {
     const favorite = state.favorites.includes(id);
-    const unavailable = profileEquipment.size && !profileEquipment.has(exercise.equipment) && !['Peso corporal', 'Sin especificar'].includes(exercise.equipment);
+    const available = equipmentAvailable(exercise, state.profile);
+    const quality = exerciseQuality(exercise);
     return `<article class="card library-card library-card-pro">
       <button class="library-card-visual-button" type="button" data-action="exercise-details" data-id="${esc(id)}" aria-label="Abrir ficha de ${esc(exercise.name)}">
         ${exerciseCardVisual(exercise, id)}
@@ -1977,11 +1997,10 @@ function libraryResultsHtml() {
           <button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button>
         </div>
         <p class="muted small clamp-2 library-card-summary">${esc(exercise.summary)}</p>
-        <div class="exercise-meta library-card-tags">
-          <span>${esc(exercise.equipment)}</span>
-          ${exercise.media?.video ? '<span class="motion-badge">▶ Animación</span>' : '<span>Guía técnica</span>'}
-          ${exercise.custom ? '<span>Personalizado</span>' : ''}
-          ${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}
+        <div class="library-professional-tags">
+          <span>${esc(movementCategory(exercise))}</span>
+          <span class="quality-${quality.tone}">${esc(quality.label)}</span>
+          <span class="${available ? 'available' : 'unavailable'}">${available ? 'Material disponible' : 'Material no marcado'}</span>
         </div>
         <div class="library-card-actions">
           <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Ver ficha</button>
@@ -1991,7 +2010,7 @@ function libraryResultsHtml() {
         </div>
       </div>
     </article>`;
-  }).join('')}</div>${entries.length > visible.length ? `<button class="button button-secondary button-block load-more" type="button" data-action="library-more">Mostrar ${Math.min(36, entries.length - visible.length)} más</button>` : ''}`;
+  }).join('')}</div>${entries.length > visible.length ? `<button class="button button-secondary button-block library-load-more" type="button" data-action="library-more">Mostrar 36 más</button>` : ''}`;
 }
 
 function renderProfile() {
@@ -2837,6 +2856,8 @@ function handleAppChange(event) {
   if (target.id === 'libraryMuscle') { libraryFilters.muscle = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'libraryLevel') { libraryFilters.level = target.value; libraryPageSize = 36; refreshLibraryResults(); }
+  if (target.id === 'libraryMovement') { libraryFilters.movement = target.value; libraryPageSize = 36; refreshLibraryResults(); }
+  if (target.id === 'libraryAvailability') { libraryFilters.availability = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'backupFile') importBackup(target.files?.[0]);
   if (target.id === 'bodyMetricSelect') {
     bodyMetric = target.value;
@@ -3248,21 +3269,37 @@ function openExercisePicker({ mode, dayIndex = null, exerciseIndex = null }) {
   let query = '';
   let muscle = 'Todos';
   let equipment = 'Todos';
+  let movement = 'Todos';
   const all = getAllExercises(state.customExercises);
-  const muscles = ['Todos', ...new Set(Object.values(all).map((item) => item.muscle).sort())];
-  const equipments = ['Todos', ...new Set(Object.values(all).map((item) => item.equipment).sort())];
-  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Seleccionar ejercicio</p><h2>${pickerTitle(mode)}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="picker-controls"><input id="pickerSearch" class="search-input" type="search" placeholder="Buscar…"><div class="filter-row"><select id="pickerMuscle" class="filter-select">${muscles.map((value) => `<option>${esc(value)}</option>`).join('')}</select><select id="pickerEquipment" class="filter-select">${equipments.map((value) => `<option>${esc(value)}</option>`).join('')}</select></div></div><div id="pickerResults" class="picker-results"></div>`, { wide: true });
+  const muscles = ['Todos', ...new Set(Object.values(all).map((item) => item.muscle).sort((a,b) => a.localeCompare(b,'es')))];
+  const equipments = ['Todos', ...new Set(Object.values(all).map((item) => item.equipment).sort((a,b) => a.localeCompare(b,'es')))];
+  const movements = ['Todos', ...movementOptions(all)];
+  const sourceId = mode === 'plan-replace'
+    ? state.plan?.days?.[dayIndex]?.exercises?.[exerciseIndex]?.exerciseId
+    : mode === 'workout-replace'
+      ? state.activeWorkout?.exercises?.[exerciseIndex]?.exerciseId
+      : null;
+  const source = sourceId ? getExercise(sourceId, state.customExercises) : null;
+  const recommended = sourceId
+    ? rankExerciseSubstitutes(sourceId, state.customExercises, state.profile, { limit: 8 })
+    : [];
+
+  const wrapper = openModal(`<div class="modal-header substitution-modal-header"><div><p class="eyebrow">${source ? 'SUSTITUCIÓN INTELIGENTE' : 'SELECCIONAR EJERCICIO'}</p><h2>${source ? `Cambiar ${esc(source.name)}` : pickerTitle(mode)}</h2>${source ? `<p class="muted small">Prioriza el mismo patrón, músculo y material disponible.</p>` : ''}</div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    ${recommended.length ? `<section class="smart-substitution-section"><div class="section-title-row"><div><p class="eyebrow">Recomendados</p><h3>Mejores sustitutos</h3></div><span class="pill">${recommended.length} opciones</span></div><div class="smart-substitution-grid">${recommended.map((item, index) => `<button class="smart-substitution-card" type="button" data-picker-id="${esc(item.id)}"><span class="substitution-rank">${String(index + 1).padStart(2,'0')}</span><span><strong>${esc(item.exercise.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.exercise.muscle)} · ${esc(item.exercise.equipment)}</em></span><b>${item.available ? '✓' : '!'}</b></button>`).join('')}</div></section>` : ''}
+    <section class="picker-all-section"><div class="section-title-row"><div><p class="eyebrow">Biblioteca</p><h3>${source ? 'Todas las opciones' : 'Elige un ejercicio'}</h3></div></div><div class="picker-controls"><input id="pickerSearch" class="search-input" type="search" placeholder="Buscar…"><div class="filter-row picker-filter-grid"><select id="pickerMuscle" class="filter-select">${muscles.map((value) => `<option>${esc(value)}</option>`).join('')}</select><select id="pickerEquipment" class="filter-select">${equipments.map((value) => `<option>${esc(value)}</option>`).join('')}</select><select id="pickerMovement" class="filter-select">${movements.map((value) => `<option>${esc(value)}</option>`).join('')}</select></div></div><div id="pickerResults" class="picker-results"></div></section>`, { wide: true });
   const results = wrapper.querySelector('#pickerResults');
   const redraw = () => {
     const normalized = normalizeText(query);
-    const entries = Object.entries(all).filter(([id, exercise]) => (!normalized || normalizeText(searchableExerciseText(id, exercise)).includes(normalized)) && (muscle === 'Todos' || exercise.muscle === muscle) && (equipment === 'Todos' || exercise.equipment === equipment)).sort((a,b) => a[1].name.localeCompare(b[1].name,'es'));
-    results.innerHTML = entries.length ? entries.map(([id, exercise]) => `<button class="picker-item" type="button" data-picker-id="${esc(id)}"><span><strong>${esc(exercise.name)}</strong><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small></span><span>＋</span></button>`).join('') : emptyState('Sin resultados','Prueba otra búsqueda.');
+    let entries = Object.entries(all).filter(([id, exercise]) => id !== sourceId && (!normalized || normalizeText(searchableExerciseText(id, exercise)).includes(normalized)) && (muscle === 'Todos' || exercise.muscle === muscle) && (equipment === 'Todos' || exercise.equipment === equipment) && (movement === 'Todos' || movementCategory(exercise) === movement));
+    entries = deduplicateExerciseEntries(entries).sort((a,b) => a[1].name.localeCompare(b[1].name,'es'));
+    results.innerHTML = entries.length ? entries.map(([id, exercise]) => `<button class="picker-item picker-item-pro" type="button" data-picker-id="${esc(id)}"><span><strong>${esc(exercise.name)}</strong><small>${esc(exercise.muscle)} · ${esc(exercise.equipment)} · ${esc(movementCategory(exercise))}</small></span><span>＋</span></button>`).join('') : emptyState('Sin resultados','Prueba otra búsqueda.');
   };
   redraw();
   wrapper.querySelector('#pickerSearch').addEventListener('input', (event) => { query = event.target.value; redraw(); });
   wrapper.querySelector('#pickerMuscle').addEventListener('change', (event) => { muscle = event.target.value; redraw(); });
   wrapper.querySelector('#pickerEquipment').addEventListener('change', (event) => { equipment = event.target.value; redraw(); });
-  results.addEventListener('click', (event) => {
+  wrapper.querySelector('#pickerMovement').addEventListener('change', (event) => { movement = event.target.value; redraw(); });
+  wrapper.addEventListener('click', (event) => {
     const button = event.target.closest('[data-picker-id]');
     if (!button) return;
     applyPickedExercise(button.dataset.pickerId, { mode, dayIndex, exerciseIndex });
@@ -3303,40 +3340,38 @@ function applyPickedExercise(id, context) {
 
 function openExerciseDetails(id) {
   const exercise = getExercise(id, state.customExercises);
-  const alternatives = (exercise.alternatives || []).map((altId) => ({
-    id: altId,
-    ...getExercise(altId, state.customExercises),
-    reason: exercise.alternativeReasons?.[altId] || alternativeReason(exercise, getExercise(altId, state.customExercises))
-  }));
+  const coaching = coachingProfile(exercise);
+  const quality = exerciseQuality(exercise);
+  const alternatives = rankExerciseSubstitutes(id, state.customExercises, state.profile, { limit: 6 });
   const favorite = state.favorites.includes(id);
   const last = lastExercisePerformance(state.history, id);
   const record = personalRecords(state.history, state.customExercises).find((item) => item.exerciseId === id);
   const primary = (exercise.primaryMuscles || [exercise.muscle]).join(', ');
   const secondary = (exercise.secondaryMuscles || []).join(', ');
-  const isPilot = Boolean(exercise.premium);
   const hasMotion = Boolean(exercise.media?.video);
+  const available = equipmentAvailable(exercise, state.profile);
 
   const wrapper = openModal(`
-    <article class="premium-exercise-detail ${isPilot ? 'premium-pilot-detail' : ''}">
-      <header class="premium-detail-header">
+    <article class="premium-exercise-detail technique-pro-detail">
+      <header class="premium-detail-header technique-pro-header">
         <button class="premium-detail-back" type="button" data-close-modal aria-label="Volver">←</button>
         <div class="premium-detail-title">
-          <p class="eyebrow">${hasMotion ? 'PREMIUM MOTION · TÉCNICA' : (isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`)}</p>
+          <p class="eyebrow">${hasMotion ? 'TÉCNICA VISUAL' : 'GUÍA TÉCNICA'} · ${esc(coaching.category)}</p>
           <h2>${esc(exercise.name)}</h2>
           ${exercise.englishName ? `<p>${esc(exercise.englishName)}</p>` : ''}
         </div>
-        <button class="premium-favorite ${favorite ? 'active' : ''}" type="button" data-premium-favorite="${esc(id)}" aria-label="${favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}">★</button>
+        <button class="premium-favorite ${favorite ? 'active' : ''}" type="button" data-premium-favorite="${esc(id)}">★</button>
       </header>
 
       ${premiumExerciseVisual(exercise, id, { reduceMotion: state.settings.reduceMotion })}
 
-      <section class="premium-detail-summary">
-        <div class="premium-data-chips">
-          <span><small>Músculo</small><strong>${esc(exercise.muscle)}</strong></span>
-          <span><small>Material</small><strong>${esc(exercise.equipment)}</strong></span>
-          <span><small>Nivel</small><strong>${esc(exercise.level)}</strong></span>
-          <span><small>Patrón</small><strong>${esc(exercise.movementType || exercise.movement)}</strong></span>
-        </div>
+      <section class="technique-pro-overview">
+        <div class="technique-quality-card quality-${quality.tone}"><small>Calidad de ficha</small><strong>${esc(quality.label)}</strong><span>${quality.score}/100</span></div>
+        <div class="technique-availability-card ${available ? 'available' : 'unavailable'}"><small>Material</small><strong>${available ? 'Disponible en tu perfil' : 'No marcado en tu perfil'}</strong><span>${esc(exercise.equipment)}</span></div>
+        <div class="technique-pattern-card"><small>Patrón</small><strong>${esc(coaching.category)}</strong><span>${esc(exercise.level)}</span></div>
+      </section>
+
+      <section class="premium-detail-summary technique-pro-summary">
         <div class="premium-muscle-copy">
           <p><span class="muscle-dot primary"></span><strong>Principal:</strong> ${esc(primary)}</p>
           ${secondary ? `<p><span class="muscle-dot secondary"></span><strong>Secundarios:</strong> ${esc(secondary)}</p>` : ''}
@@ -3344,95 +3379,62 @@ function openExerciseDetails(id) {
         <p class="premium-exercise-intro">${esc(exercise.summary)}</p>
       </section>
 
-      <section class="premium-detail-actions">
+      <section class="premium-detail-actions technique-pro-actions">
         <button class="button button-primary" type="button" data-premium-add-plan="${esc(id)}" ${state.plan?.days?.length ? '' : 'disabled'}>＋ Añadir al plan</button>
         <button class="button button-secondary" type="button" data-premium-add-workout="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Añadir al entreno</button>
       </section>
 
       ${exerciseHistoryHtml(last, record, exercise)}
 
-      <section class="premium-content-section">
-        <div class="premium-section-heading"><span>01</span><div><p class="eyebrow">Técnica</p><h3>Cómo hacerlo</h3></div></div>
-        <ol class="premium-step-list">${(exercise.steps || []).map((step, index) => `<li><span>${String(index + 1).padStart(2, '0')}</span><p>${esc(step)}</p></li>`).join('')}</ol>
+      <section class="premium-content-section technique-pro-section">
+        <div class="premium-section-heading"><span>01</span><div><p class="eyebrow">Ejecución</p><h3>Tres fases claras</h3></div></div>
+        <div class="technique-phase-grid">
+          <article><span>Preparación</span><strong>${esc(coaching.setup)}</strong></article>
+          <article><span>Movimiento</span><strong>${esc(coaching.execution)}</strong></article>
+          <article><span>Regreso</span><strong>${esc(coaching.finish)}</strong></article>
+        </div>
       </section>
 
-      ${(exercise.breathing || exercise.tempo) ? `<section class="technique-cue-grid">
-        ${exercise.breathing ? `<article><span class="cue-icon">◌</span><div><p class="eyebrow">Respiración</p><strong>${esc(exercise.breathing)}</strong></div></article>` : ''}
-        ${exercise.tempo ? `<article><span class="cue-icon">◷</span><div><p class="eyebrow">Ritmo recomendado</p><strong>${esc(exercise.tempo)}</strong></div></article>` : ''}
-      </section>` : ''}
-
-      <section class="premium-content-section">
-        <div class="premium-section-heading warning"><span>02</span><div><p class="eyebrow">Evita esto</p><h3>Errores frecuentes</h3></div></div>
-        <ul class="premium-warning-list">${(exercise.mistakes || []).map((mistake) => `<li><span>!</span><p>${esc(mistake)}</p></li>`).join('')}</ul>
+      <section class="technique-cue-grid technique-pro-cue-grid">
+        <article><span class="cue-icon">◌</span><div><p class="eyebrow">Respiración</p><strong>${esc(coaching.breathing)}</strong></div></article>
+        <article><span class="cue-icon">◷</span><div><p class="eyebrow">Ritmo recomendado</p><strong>${esc(coaching.tempo)}</strong></div></article>
       </section>
 
-      ${(exercise.tips || []).length ? `<section class="premium-content-section">
-        <div class="premium-section-heading tips"><span>03</span><div><p class="eyebrow">Detalles útiles</p><h3>Consejos prácticos</h3></div></div>
-        <ul class="premium-tip-list">${exercise.tips.map((tip) => `<li><span>✓</span><p>${esc(tip)}</p></li>`).join('')}</ul>
+      <section class="premium-content-section technique-pro-section">
+        <div class="premium-section-heading tips"><span>02</span><div><p class="eyebrow">Durante la serie</p><h3>Puntos clave</h3></div></div>
+        <div class="quick-cue-grid">${coaching.cues.map((cue) => `<span><i>✓</i><strong>${esc(cue)}</strong></span>`).join('')}</div>
+      </section>
+
+      <section class="premium-content-section technique-pro-section">
+        <div class="premium-section-heading warning"><span>03</span><div><p class="eyebrow">Evita esto</p><h3>Errores frecuentes</h3></div></div>
+        <ul class="premium-warning-list">${coaching.mistakes.map((mistake) => `<li><span>!</span><p>${esc(mistake)}</p></li>`).join('')}</ul>
+      </section>
+
+      ${alternatives.length ? `<section class="premium-content-section alternatives-section technique-pro-section">
+        <div class="premium-section-heading"><span>04</span><div><p class="eyebrow">Sustituciones inteligentes</p><h3>Mismo objetivo, otra opción</h3></div></div>
+        <div class="smart-detail-alternatives">${alternatives.map((item, index) => `<button type="button" class="smart-detail-alternative" data-alt-details="${esc(item.id)}"><span class="substitution-rank">${String(index + 1).padStart(2,'0')}</span><span><strong>${esc(item.exercise.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.exercise.equipment)} · ${item.available ? 'Disponible' : 'Material no marcado'}</em></span><b>›</b></button>`).join('')}</div>
       </section>` : ''}
+    </article>`, { wide: true });
 
-      ${alternatives.length ? `<section class="premium-content-section alternatives-section">
-        <div class="premium-section-heading"><span>04</span><div><p class="eyebrow">Máquina ocupada</p><h3>Alternativas</h3></div></div>
-        <div class="premium-alternative-list">${alternatives.map((item) => `<button type="button" class="premium-alternative-card" data-alt-details="${esc(item.id)}"><span class="alternative-mini-visual">${exerciseCardVisual(item, item.id, { compact: true })}</span><span class="alternative-copy"><strong>${esc(item.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.equipment)} · ${esc(item.level)}</em></span><b>›</b></button>`).join('')}</div>
-      </section>` : ''}
-
-      <section class="premium-safety-note"><span>i</span><p>La ficha es educativa. Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. Para corregir técnica o adaptar el movimiento a una lesión, consulta a un profesional.</p></section>
-    </article>
-  `, { wide: true });
-
-  wrapper.querySelectorAll('[data-exercise-visual-tab]').forEach((button) => button.addEventListener('click', () => {
-    const tab = button.dataset.exerciseVisualTab;
-    wrapper.querySelectorAll('[data-exercise-visual-tab]').forEach((item) => {
-      const active = item.dataset.exerciseVisualTab === tab;
-      item.classList.toggle('active', active);
-      item.setAttribute('aria-selected', String(active));
-    });
-    wrapper.querySelectorAll('[data-exercise-visual-panel]').forEach((panel) => {
-      const active = panel.dataset.exerciseVisualPanel === tab;
-      panel.classList.toggle('active', active);
-      panel.hidden = !active;
-      panel.style.display = active ? 'block' : 'none';
-    });
-  }));
   const motionVideo = wrapper.querySelector('[data-motion-video]');
   const motionToggle = wrapper.querySelector('[data-motion-toggle]');
   const motionError = wrapper.querySelector('[data-motion-error]');
   if (motionVideo) {
-    const showMotionError = () => {
-      if (motionError) motionError.hidden = false;
-      motionVideo.style.opacity = '0';
-      if (motionToggle) { motionToggle.disabled = true; motionToggle.innerHTML = 'No disponible'; }
-    };
+    const showMotionError = () => { if (motionError) motionError.hidden = false; motionVideo.style.opacity = '.18'; };
     motionVideo.addEventListener('error', showMotionError);
     motionVideo.querySelector('source')?.addEventListener('error', showMotionError);
-    motionVideo.addEventListener('loadeddata', () => {
-      if (motionError) motionError.hidden = true;
-      motionVideo.style.opacity = '1';
-    });
+    motionVideo.addEventListener('loadeddata', () => { if (motionError) motionError.hidden = true; motionVideo.style.opacity = '1'; });
   }
-  wrapper.querySelectorAll('[data-anatomy-image]').forEach((image) => {
-    image.addEventListener('error', () => {
-      image.closest('figure')?.classList.add('media-load-failed');
-      image.alt = 'Mapa muscular no disponible. Recarga la ficha.';
-    });
-  });
   if (motionVideo && motionToggle) {
-    const updateMotionToggle = () => {
-      motionToggle.innerHTML = motionVideo.paused ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>';
-    };
+    const updateMotionToggle = () => { motionToggle.innerHTML = motionVideo.paused ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>'; };
     motionToggle.addEventListener('click', async () => {
-      if (motionVideo.paused) {
-        try { await motionVideo.play(); } catch (error) { showToast('Pulsa de nuevo para iniciar la demostración.'); }
-      } else motionVideo.pause();
+      if (motionVideo.paused) { try { await motionVideo.play(); } catch (error) { showToast('Pulsa de nuevo para iniciar la demostración.'); } }
+      else motionVideo.pause();
       updateMotionToggle();
     });
     motionVideo.addEventListener('play', updateMotionToggle);
     motionVideo.addEventListener('pause', updateMotionToggle);
-    wrapper.querySelector('[data-motion-replay]')?.addEventListener('click', async () => {
-      motionVideo.currentTime = 0;
-      try { await motionVideo.play(); } catch (error) { /* iOS puede pedir interacción */ }
-      updateMotionToggle();
-    });
+    wrapper.querySelector('[data-motion-replay]')?.addEventListener('click', async () => { motionVideo.currentTime = 0; try { await motionVideo.play(); } catch (error) {} updateMotionToggle(); });
     wrapper.querySelectorAll('[data-motion-speed]').forEach((button) => button.addEventListener('click', () => {
       motionVideo.playbackRate = Number(button.dataset.motionSpeed) || 1;
       wrapper.querySelectorAll('[data-motion-speed]').forEach((item) => item.classList.toggle('active', item === button));
@@ -3442,39 +3444,21 @@ function openExerciseDetails(id) {
   wrapper.querySelector('[data-motion-fullscreen]')?.addEventListener('click', async () => {
     if (!motionVideo) return;
     try {
-      if (typeof motionVideo.webkitEnterFullscreen === 'function') {
-        motionVideo.webkitEnterFullscreen();
-      } else if (motionVideo.requestFullscreen) {
-        await motionVideo.requestFullscreen();
-      } else {
-        await motionVideo.closest('.premium-motion-stage')?.requestFullscreen?.();
-      }
-    } catch (error) {
-      showToast('La pantalla completa no está disponible en este navegador.');
-    }
+      if (typeof motionVideo.webkitEnterFullscreen === 'function') motionVideo.webkitEnterFullscreen();
+      else if (motionVideo.requestFullscreen) await motionVideo.requestFullscreen();
+      else await motionVideo.closest('.premium-motion-stage')?.requestFullscreen?.();
+    } catch (error) { showToast('La pantalla completa no está disponible en este navegador.'); }
   });
-
   wrapper.querySelector('[data-premium-favorite]')?.addEventListener('click', (event) => {
     const button = event.currentTarget;
     state.favorites = state.favorites.includes(id) ? state.favorites.filter((item) => item !== id) : [...state.favorites, id];
     save();
-    const active = state.favorites.includes(id);
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-label', active ? 'Quitar de favoritos' : 'Añadir a favoritos');
+    button.classList.toggle('active', state.favorites.includes(id));
     refreshLibraryResults();
   });
-  wrapper.querySelector('[data-premium-add-plan]')?.addEventListener('click', () => {
-    wrapper._closeModal();
-    choosePlanDayForExercise(id);
-  });
-  wrapper.querySelector('[data-premium-add-workout]')?.addEventListener('click', () => {
-    wrapper._closeModal();
-    addLibraryExerciseToWorkout(id);
-  });
-  wrapper.querySelectorAll('[data-alt-details]').forEach((button) => button.addEventListener('click', () => {
-    wrapper._closeModal();
-    openExerciseDetails(button.dataset.altDetails);
-  }));
+  wrapper.querySelector('[data-premium-add-plan]')?.addEventListener('click', () => { wrapper._closeModal(); choosePlanDayForExercise(id); });
+  wrapper.querySelector('[data-premium-add-workout]')?.addEventListener('click', () => { wrapper._closeModal(); addLibraryExerciseToWorkout(id); });
+  wrapper.querySelectorAll('[data-alt-details]').forEach((button) => button.addEventListener('click', () => { wrapper._closeModal(); openExerciseDetails(button.dataset.altDetails); }));
 }
 
 function exerciseHistoryHtml(last, record, exercise) {
@@ -4008,7 +3992,7 @@ function updateLiveDuration() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34c7', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=34d', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
