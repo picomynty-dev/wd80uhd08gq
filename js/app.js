@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34a';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34a';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34a';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34b';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34b';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34b';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,13 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34a';
+} from './stats.js?v=34b';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34a';
+} from './coach.js?v=34b';
+import {
+  buildAdaptiveSession,
+  estimatePlanMinutes,
+  readinessSummary
+} from './adaptive.js?v=34b';
 import {
   clamp,
   clone,
@@ -39,10 +44,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34a';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34a';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34a';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34a';
+} from './utils.js?v=34b';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34b';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34b';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34b';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -52,7 +57,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34a';
+} from './photo-progress.js?v=34b';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1048,11 +1053,33 @@ function renderPlanExercise(item, dayIndex, exerciseIndex, total) {
   </div>`;
 }
 
-function createActiveWorkout(dayIndex = state.nextWorkoutIndex) {
+function createActiveWorkout(dayIndex = state.nextWorkoutIndex, options = {}) {
   const days = state.plan?.days || [];
   if (!days.length) return null;
   const safeIndex = clamp(Number(dayIndex) || 0, 0, days.length - 1);
   const day = days[safeIndex];
+  const readiness = options.readiness || null;
+  const adaptation = readiness
+    ? buildAdaptiveSession(day, readiness, state.customExercises)
+    : {
+        blocked: false,
+        mode: 'original',
+        originalMinutes: estimatePlanMinutes(day),
+        targetMinutes: estimatePlanMinutes(day),
+        adaptedMinutes: estimatePlanMinutes(day),
+        items: clone(day.exercises),
+        removed: [],
+        removedSets: 0,
+        reasons: [],
+        guidance: [],
+        originalExerciseCount: day.exercises.length,
+        adaptedExerciseCount: day.exercises.length,
+        originalSetCount: day.exercises.reduce((sum, item) => sum + numberValue(item.targetSets, 3), 0),
+        adaptedSetCount: day.exercises.reduce((sum, item) => sum + numberValue(item.targetSets, 3), 0)
+      };
+
+  if (adaptation.blocked) return null;
+
   state.activeWorkout = {
     id: uid('session'),
     planDayIndex: safeIndex,
@@ -1061,7 +1088,12 @@ function createActiveWorkout(dayIndex = state.nextWorkoutIndex) {
     startedAt: new Date().toISOString(),
     notes: '',
     restTimer: null,
-    exercises: day.exercises.map((planItem) => workoutExerciseFromPlan(planItem))
+    readiness,
+    adaptation: {
+      ...adaptation,
+      originalItems: clone(day.exercises)
+    },
+    exercises: adaptation.items.map((planItem) => workoutExerciseFromPlan(planItem))
   };
   save();
   return state.activeWorkout;
@@ -1087,9 +1119,174 @@ function workoutExerciseFromPlan(planItem) {
   };
 }
 
+
+function renderPreWorkoutCheckin(dayIndex = state.nextWorkoutIndex) {
+  const days = state.plan?.days || [];
+  const safeIndex = clamp(Number(dayIndex) || 0, 0, Math.max(0, days.length - 1));
+  const day = days[safeIndex];
+  if (!day) return renderLocked('No hay una sesión preparada.', 'Selecciona una rutina con al menos un entrenamiento.');
+
+  const estimated = estimatePlanMinutes(day);
+  const muscleNames = [...new Set(day.exercises.map((item) => getExercise(item.exerciseId, state.customExercises).muscle))].slice(0, 4);
+
+  app.innerHTML = `<section class="page readiness-page">
+    <header class="readiness-hero">
+      <div class="readiness-brand"><span class="coach-mark">MFP</span><span><small>PREPARACIÓN DE SESIÓN</small><strong>Entrenador adaptativo</strong></span></div>
+      <p class="eyebrow">Próxima sesión</p>
+      <h1>${esc(day.name)}</h1>
+      <p>${day.exercises.length} ejercicios · ${estimated} min estimados · ${muscleNames.map(esc).join(' · ')}</p>
+    </header>
+
+    <form id="readinessForm" class="readiness-form">
+      <section class="readiness-section">
+        <div class="readiness-section-heading"><span>01</span><div><h2>¿Cuánto tiempo tienes hoy?</h2><p>La adaptación se aplica solo a esta sesión.</p></div></div>
+        <div class="readiness-choice-grid readiness-time-grid">
+          ${[
+            ['25','25 min','Esencial'],
+            ['40','40 min','Equilibrada'],
+            ['60','60 min','Amplia'],
+            ['full','Completa',`${estimated} min aprox.`]
+          ].map(([value,label,description]) => `<label class="readiness-choice">
+            <input type="radio" name="timeMode" value="${value}" ${value === (estimated <= 45 ? 'full' : '40') ? 'checked' : ''}>
+            <span><strong>${label}</strong><small>${description}</small></span>
+          </label>`).join('')}
+        </div>
+      </section>
+
+      <section class="readiness-section">
+        <div class="readiness-section-heading"><span>02</span><div><h2>Energía y sueño</h2><p>Ayudan a ajustar volumen y objetivo de esfuerzo.</p></div></div>
+        <div class="readiness-double-grid">
+          <fieldset class="readiness-fieldset"><legend>Energía</legend>
+            <div class="readiness-segmented">
+              ${[['low','Baja'],['normal','Normal'],['high','Alta']].map(([value,label]) => `<label><input type="radio" name="energy" value="${value}" ${value === 'normal' ? 'checked' : ''}><span>${label}</span></label>`).join('')}
+            </div>
+          </fieldset>
+          <fieldset class="readiness-fieldset"><legend>Sueño</legend>
+            <div class="readiness-segmented">
+              ${[['poor','Malo'],['normal','Normal'],['good','Bueno']].map(([value,label]) => `<label><input type="radio" name="sleep" value="${value}" ${value === 'normal' ? 'checked' : ''}><span>${label}</span></label>`).join('')}
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="readiness-section">
+        <div class="readiness-section-heading"><span>03</span><div><h2>¿Tienes molestias?</h2><p>La app no diagnostica ni sustituye una valoración profesional.</p></div></div>
+        <div class="readiness-segmented discomfort-segmented">
+          ${[
+            ['none','Ninguna','Entrenamiento habitual'],
+            ['mild','Leves','Sin aumentos improvisados'],
+            ['important','Importantes','No adaptar automáticamente']
+          ].map(([value,label,description]) => `<label><input type="radio" name="discomfort" value="${value}" ${value === 'none' ? 'checked' : ''}><span><strong>${label}</strong><small>${description}</small></span></label>`).join('')}
+        </div>
+        <div id="readinessSafetyNotice" class="readiness-safety-notice" hidden></div>
+      </section>
+
+      <section id="readinessPreview" class="readiness-preview"></section>
+
+      <div class="readiness-actions">
+        <button class="button button-secondary" type="button" data-nav="home">Volver</button>
+        <button class="button button-secondary" type="button" id="startOriginalWorkout">Usar sesión original</button>
+        <button class="button button-primary readiness-start-button" type="submit">Crear sesión adaptada <span>→</span></button>
+      </div>
+    </form>
+  </section>`;
+
+  const form = document.querySelector('#readinessForm');
+  const safety = document.querySelector('#readinessSafetyNotice');
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalButton = document.querySelector('#startOriginalWorkout');
+
+  const readValues = () => {
+    const data = new FormData(form);
+    const timeMode = String(data.get('timeMode') || 'full');
+    return {
+      timeMode: timeMode === 'full' ? 'full' : 'limited',
+      minutes: timeMode === 'full' ? estimated : numberValue(timeMode, estimated),
+      energy: String(data.get('energy') || 'normal'),
+      sleep: String(data.get('sleep') || 'normal'),
+      discomfort: String(data.get('discomfort') || 'none'),
+      checkedAt: new Date().toISOString()
+    };
+  };
+
+  const updatePreview = () => {
+    const readiness = readValues();
+    const adaptation = buildAdaptiveSession(day, readiness, state.customExercises);
+    const preview = document.querySelector('#readinessPreview');
+
+    if (adaptation.blocked) {
+      safety.hidden = false;
+      safety.className = 'readiness-safety-notice important';
+      safety.innerHTML = `<strong>No se generará una sesión adaptada</strong><p>Si el dolor es intenso, repentino o cambia tu forma de moverte, pospón el entrenamiento y valora consultar con un profesional sanitario.</p>`;
+      submitButton.disabled = true;
+      originalButton.disabled = true;
+      preview.innerHTML = `<div class="readiness-blocked-preview"><span>!</span><div><strong>Prioriza la seguridad</strong><p>Puedes volver a Inicio y retomar el entrenamiento cuando las molestias importantes hayan desaparecido o hayan sido valoradas.</p></div></div>`;
+      return;
+    }
+
+    submitButton.disabled = false;
+    originalButton.disabled = false;
+
+    if (readiness.discomfort === 'mild') {
+      safety.hidden = false;
+      safety.className = 'readiness-safety-notice mild';
+      safety.innerHTML = `<strong>Molestias leves</strong><p>No aumentes la carga en un movimiento molesto y detente si la molestia empeora o modifica la técnica.</p>`;
+    } else {
+      safety.hidden = true;
+      safety.innerHTML = '';
+    }
+
+    preview.innerHTML = readinessPreviewHtml(day, readiness, adaptation);
+  };
+
+  form.addEventListener('change', updatePreview);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const readiness = readValues();
+    const workout = createActiveWorkout(safeIndex, { readiness });
+    if (!workout) return updatePreview();
+    renderWorkout();
+    showToast('Sesión adaptada preparada.', 'success');
+  });
+
+  originalButton.addEventListener('click', () => {
+    const readiness = { ...readValues(), timeMode: 'full', minutes: estimated, originalRequested: true };
+    if (readiness.discomfort === 'important') return updatePreview();
+    const workout = createActiveWorkout(safeIndex, { readiness });
+    if (!workout) return;
+    renderWorkout();
+    showToast('Sesión original preparada.');
+  });
+
+  updatePreview();
+}
+
+function readinessPreviewHtml(day, readiness, adaptation) {
+  const summary = readinessSummary(readiness);
+  const removedNames = adaptation.removed.map((item) => item.name);
+  const changed = adaptation.mode === 'adaptive'
+    && (adaptation.removed.length || adaptation.removedSets || adaptation.adaptedMinutes !== adaptation.originalMinutes);
+
+  return `<div class="readiness-preview-header">
+      <div><p class="eyebrow">Vista previa</p><h2>${changed ? 'Sesión adaptada' : 'Sesión completa'}</h2></div>
+      <span class="readiness-duration">${adaptation.adaptedMinutes}<small>min aprox.</small></span>
+    </div>
+    <div class="readiness-preview-metrics">
+      <span><strong>${adaptation.adaptedExerciseCount}</strong><small>de ${adaptation.originalExerciseCount} ejercicios</small></span>
+      <span><strong>${adaptation.adaptedSetCount}</strong><small>de ${adaptation.originalSetCount} series</small></span>
+      <span><strong>${summary.energy}</strong><small>energía</small></span>
+      <span><strong>${summary.sleep}</strong><small>sueño</small></span>
+    </div>
+    ${removedNames.length ? `<div class="readiness-removed"><small>Se omiten solo hoy</small><strong>${removedNames.map(esc).join(' · ')}</strong></div>` : ''}
+    <div class="readiness-guidance-list">
+      ${adaptation.guidance.map((note) => `<p><span>✓</span>${esc(note)}</p>`).join('')}
+    </div>
+    <p class="readiness-original-note">La rutina permanente “${esc(day.name)}” no se modifica.</p>`;
+}
+
 function renderWorkout() {
   if (!state.plan?.days?.length) return renderLocked('No tienes días de entrenamiento.', 'Añade al menos un día con ejercicios desde el plan.');
-  if (!state.activeWorkout) createActiveWorkout();
+  if (!state.activeWorkout) return renderPreWorkoutCheckin(state.nextWorkoutIndex);
   const workout = state.activeWorkout;
   ensureWorkoutAccordionState(workout);
   const allSets = workout.exercises.flatMap((exercise) => exercise.sets);
@@ -1111,6 +1308,20 @@ function renderWorkout() {
           <button class="command-add-button" type="button" data-action="picker-workout-add"><span>＋</span> Ejercicio</button>
         </div>
       </header>
+
+      ${workout.adaptation ? `<section class="active-adaptation-banner ${workout.adaptation.mode === 'adaptive' ? 'is-adapted' : ''}">
+        <div class="active-adaptation-copy">
+          <span class="active-adaptation-icon">${workout.adaptation.mode === 'adaptive' ? '≈' : '◎'}</span>
+          <div>
+            <small>${workout.adaptation.mode === 'adaptive' ? `SESIÓN ADAPTADA · ${workout.adaptation.adaptedMinutes} MIN` : 'SESIÓN COMPLETA'}</small>
+            <strong>${workout.adaptation.mode === 'adaptive' ? `${workout.adaptation.adaptedExerciseCount} ejercicios y ${workout.adaptation.adaptedSetCount} series` : 'Rutina original sin recortes'}</strong>
+          </div>
+        </div>
+        <div class="active-adaptation-actions">
+          <button type="button" class="button button-ghost button-small" data-action="workout-adaptation-details">Ver ajustes</button>
+          ${workout.adaptation.mode === 'adaptive' && !doneSets ? '<button type="button" class="button button-secondary button-small" data-action="restore-full-workout">Restaurar completa</button>' : ''}
+        </div>
+      </section>` : ''}
 
       <section class="workout-control-deck">
         <div class="workout-progress-ring" style="--progress:${percentage * 3.6}deg"><div><strong>${percentage}%</strong><small>completado</small></div></div>
@@ -2035,6 +2246,8 @@ async function handleAppClick(event) {
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
     'coach-details': openCoachDetails,
+    'workout-adaptation-details': openWorkoutAdaptationDetails,
+    'restore-full-workout': restoreFullWorkout,
     'quick-weight': openWeightModal,
     'body-progress-home': () => { setView('profile'); showProfileTab('body'); },
     'body-progress-new': openBodyProgressForm,
@@ -2477,10 +2690,22 @@ function restoreRecommendedPlan() {
 
 function startSpecificDay(dayIndex) {
   if (state.activeWorkout) {
-    return confirmAction({ title: 'Cambiar de entrenamiento', message: 'Ya existe una sesión en curso. Al continuar se descartará esa sesión.', confirmLabel: 'Empezar nuevo', danger: true, onConfirm: () => { clearRestTimer(); state.activeWorkout = null; createActiveWorkout(dayIndex); setView('workout'); }});
+    return confirmAction({
+      title: 'Cambiar de entrenamiento',
+      message: 'Ya existe una sesión en curso. Al continuar se descartará esa sesión.',
+      confirmLabel: 'Preparar nueva',
+      danger: true,
+      onConfirm: () => {
+        clearRestTimer();
+        state.activeWorkout = null;
+        state.nextWorkoutIndex = dayIndex;
+        save();
+        setView('workout');
+      }
+    });
   }
   state.nextWorkoutIndex = dayIndex;
-  createActiveWorkout(dayIndex);
+  save();
   setView('workout');
 }
 
@@ -2794,6 +3019,67 @@ function removeWorkoutExercise(exerciseIndex) {
   }});
 }
 
+
+function openWorkoutAdaptationDetails() {
+  const workout = state.activeWorkout;
+  if (!workout?.adaptation) return;
+  const adaptation = workout.adaptation;
+  const readiness = readinessSummary(workout.readiness || {});
+  const removed = adaptation.removed || [];
+
+  openModal(`<div class="modal-header">
+      <div><p class="eyebrow">Adaptación temporal</p><h2>${adaptation.mode === 'adaptive' ? 'Sesión ajustada para hoy' : 'Sesión original'}</h2></div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <section class="adaptation-detail-grid">
+      <article><small>Tiempo elegido</small><strong>${esc(readiness.minutes)}</strong></article>
+      <article><small>Estimación final</small><strong>${adaptation.adaptedMinutes} min</strong></article>
+      <article><small>Energía</small><strong>${esc(readiness.energy)}</strong></article>
+      <article><small>Sueño</small><strong>${esc(readiness.sleep)}</strong></article>
+      <article><small>Molestias</small><strong>${esc(readiness.discomfort)}</strong></article>
+      <article><small>Series</small><strong>${adaptation.adaptedSetCount}/${adaptation.originalSetCount}</strong></article>
+    </section>
+    ${removed.length ? `<section class="adaptation-removed-list"><p class="eyebrow">Omitidos solo hoy</p>${removed.map((item) => `<span>${esc(item.name)}</span>`).join('')}</section>` : ''}
+    <section class="adaptation-guidance-modal">
+      ${(adaptation.guidance || []).map((note) => `<p><span>✓</span>${esc(note)}</p>`).join('')}
+    </section>
+    <p class="privacy-note">Esta adaptación no modifica la rutina permanente. Los datos del check-in se guardan junto a esta sesión para entender el contexto del entrenamiento.</p>
+    <div class="modal-actions"><button class="button button-primary" type="button" data-close-modal>Entendido</button></div>`);
+}
+
+function restoreFullWorkout() {
+  const workout = state.activeWorkout;
+  if (!workout?.adaptation?.originalItems?.length) return;
+  const hasCompleted = workout.exercises.some((exercise) => completedSets(exercise).length);
+  if (hasCompleted) return showToast('No puedes restaurar la sesión completa después de registrar series.', 'danger');
+
+  confirmAction({
+    title: 'Restaurar sesión completa',
+    message: 'Se recuperarán todos los ejercicios y series de la rutina original. El check-in se conservará.',
+    confirmLabel: 'Restaurar',
+    onConfirm: () => {
+      workout.exercises = workout.adaptation.originalItems.map((item) => workoutExerciseFromPlan(item));
+      workout.adaptation = {
+        ...workout.adaptation,
+        mode: 'original',
+        items: clone(workout.adaptation.originalItems),
+        adaptedMinutes: workout.adaptation.originalMinutes,
+        targetMinutes: workout.adaptation.originalMinutes,
+        adaptedExerciseCount: workout.adaptation.originalExerciseCount,
+        adaptedSetCount: workout.adaptation.originalSetCount,
+        removed: [],
+        removedSets: 0,
+        reasons: [],
+        guidance: ['Sesión original restaurada manualmente.']
+      };
+      workoutAccordionSessionId = null;
+      save();
+      renderWorkout();
+      showToast('Sesión completa restaurada.', 'success');
+    }
+  });
+}
+
 function cancelWorkout() {
   confirmAction({ title: 'Cancelar entrenamiento', message: 'Se perderán las series registradas en esta sesión.', confirmLabel: 'Cancelar sesión', danger: true, onConfirm: () => {
     clearRestTimer(); state.activeWorkout = null; save(); setView('home'); showToast('Sesión cancelada.');
@@ -2818,6 +3104,18 @@ function finishWorkout() {
     completedCount: exercises.length,
     totalCount: workout.exercises.length,
     notes: workout.notes || '',
+    readiness: workout.readiness || null,
+    adaptation: workout.adaptation ? {
+      mode: workout.adaptation.mode,
+      originalMinutes: workout.adaptation.originalMinutes,
+      adaptedMinutes: workout.adaptation.adaptedMinutes,
+      originalExerciseCount: workout.adaptation.originalExerciseCount,
+      adaptedExerciseCount: workout.adaptation.adaptedExerciseCount,
+      originalSetCount: workout.adaptation.originalSetCount,
+      adaptedSetCount: workout.adaptation.adaptedSetCount,
+      reasons: workout.adaptation.reasons || [],
+      guidance: workout.adaptation.guidance || []
+    } : null,
     exercises,
     volume: 0,
     prs: []
@@ -2842,7 +3140,10 @@ function openSessionCompleted(session) {
     <div class="completion-coach-insight"><span class="coach-status-icon coach-status-${coachUpdate.primary.tone}">${coachUpdate.primary.icon}</span><div><strong>${esc(coachUpdate.primary.exerciseName)} · ${esc(coachUpdate.primary.title)}</strong><p>${esc(coachUpdate.primary.nextGoal)}</p></div></div>
     <div class="completion-coach-counts"><span>${coachUpdate.positiveCount} señales positivas</span><span>${coachUpdate.attentionCount} puntos a revisar</span></div>
   </section>` : '';
-  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p></div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
+  const adaptationTag = session.adaptation?.mode === 'adaptive'
+    ? `<span class="completion-adaptation-tag">Sesión adaptada · ${session.adaptation.adaptedMinutes} min estimados</span>`
+    : '';
+  const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
     onClose: () => setView(destination)
   });
   wrapper.querySelector('#completedContinue').addEventListener('click', () => {
