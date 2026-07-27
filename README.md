@@ -1,14 +1,16 @@
-# My Fit Plan v3.4C.7 · Flujos separados
+# My Fit Plan v3.4D · Biblioteca y técnica profesional
 
-## Tu rutina
-Empieza directamente con la próxima sesión y avanza el orden de la rutina al
-finalizar.
+## Biblioteca Pro
+- Filtros por músculo, material, nivel, patrón y disponibilidad.
+- Indicadores de calidad, animación y compatibilidad con el material del perfil.
+- Eliminación de duplicados exactos en resultados.
 
-## Entrenamiento My Fit Plan
-Abre el check-in de tiempo, energía, sueño y molestias. My Fit Plan utiliza las
-respuestas para adaptar o crear la sesión de ese día. No avanza la rutina.
+## Fichas técnicas
+- Preparación, ejecución y regreso.
+- Respiración, ritmo, puntos clave y errores frecuentes.
+- Músculos principales y secundarios.
+- Historial personal y récords.
 
-## Entrenamiento personalizado
-El usuario elige y configura todos los ejercicios. Al pulsar “Empezar
-entrenamiento”, la sesión comienza directamente, sin check-in ni adaptación.
-No modifica ni avanza la rutina.
+## Sustituciones inteligentes
+- Clasificación por patrón, músculo, nivel y material disponible.
+- Recomendaciones destacadas al cambiar ejercicios en plan o entrenamiento.

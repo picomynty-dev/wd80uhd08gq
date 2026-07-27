@@ -1,3 +1,13 @@
+# My Fit Plan v3.4D
+
+- Rehace la Biblioteca como Biblioteca Pro.
+- Añade filtros por patrón de movimiento y disponibilidad.
+- Añade puntuación de calidad y compatibilidad de material.
+- Rediseña la ficha técnica con fases, cues, respiración y ritmo.
+- Añade sustituciones inteligentes en plan y entrenamiento.
+- Clasifica alternativas por patrón, músculo, nivel y material.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4C.7
 
 - Separa rutina, My Fit Plan y personalizado en tres flujos distintos.
