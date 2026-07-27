@@ -1,37 +1,37 @@
 'use strict';
 
-import { getAllExercises, getExercise } from './exercises.js?v=34c2';
-import { createPlanExercise, trainingRules } from './plans.js?v=34c2';
-import { numberValue } from './utils.js?v=34c2';
+import { getAllExercises, getExercise } from './exercises.js?v=34c3';
+import { createPlanExercise, trainingRules } from './plans.js?v=34c3';
+import { numberValue } from './utils.js?v=34c3';
 
 const FOCUS_PROFILES = [
   {
     id: 'push',
-    name: 'Empuje alternativo',
+    name: 'Empuje',
     muscles: ['Pecho', 'Hombros', 'Tríceps'],
-    slots: ['Pecho', 'Hombros', 'Tríceps', 'Pecho', 'Hombros', 'Core']
+    slots: ['Pecho', 'Pecho', 'Hombros', 'Tríceps', 'Hombros', 'Core']
   },
   {
     id: 'pull',
-    name: 'Tirón alternativo',
+    name: 'Tirón',
     muscles: ['Espalda', 'Hombro posterior', 'Bíceps'],
-    slots: ['Espalda', 'Espalda', 'Hombro posterior', 'Bíceps', 'Bíceps', 'Core']
+    slots: ['Espalda', 'Espalda', 'Hombro posterior', 'Bíceps', 'Espalda', 'Core']
   },
   {
     id: 'lower',
-    name: 'Pierna equilibrada',
+    name: 'Pierna completa',
     muscles: ['Cuádriceps', 'Isquiotibiales', 'Glúteos', 'Gemelos'],
     slots: ['Cuádriceps', 'Isquiotibiales', 'Glúteos', 'Cuádriceps', 'Gemelos', 'Core']
   },
   {
     id: 'posterior',
-    name: 'Cadena posterior y core',
+    name: 'Cadena posterior',
     muscles: ['Glúteos', 'Isquiotibiales', 'Espalda baja', 'Core'],
     slots: ['Glúteos', 'Isquiotibiales', 'Espalda baja', 'Glúteos', 'Core', 'Gemelos']
   },
   {
     id: 'upper',
-    name: 'Torso equilibrado',
+    name: 'Torso',
     muscles: ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'],
     slots: ['Pecho', 'Espalda', 'Hombros', 'Espalda', 'Bíceps', 'Tríceps']
   },
@@ -43,9 +43,15 @@ const FOCUS_PROFILES = [
   },
   {
     id: 'arms',
-    name: 'Brazos, hombros y core',
+    name: 'Brazos y hombros',
     muscles: ['Hombros', 'Bíceps', 'Tríceps', 'Core'],
     slots: ['Hombros', 'Bíceps', 'Tríceps', 'Hombro posterior', 'Bíceps', 'Core']
+  },
+  {
+    id: 'core',
+    name: 'Core y estabilidad',
+    muscles: ['Core', 'Glúteos', 'Espalda baja'],
+    slots: ['Core', 'Core', 'Glúteos', 'Core', 'Espalda baja', 'Core']
   }
 ];
 
@@ -83,8 +89,64 @@ function broadMuscle(muscle) {
   return value;
 }
 
+function movementFamily(exercise) {
+  const text = `${exercise.name || ''} ${exercise.movement || ''} ${exercise.visualType || ''} ${exercise.movementType || ''}`.toLowerCase();
+  if (/(press|empuje)/.test(text)) return text.includes('vertical') || /(hombro|militar)/.test(text) ? 'vertical_press' : 'horizontal_press';
+  if (/(remo|row)/.test(text)) return 'row';
+  if (/(jalón|dominada|pullup|tirón vertical)/.test(text)) return 'vertical_pull';
+  if (/(sentadilla|squat|prensa)/.test(text)) return 'squat';
+  if (/(peso muerto|rumano|bisagra|good morning)/.test(text)) return 'hinge';
+  if (/(zancada|split squat|step up)/.test(text)) return 'lunge';
+  if (/(curl.*bíceps|bíceps)/.test(text)) return 'biceps';
+  if (/(tríceps|fondos|extensión.*codo)/.test(text)) return 'triceps';
+  if (/(elevaciones laterales|deltoide lateral)/.test(text)) return 'lateral_raise';
+  if (/(face pull|pájaros|reverse fly|posterior)/.test(text)) return 'rear_delt';
+  if (/(abducción|abduction)/.test(text)) return 'abduction';
+  if (/(crunch|sit up|flexión.*tronco)/.test(text)) return 'core_flexion';
+  if (/(plancha|plank|anti)/.test(text)) return 'core_stability';
+  return String(exercise.visualType || exercise.movement || exercise.muscle || '').toLowerCase();
+}
+
 function exerciseIds(day) {
   return new Set((day?.exercises || []).map((item) => item.exerciseId).filter(Boolean));
+}
+
+function setFromHistory(entries = [], key = 'exerciseIds', limit = 4) {
+  const result = new Set();
+  (entries || []).slice(0, limit).forEach((entry) => {
+    (entry?.[key] || []).forEach((value) => result.add(value));
+  });
+  return result;
+}
+
+function recentExerciseData(history = []) {
+  const sorted = [...history].sort((a, b) => sessionDate(b) - sessionDate(a));
+  const lastTwo = new Set();
+  const lastSix = new Set();
+  const completedRecommended = new Set();
+  const lastSeen = new Map();
+
+  sorted.slice(0, 2).forEach((session) => {
+    (session.exercises || []).forEach((item) => lastTwo.add(item.exerciseId));
+  });
+  sorted.slice(0, 6).forEach((session) => {
+    (session.exercises || []).forEach((item) => lastSix.add(item.exerciseId));
+  });
+  sorted
+    .filter((session) => session.sessionSource === 'recommended')
+    .slice(0, 3)
+    .forEach((session) => {
+      (session.exercises || []).forEach((item) => completedRecommended.add(item.exerciseId));
+    });
+
+  for (const session of sorted) {
+    const date = sessionDate(session);
+    for (const item of session.exercises || []) {
+      if (!lastSeen.has(item.exerciseId)) lastSeen.set(item.exerciseId, date);
+    }
+  }
+
+  return { lastTwo, lastSix, completedRecommended, lastSeen };
 }
 
 function recentMuscleCounts(history = [], customExercises = []) {
@@ -104,60 +166,30 @@ function recentMuscleCounts(history = [], customExercises = []) {
   return counts;
 }
 
-function recentExerciseData(history = []) {
-  const sorted = [...history].sort((a, b) => sessionDate(b) - sessionDate(a));
-  const lastTwo = new Set();
-  const lastSix = new Set();
-  const lastRecommended = new Set();
-  const lastSeen = new Map();
-
-  sorted.slice(0, 2).forEach((session) => {
-    (session.exercises || []).forEach((item) => lastTwo.add(item.exerciseId));
-  });
-  sorted.slice(0, 6).forEach((session) => {
-    (session.exercises || []).forEach((item) => lastSix.add(item.exerciseId));
-  });
-  sorted
-    .filter((session) => session.sessionSource === 'recommended')
-    .slice(0, 2)
-    .forEach((session) => {
-      (session.exercises || []).forEach((item) => lastRecommended.add(item.exerciseId));
-    });
-
-  for (const session of sorted) {
-    const date = sessionDate(session);
-    for (const item of session.exercises || []) {
-      if (!lastSeen.has(item.exerciseId)) lastSeen.set(item.exerciseId, date);
-    }
-  }
-
-  return { lastTwo, lastSix, lastRecommended, lastSeen };
-}
-
 function daysSince(date) {
   if (!date || Number.isNaN(date.getTime())) return 30;
   return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
 }
 
 function normalizedEquipment(value) {
-  const equipment = String(value || '').toLowerCase();
+  const equipment = String(value || '').toLowerCase().trim();
   if (equipment === 'banda elástica') return 'bandas';
-  if (equipment.startsWith('barra')) return 'barra';
-  if (equipment === 'barra y banco') return 'barra';
+  if (equipment.includes('barra')) return 'barra';
+  if (equipment.includes('mancuerna')) return 'mancuernas';
+  if (equipment.includes('máquina')) return 'máquina';
+  if (equipment.includes('polea')) return 'polea';
+  if (equipment.includes('banco')) return 'banco';
   return equipment;
 }
 
 function equipmentAllowed(exercise, profile = {}) {
-  const selected = new Set(
-    (profile.equipment || []).map((item) => normalizedEquipment(item))
-  );
+  const selected = new Set((profile.equipment || []).map(normalizedEquipment));
   if (!selected.size) return true;
 
   const equipment = normalizedEquipment(exercise.equipment);
   if (selected.has(equipment)) return true;
   if (exercise.equipment === 'Peso corporal') return true;
-  if (exercise.equipment === 'Banco' && selected.has('barra')) return true;
-  if (exercise.equipment === 'Barra y banco' && selected.has('barra')) return true;
+  if (equipment === 'banco' && (selected.has('barra') || selected.has('mancuernas'))) return true;
   return false;
 }
 
@@ -169,22 +201,43 @@ function levelAllowed(exercise, profile = {}) {
   return true;
 }
 
-function focusScore(focus, nextDay, muscleCounts, seed) {
-  const nextMuscles = new Set(
+function chooseFocus({
+  nextDay,
+  muscleCounts,
+  variant,
+  excludedFocusIds,
+  recommendationHistory
+}) {
+  const nextBroad = new Set(
     (nextDay?.exercises || []).map((item) => broadMuscle(item._muscle || ''))
   );
-  const underworked = focus.muscles.reduce(
-    (sum, muscle) => sum + Math.max(0, 3 - (muscleCounts.get(muscle) || 0)),
-    0
+  const persistentFocus = new Set(
+    (recommendationHistory || []).slice(0, 4).map((entry) => entry.focusId).filter(Boolean)
   );
-  const overlap = focus.muscles.filter((muscle) => nextMuscles.has(broadMuscle(muscle))).length;
-  const variation = seededFraction(seed, focus.id) * 5;
 
-  return underworked * 3.2 - overlap * 4.5 + variation;
-}
+  const scored = FOCUS_PROFILES.map((focus) => {
+    const underworked = focus.muscles.reduce(
+      (sum, muscle) => sum + Math.max(0, 3 - (muscleCounts.get(muscle) || 0)),
+      0
+    );
+    const nextOverlap = focus.muscles.filter((muscle) => nextBroad.has(broadMuscle(muscle))).length;
+    const blocked = excludedFocusIds.has(focus.id);
+    const recentlyUsed = persistentFocus.has(focus.id);
+    const rotation = seededFraction(`${dayStamp()}|${variant}`, focus.id) * 7;
 
-function movementKey(exercise) {
-  return String(exercise.movement || exercise.visualType || exercise.movementType || '').toLowerCase();
+    return {
+      focus,
+      score: underworked * 3.5 - nextOverlap * 4.8 - (blocked ? 1000 : 0) - (recentlyUsed ? 18 : 0) + rotation
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  const available = scored.filter((item) => item.score > -900);
+  if (available.length) return available[0].focus;
+
+  // Cuando se han recorrido todos los enfoques, reinicia solamente la rotación de enfoque.
+  return scored
+    .map((item) => ({ ...item, score: item.score + (excludedFocusIds.has(item.focus.id) ? 1000 : 0) }))
+    .sort((a, b) => b.score - a.score)[0].focus;
 }
 
 function candidateScore({
@@ -193,73 +246,100 @@ function candidateScore({
   slotMuscle,
   muscleCounts,
   recent,
-  selectedMovements,
+  selectedFamilies,
+  softExcludedIds,
   seed,
-  index
+  slotIndex
 }) {
   let score = 100;
   const exactMuscle = exercise.muscle === slotMuscle;
   const broadMatch = broadMuscle(exercise.muscle) === broadMuscle(slotMuscle);
 
-  if (exactMuscle) score += 38;
-  else if (broadMatch) score += 16;
-  else score -= 60;
+  if (exactMuscle) score += 42;
+  else if (broadMatch) score += 18;
+  else score -= 75;
 
   score += Math.max(0, 4 - (muscleCounts.get(exercise.muscle) || 0)) * 5;
-  score += Math.min(15, daysSince(recent.lastSeen.get(id))) * 1.2;
+  score += Math.min(16, daysSince(recent.lastSeen.get(id))) * 1.25;
 
-  if (recent.lastRecommended.has(id)) score -= 80;
-  if (recent.lastTwo.has(id)) score -= 38;
-  else if (recent.lastSix.has(id)) score -= 13;
+  if (recent.lastTwo.has(id)) score -= 45;
+  else if (recent.lastSix.has(id)) score -= 14;
+  if (recent.completedRecommended.has(id)) score -= 55;
+  if (softExcludedIds.has(id)) score -= 70;
 
-  const movement = movementKey(exercise);
-  if (movement && selectedMovements.has(movement)) score -= 18;
+  const family = movementFamily(exercise);
+  if (family && selectedFamilies.has(family)) score -= 34;
 
-  if (exercise.media?.video) score += 3;
-  if (exercise.realMotion) score += 1;
+  if (exercise.media?.video) score += 2;
   if (exercise.level === 'Principiante') score += 1;
 
-  score += seededFraction(seed, `${id}|${slotMuscle}|${index}`) * 13;
+  score += seededFraction(seed, `${id}|${slotMuscle}|${slotIndex}`) * 20;
   return score;
+}
+
+function chooseCandidate(ranked, seed, slotIndex) {
+  if (!ranked.length) return null;
+  const topScore = ranked[0].score;
+  const shortlist = ranked
+    .filter((item) => item.score >= topScore - 13)
+    .slice(0, 9);
+  const index = Math.floor(seededFraction(seed, `pick-${slotIndex}`) * shortlist.length);
+  return shortlist[index] || shortlist[0] || ranked[0];
+}
+
+function buildPool({
+  library,
+  mandatoryExcludedIds,
+  memoryExcludedIds,
+  profile,
+  desiredCount
+}) {
+  const base = Object.entries(library).filter(([id, exercise]) =>
+    !mandatoryExcludedIds.has(id)
+    && levelAllowed(exercise, profile)
+    && !['Movilidad', 'Cardio'].includes(exercise.muscle)
+  );
+
+  const strict = base.filter(([id, exercise]) =>
+    !memoryExcludedIds.has(id)
+    && equipmentAllowed(exercise, profile)
+  );
+  if (strict.length >= desiredCount * 5) return strict;
+
+  const equipmentOnly = base.filter(([id, exercise]) => equipmentAllowed(exercise, profile));
+  if (equipmentOnly.length >= desiredCount * 4) return equipmentOnly;
+
+  const withoutMemory = base.filter(([id]) => !memoryExcludedIds.has(id));
+  return withoutMemory.length >= desiredCount * 3 ? withoutMemory : base;
 }
 
 function selectExercises({
   focus,
   library,
-  nextExerciseIds,
+  mandatoryExcludedIds,
+  memoryExcludedIds,
+  softExcludedIds,
   muscleCounts,
   recent,
   profile,
-  customExercises,
   seed,
   desiredCount
 }) {
   const selected = [];
   const selectedIds = new Set();
-  const selectedMovements = new Set();
+  const selectedFamilies = new Set();
   const rules = trainingRules(profile);
+  const pool = buildPool({
+    library,
+    mandatoryExcludedIds,
+    memoryExcludedIds,
+    profile,
+    desiredCount
+  });
 
-  const strictPool = Object.entries(library).filter(([id, exercise]) =>
-    !nextExerciseIds.has(id)
-    && equipmentAllowed(exercise, profile)
-    && levelAllowed(exercise, profile)
-    && exercise.muscle !== 'Movilidad'
-    && exercise.muscle !== 'Cardio'
-  );
-
-  const relaxedPool = Object.entries(library).filter(([id, exercise]) =>
-    !nextExerciseIds.has(id)
-    && levelAllowed(exercise, profile)
-    && exercise.muscle !== 'Movilidad'
-    && exercise.muscle !== 'Cardio'
-  );
-
-  const pool = strictPool.length >= desiredCount * 3 ? strictPool : relaxedPool;
-  const slots = focus.slots.slice(0, desiredCount);
-
-  for (let index = 0; index < slots.length; index += 1) {
-    const slotMuscle = slots[index];
-    const ranked = pool
+  for (let slotIndex = 0; slotIndex < focus.slots.slice(0, desiredCount).length; slotIndex += 1) {
+    const slotMuscle = focus.slots[slotIndex];
+    const candidates = pool
       .filter(([id]) => !selectedIds.has(id))
       .map(([id, exercise]) => ({
         id,
@@ -270,37 +350,42 @@ function selectExercises({
           slotMuscle,
           muscleCounts,
           recent,
-          selectedMovements,
+          selectedFamilies,
+          softExcludedIds,
           seed,
-          index
+          slotIndex
         })
       }))
       .sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name, 'es'));
 
-    let choice = ranked.find((item) => item.exercise.muscle === slotMuscle);
-    if (!choice) choice = ranked.find((item) => broadMuscle(item.exercise.muscle) === broadMuscle(slotMuscle));
-    if (!choice) choice = ranked[0];
+    let matching = candidates.filter((item) => item.exercise.muscle === slotMuscle);
+    if (!matching.length) {
+      matching = candidates.filter((item) => broadMuscle(item.exercise.muscle) === broadMuscle(slotMuscle));
+    }
+    const choice = chooseCandidate(matching.length ? matching : candidates, seed, slotIndex);
     if (!choice) continue;
 
     selectedIds.add(choice.id);
-    const movement = movementKey(choice.exercise);
-    if (movement) selectedMovements.add(movement);
+    selectedFamilies.add(movementFamily(choice.exercise));
 
-    const compound = index <= 1 || /(press|remo|jalón|dominada|sentadilla|prensa|peso muerto|zancada|hip thrust)/i.test(choice.exercise.name);
-    const overrides = {
+    const compound = slotIndex <= 1
+      || /(press|remo|jalón|dominada|sentadilla|prensa|peso muerto|zancada|hip thrust)/i.test(choice.exercise.name);
+    selected.push(createPlanExercise(choice.id, rules, {
       targetSets: compound ? Math.max(3, rules.targetSets) : Math.min(3, rules.targetSets),
       restSeconds: compound ? Math.max(75, rules.restSeconds) : Math.min(75, rules.restSeconds)
-    };
-    selected.push(createPlanExercise(choice.id, rules, overrides));
+    }));
   }
 
   return selected;
 }
 
+function signatureFromIds(ids = []) {
+  return [...ids].sort().join('|');
+}
+
 function recommendationName(focus, variant) {
-  const suffixes = ['Equilibrada', 'Variante', 'Alternativa', 'Rotación'];
-  const suffix = suffixes[variant % suffixes.length];
-  return `${focus.name} · ${suffix}`;
+  const suffixes = ['Equilibrada', 'Rotación', 'Alternativa', 'Nueva selección', 'Variante'];
+  return `${focus.name} · ${suffixes[variant % suffixes.length]}`;
 }
 
 export function buildRecommendedSession(
@@ -309,20 +394,32 @@ export function buildRecommendedSession(
   nextWorkoutIndex = 0,
   customExercises = [],
   profile = {},
-  variant = 0
+  options = {}
 ) {
   const days = plan?.days || [];
   if (!days.length) return null;
 
+  const variant = numberValue(options.variant, 0);
+  const recommendationHistory = Array.isArray(options.recommendationHistory)
+    ? options.recommendationHistory
+    : [];
+  const excludedExerciseIds = new Set(options.excludeExerciseIds || []);
+  const excludedFocusIds = new Set(options.excludeFocusIds || []);
+
   const safeNext = Math.max(0, Math.min(days.length - 1, numberValue(nextWorkoutIndex)));
   const nextDay = days[safeNext];
-  const library = getAllExercises(customExercises);
   const nextExerciseIds = exerciseIds(nextDay);
+  const library = getAllExercises(customExercises);
   const muscleCounts = recentMuscleCounts(history, customExercises);
   const recent = recentExerciseData(history);
-  const seed = `${dayStamp()}|${plan.id || plan.name}|${history.length}|${safeNext}|${variant}`;
 
-  // Añadir los músculos reales del próximo día para calcular el solapamiento.
+  const persistentIds = setFromHistory(recommendationHistory, 'exerciseIds', 5);
+  const softPersistentIds = setFromHistory(recommendationHistory, 'exerciseIds', 10);
+  const mandatoryExcludedIds = new Set([...nextExerciseIds, ...excludedExerciseIds]);
+  const memoryExcludedIds = new Set([...persistentIds, ...recent.completedRecommended]);
+  const softExcludedIds = new Set([...softPersistentIds, ...recent.lastTwo]);
+
+  const seed = `${dayStamp()}|${plan.id || plan.name}|${history.length}|${safeNext}|${variant}|${[...excludedExerciseIds].sort().join(',')}`;
   const enrichedNextDay = {
     ...nextDay,
     exercises: (nextDay.exercises || []).map((item) => ({
@@ -331,60 +428,66 @@ export function buildRecommendedSession(
     }))
   };
 
-  const rankedFocuses = FOCUS_PROFILES
-    .map((focus) => ({
-      focus,
-      score: focusScore(focus, enrichedNextDay, muscleCounts, seed)
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  const focusWindow = rankedFocuses.slice(0, Math.min(4, rankedFocuses.length));
-  const focus = focusWindow[variant % focusWindow.length]?.focus || rankedFocuses[0].focus;
+  const focus = chooseFocus({
+    nextDay: enrichedNextDay,
+    muscleCounts,
+    variant,
+    excludedFocusIds,
+    recommendationHistory
+  });
 
   const minutes = numberValue(profile.minutes || profile.duration, 45);
   const desiredCount = minutes <= 30 ? 4 : minutes <= 45 ? 5 : 6;
   const exercises = selectExercises({
     focus,
     library,
-    nextExerciseIds,
+    mandatoryExcludedIds,
+    memoryExcludedIds,
+    softExcludedIds,
     muscleCounts,
     recent,
     profile,
-    customExercises,
     seed,
     desiredCount
   });
 
   if (exercises.length < 3) return null;
 
-  const generatedName = recommendationName(focus, variant);
-  const selectedIds = new Set(exercises.map((item) => item.exerciseId));
-  const overlap = [...selectedIds].filter((id) => nextExerciseIds.has(id)).length;
-  const previousRecommendedOverlap = [...selectedIds].filter((id) => recent.lastRecommended.has(id)).length;
-  const confidence = Math.min(94, 54 + Math.min(5, history.length) * 6 + Math.min(10, exercises.length * 2));
-
-  const noveltyText = previousRecommendedOverlap
-    ? `Solo ${previousRecommendedOverlap} ejercicio${previousRecommendedOverlap === 1 ? '' : 's'} coincide${previousRecommendedOverlap === 1 ? '' : 'n'} con tus recomendaciones recientes.`
-    : 'Evita los ejercicios usados en tus recomendaciones recientes.';
+  const selectedIds = exercises.map((item) => item.exerciseId);
+  const selectedSet = new Set(selectedIds);
+  const overlapWithMain = selectedIds.filter((id) => nextExerciseIds.has(id)).length;
+  const overlapWithPreview = selectedIds.filter((id) => excludedExerciseIds.has(id)).length;
+  const overlapWithRecentMemory = selectedIds.filter((id) => persistentIds.has(id)).length;
+  const signature = signatureFromIds(selectedIds);
+  const confidence = Math.min(
+    95,
+    56 + Math.min(5, history.length) * 5 + Math.min(12, exercises.length * 2)
+  );
 
   return {
     source: 'recommended',
     sourceLabel: 'Recomendada por MFP',
     planDayIndex: null,
     variant,
+    focusId: focus.id,
+    exerciseIds: selectedIds,
+    signature,
     day: {
-      id: `dynamic-recommended-${hashText(seed)}`,
-      name: generatedName,
+      id: `dynamic-recommended-${hashText(`${seed}|${signature}`)}`,
+      name: recommendationName(focus, variant),
       focus: focus.name,
       exercises
     },
-    originalDayName: generatedName,
-    reason: `Sesión creada ahora con ${exercises.length} ejercicios diferentes a tu próxima rutina. ${noveltyText}`,
+    originalDayName: recommendationName(focus, variant),
+    reason: `Creada ahora con ${exercises.length} ejercicios. No comparte ejercicios con tu sesión principal y rota respecto a las propuestas anteriores.`,
     muscles: focus.muscles,
     confidence,
+    overlapWithMain,
+    overlapWithPreview,
+    overlapWithRecentMemory,
     tags: [
-      overlap === 0 ? '0 ejercicios repetidos' : `${overlap} repetidos`,
-      `Variante ${variant + 1}`,
+      `${overlapWithMain} repetidos con principal`,
+      `${overlapWithPreview} repetidos con propuestas vistas`,
       focus.name,
       `${confidence}% de confianza`
     ]

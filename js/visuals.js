@@ -96,6 +96,70 @@ function bodyMap(exercise) {
   </svg>`;
 }
 
+
+function cardMonogram(value = '') {
+  const words = String(value || 'Ejercicio').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return 'MF';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
+}
+
+function movementLabel(exercise = {}) {
+  return exercise.movementType
+    || String(exercise.movement || exercise.visualType || 'Movimiento técnico')
+      .replaceAll('_', ' ')
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+export function exerciseCardVisual(exercise, exerciseId = '', { compact = false } = {}) {
+  const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
+  const hasPoster = Boolean(exercise?.media?.poster);
+  const modeLabel = exercise?.realMotion ? 'REAL MOTION' : hasPoster ? 'PREMIUM MOTION' : 'FICHA TÉCNICA';
+
+  if (hasPoster) {
+    return `<div class="exercise-card-media exercise-card-media-motion ${compact ? 'is-compact' : ''}" data-card-exercise="${esc(exerciseId)}">
+      <div class="exercise-card-media-fallback"><span>${cardMonogram(exercise.muscle)}</span><small>${esc(exercise.muscle)}</small></div>
+      <img data-exercise-card-poster src="${esc(exercise.media.poster)}" alt="Demostración de ${esc(exercise.name || 'ejercicio')}" loading="lazy">
+      <div class="exercise-card-media-shade"></div>
+      <span class="exercise-card-media-badge">${modeLabel}</span>
+      <div class="exercise-card-muscle-line"><i></i><span><small>Principal</small><strong>${esc(primary)}</strong></span></div>
+    </div>`;
+  }
+
+  return `<div class="exercise-card-media exercise-card-media-static ${compact ? 'is-compact' : ''}" data-card-exercise="${esc(exerciseId)}">
+    <div class="exercise-card-tech-grid"></div>
+    <span class="exercise-card-static-badge">FICHA TÉCNICA</span>
+    <div class="exercise-card-monogram">${cardMonogram(exercise.muscle)}</div>
+    <div class="exercise-card-static-copy">
+      <small>${esc(exercise.muscle || 'Ejercicio')}</small>
+      <strong>${esc(movementLabel(exercise))}</strong>
+      <span>${esc(exercise.equipment || 'Sin material')}</span>
+    </div>
+  </div>`;
+}
+
+function staticExerciseDetailVisual(exercise, exerciseId = '') {
+  const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
+  const secondary = (exercise.secondaryMuscles || []).join(' · ');
+  return `<section class="exercise-static-detail" data-premium-visual="${esc(exerciseId)}">
+    <div class="exercise-static-detail-hero">
+      <div class="exercise-card-tech-grid"></div>
+      <span class="exercise-card-static-badge">GUÍA TÉCNICA</span>
+      <div class="exercise-static-detail-monogram">${cardMonogram(exercise.muscle)}</div>
+      <div class="exercise-static-detail-copy">
+        <small>${esc(exercise.muscle)} · ${esc(exercise.equipment)}</small>
+        <h3>${esc(exercise.name)}</h3>
+        <p>${esc(movementLabel(exercise))}</p>
+      </div>
+    </div>
+    <div class="exercise-static-muscles">
+      <span class="primary"><i></i><small>Principal</small><strong>${esc(primary)}</strong></span>
+      ${secondary ? `<span class="secondary"><i></i><small>Secundarios</small><strong>${esc(secondary)}</strong></span>` : ''}
+    </div>
+    <p class="exercise-static-note">Este ejercicio todavía no dispone de una demostración animada. La técnica completa, los errores y las alternativas aparecen debajo.</p>
+  </section>`;
+}
+
 export function exerciseVisual(exercise, { large = false } = {}) {
   if (exercise?.media?.poster) {
     const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
@@ -210,7 +274,7 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
     </section>`;
   }
   if (!exercise?.movementImages?.start || !exercise?.movementImages?.end || !exercise?.anatomyImages?.front || !exercise?.anatomyImages?.back) {
-    return `<div class="premium-exercise-fallback">${exerciseVisual(exercise, { large: true })}</div>`;
+    return staticExerciseDetailVisual(exercise, exerciseId);
   }
   return `<section class="premium-exercise-visual" data-premium-visual="${esc(exerciseId)}">
     <div class="movement-compare-grid">

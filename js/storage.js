@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV34C2';
-export const LEGACY_KEYS = ['myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.4C.2';
+export const STORAGE_KEY = 'myFitPlanStateV34C3';
+export const LEGACY_KEYS = ['myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.4C.3';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -19,7 +19,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 344,
+  schemaVersion: 345,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -35,6 +35,7 @@ export const defaultState = {
   customExercises: [],
   favorites: [],
   searchHistory: [],
+  recommendationHistory: [],
   weightHistory: [],
   bodyProgress: [],
   photoPrivacy: {
@@ -123,7 +124,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 344,
+    schemaVersion: 345,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -137,6 +138,7 @@ export function normalizeState(saved = {}) {
     customExercises: Array.isArray(saved.customExercises) ? saved.customExercises.map(normalizeCustomExercise) : [],
     favorites: Array.isArray(saved.favorites) ? [...new Set(saved.favorites)] : [],
     searchHistory: Array.isArray(saved.searchHistory) ? [...new Set(saved.searchHistory.map((item) => String(item).trim()).filter(Boolean))].slice(0, 8) : [],
+    recommendationHistory: normalizeRecommendationHistory(saved.recommendationHistory),
     weightHistory: normalizeWeightHistory(saved.weightHistory, profile),
     bodyProgress: normalizeBodyProgress(saved.bodyProgress),
     photoPrivacy: normalizePhotoPrivacy(saved.photoPrivacy),
@@ -196,6 +198,20 @@ function findRoutine(folders, routineId) {
 
 function findFolderForRoutine(folders, routineId) {
   return (folders || []).find((folder) => folder.routines?.some((routine) => routine.id === routineId)) || null;
+}
+
+
+function normalizeRecommendationHistory(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries.map((entry) => ({
+    id: entry.id || uid('recommendation'),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    focusId: String(entry.focusId || ''),
+    signature: String(entry.signature || ''),
+    exerciseIds: Array.isArray(entry.exerciseIds)
+      ? [...new Set(entry.exerciseIds.filter(Boolean))]
+      : []
+  })).filter((entry) => entry.exerciseIds.length).slice(0, 16);
 }
 
 function normalizeWeightHistory(history, profile) {

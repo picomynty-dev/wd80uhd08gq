@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c2';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c2';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c2';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=34c3';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=34c3';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=34c3';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,19 +17,19 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=34c2';
+} from './stats.js?v=34c3';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard,
   progressionRecommendation
-} from './coach.js?v=34c2';
+} from './coach.js?v=34c3';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=34c2';
-import { buildRecommendedSession } from './session-selector.js?v=34c2';
+} from './adaptive.js?v=34c3';
+import { buildRecommendedSession } from './session-selector.js?v=34c3';
 import {
   clamp,
   clone,
@@ -45,10 +45,10 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=34c2';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c2';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c2';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c2';
+} from './utils.js?v=34c3';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=34c3';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=34c3';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=34c3';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -58,7 +58,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=34c2';
+} from './photo-progress.js?v=34c3';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -86,6 +86,9 @@ let bodyMetric = 'waist';
 let pendingWorkoutSelection = null;
 let customWorkoutDraft = null;
 let recommendationVariant = 0;
+let currentRecommendation = null;
+let recommendationCacheKey = '';
+let recommendationPreviewHistory = [];
 
 init();
 
@@ -1077,15 +1080,70 @@ function routineSelection(dayIndex = state.nextWorkoutIndex) {
   };
 }
 
-function recommendedSelection() {
-  return buildRecommendedSession(
+function recommendedSelection({ force = false } = {}) {
+  const cacheKey = [
+    state.plan?.id || state.plan?.name || 'plan',
+    state.nextWorkoutIndex,
+    state.history.length,
+    recommendationVariant,
+    recommendationPreviewHistory.map((item) => item.signature).join(',')
+  ].join('|');
+
+  if (!force && currentRecommendation && recommendationCacheKey === cacheKey) {
+    return currentRecommendation;
+  }
+
+  const excludeExerciseIds = recommendationPreviewHistory.flatMap((item) => item.exerciseIds || []);
+  const excludeFocusIds = recommendationPreviewHistory.map((item) => item.focusId).filter(Boolean);
+
+  currentRecommendation = buildRecommendedSession(
     state.plan,
     state.history,
     state.nextWorkoutIndex,
     state.customExercises,
     state.profile,
-    recommendationVariant
+    {
+      variant: recommendationVariant,
+      excludeExerciseIds,
+      excludeFocusIds,
+      recommendationHistory: state.recommendationHistory || []
+    }
   );
+  recommendationCacheKey = cacheKey;
+  return currentRecommendation;
+}
+
+function rotateRecommendedSession() {
+  const current = recommendedSelection();
+  if (current) {
+    recommendationPreviewHistory.push({
+      focusId: current.focusId,
+      signature: current.signature,
+      exerciseIds: [...(current.exerciseIds || [])]
+    });
+    recommendationPreviewHistory = recommendationPreviewHistory.slice(-10);
+  }
+  recommendationVariant += 1;
+  currentRecommendation = null;
+  recommendationCacheKey = '';
+  renderWorkoutSelector();
+  showToast('Nueva propuesta sin repetir la anterior.', 'success');
+}
+
+function rememberRecommendedSession(selection) {
+  if (!selection?.exerciseIds?.length) return;
+  const entry = {
+    id: uid('recommendation'),
+    createdAt: new Date().toISOString(),
+    focusId: selection.focusId || '',
+    signature: selection.signature || [...selection.exerciseIds].sort().join('|'),
+    exerciseIds: [...selection.exerciseIds]
+  };
+  state.recommendationHistory = [
+    entry,
+    ...(state.recommendationHistory || []).filter((item) => item.signature !== entry.signature)
+  ].slice(0, 16);
+  save();
 }
 
 function renderWorkoutSelector() {
@@ -1131,13 +1189,13 @@ function renderWorkoutSelector() {
           <span class="training-option-badge recommendation"><i></i> RECOMENDADA POR MFP</span>
           <div class="training-recommendation-tools">
             ${recommended ? `<span class="training-confidence">${recommended.confidence}% datos</span>` : ''}
-            <button type="button" class="training-refresh-button" data-action="training-refresh-recommended" aria-label="Crear otra recomendación">↻ <span>Otra</span></button>
+            <button type="button" class="training-refresh-button" data-action="training-refresh-recommended" aria-label="Crear otra recomendación">↻ <span>Otra distinta</span></button>
           </div>
         </div>
         <div class="training-option-copy">
           <p class="eyebrow">Alternativa inteligente</p>
           <h2>${recommendedDay ? esc(recommended.originalDayName || recommendedDay.name) : 'No se pudo crear una alternativa'}</h2>
-          <p>${recommended ? esc(recommended.reason) : 'Revisa el material disponible en tu perfil o añade más ejercicios a la biblioteca.'}</p>
+          <p>${recommended ? esc(recommended.reason) : 'No hay suficientes ejercicios compatibles para crear una alternativa profesional.'}</p>
         </div>
         ${recommendedDay ? workoutOptionPreview(recommendedDay, true) : ''}
         ${recommended ? `<div class="training-reason-tags">${recommended.tags.map((tag) => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
@@ -1188,6 +1246,7 @@ function chooseTrainingOption(source) {
     return;
   }
 
+  if (source === 'recommended') rememberRecommendedSession(selection);
   pendingWorkoutSelection = selection;
   customWorkoutDraft = null;
   renderWorkout();
@@ -1762,6 +1821,7 @@ function renderLibrary() {
       </section>
       <div id="libraryResults" class="library-results section">${libraryResultsHtml()}</div>
     </section>`;
+  hydrateExerciseCardPosters(app);
 }
 
 function libraryResultsHtml() {
@@ -1788,17 +1848,30 @@ function libraryResultsHtml() {
   return `<div class="results-header"><p class="results-count"><strong>${entries.length}</strong> resultados${entries.length > visible.length ? ` · mostrando ${visible.length}` : ''}</p>${query ? `<button class="button button-ghost button-small" type="button" data-action="remember-search" data-query="${esc(query)}">Guardar búsqueda</button>` : ''}</div><div class="exercise-grid">${visible.map(([id, exercise]) => {
     const favorite = state.favorites.includes(id);
     const unavailable = profileEquipment.size && !profileEquipment.has(exercise.equipment) && !['Peso corporal', 'Sin especificar'].includes(exercise.equipment);
-    return `<article class="card library-card">
-      ${exerciseVisual(exercise)}
+    return `<article class="card library-card library-card-pro">
+      <button class="library-card-visual-button" type="button" data-action="exercise-details" data-id="${esc(id)}" aria-label="Abrir ficha de ${esc(exercise.name)}">
+        ${exerciseCardVisual(exercise, id)}
+      </button>
       <div class="library-card-body">
-        <div class="card-header"><div><div class="exercise-meta"><span>${esc(exercise.muscle)}</span><span>${esc(exercise.level)}</span></div><h3>${esc(exercise.name)}</h3></div><button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button></div>
-        <p class="muted small clamp-2">${esc(exercise.summary)}</p>
-        <div class="exercise-meta"><span>${esc(exercise.equipment)}</span>${exercise.media?.video ? '<span class="motion-badge">▶ Animación</span>' : ''}${exercise.custom ? '<span>Personalizado</span>' : ''}${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}</div>
+        <div class="library-card-heading">
+          <button class="library-card-title-button" type="button" data-action="exercise-details" data-id="${esc(id)}">
+            <div class="exercise-meta"><span>${esc(exercise.muscle)}</span><span>${esc(exercise.level)}</span></div>
+            <h3>${esc(exercise.name)}</h3>
+          </button>
+          <button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button>
+        </div>
+        <p class="muted small clamp-2 library-card-summary">${esc(exercise.summary)}</p>
+        <div class="exercise-meta library-card-tags">
+          <span>${esc(exercise.equipment)}</span>
+          ${exercise.media?.video ? '<span class="motion-badge">▶ Animación</span>' : '<span>Guía técnica</span>'}
+          ${exercise.custom ? '<span>Personalizado</span>' : ''}
+          ${unavailable ? '<span class="warning-text">Material no marcado</span>' : ''}
+        </div>
         <div class="library-card-actions">
-          <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Técnica</button>
+          <button class="button button-secondary button-small" type="button" data-action="exercise-details" data-id="${esc(id)}">Ver ficha</button>
           <button class="button button-primary button-small" type="button" data-action="library-add-workout" data-id="${esc(id)}" ${state.activeWorkout ? '' : 'disabled'}>＋ Entreno</button>
           <button class="button button-secondary button-small" type="button" data-action="library-add-plan" data-id="${esc(id)}" ${state.plan?.days?.length ? '' : 'disabled'}>＋ Plan</button>
-          ${exercise.custom ? `<button class="button button-ghost button-small" type="button" data-action="custom-edit" data-id="${esc(id)}">Editar</button>` : ''}
+          ${exercise.custom ? `<button class="button button-ghost button-small library-card-edit" type="button" data-action="custom-edit" data-id="${esc(id)}">Editar</button>` : ''}
         </div>
       </div>
     </article>`;
@@ -2561,11 +2634,7 @@ async function handleAppClick(event) {
     'home-workout': () => setView('workout'),
     'training-routine': () => chooseTrainingOption('routine'),
     'training-recommended': () => chooseTrainingOption('recommended'),
-    'training-refresh-recommended': () => {
-      recommendationVariant += 1;
-      renderWorkoutSelector();
-      showToast('Nueva propuesta generada.', 'success');
-    },
+    'training-refresh-recommended': rotateRecommendedSession,
     'training-custom': startCustomWorkoutBuilder,
     'workout-selector-back': backToWorkoutSelector,
     'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),
@@ -2682,9 +2751,24 @@ function handleAppInput(event) {
 }
 
 const debounceRefreshLibrary = debounce(refreshLibraryResults, 160);
+
+function hydrateExerciseCardPosters(rootNode = document) {
+  rootNode.querySelectorAll('img[data-exercise-card-poster]').forEach((image) => {
+    if (image.dataset.errorBound === 'true') return;
+    image.dataset.errorBound = 'true';
+    image.addEventListener('error', () => {
+      image.closest('.exercise-card-media')?.classList.add('poster-failed');
+      image.remove();
+    });
+  });
+}
+
 function refreshLibraryResults() {
   const results = document.querySelector('#libraryResults');
-  if (results) results.innerHTML = libraryResultsHtml();
+  if (results) {
+    results.innerHTML = libraryResultsHtml();
+    hydrateExerciseCardPosters(results);
+  }
   document.querySelectorAll('[data-action="library-mode"]').forEach((button) => button.classList.toggle('active', button.dataset.mode === libraryFilters.mode));
 }
 
@@ -3172,7 +3256,7 @@ function openExerciseDetails(id) {
 
       ${alternatives.length ? `<section class="premium-content-section alternatives-section">
         <div class="premium-section-heading"><span>04</span><div><p class="eyebrow">Máquina ocupada</p><h3>Alternativas</h3></div></div>
-        <div class="premium-alternative-list">${alternatives.map((item) => `<button type="button" class="premium-alternative-card" data-alt-details="${esc(item.id)}"><span class="alternative-mini-visual">${exerciseVisual(item)}</span><span class="alternative-copy"><strong>${esc(item.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.equipment)} · ${esc(item.level)}</em></span><b>›</b></button>`).join('')}</div>
+        <div class="premium-alternative-list">${alternatives.map((item) => `<button type="button" class="premium-alternative-card" data-alt-details="${esc(item.id)}"><span class="alternative-mini-visual">${exerciseCardVisual(item, item.id, { compact: true })}</span><span class="alternative-copy"><strong>${esc(item.name)}</strong><small>${esc(item.reason)}</small><em>${esc(item.equipment)} · ${esc(item.level)}</em></span><b>›</b></button>`).join('')}</div>
       </section>` : ''}
 
       <section class="premium-safety-note"><span>i</span><p>La ficha es educativa. Detén el ejercicio si aparece dolor agudo, mareo o una sensación anormal. Para corregir técnica o adaptar el movimiento a una lesión, consulta a un profesional.</p></section>
