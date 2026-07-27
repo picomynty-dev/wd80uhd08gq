@@ -1,12 +1,8 @@
 'use strict';
 
-import { mediaAssets } from './media-bundle.js';
-
-const media = (id) => mediaAssets[id] || ({
-  video: new URL(`../assets/motion/${id}.mp4`, import.meta.url).href,
-  poster: new URL(`../assets/posters/${id}.jpg`, import.meta.url).href,
-  anatomyFront: new URL(`../assets/anatomy-v2/${id}-front.svg`, import.meta.url).href,
-  anatomyBack: new URL(`../assets/anatomy-v2/${id}-back.svg`, import.meta.url).href
+const media = (id) => ({
+  video: new URL(`../assets/motion-pro/${id}.mp4`, import.meta.url).href,
+  poster: new URL(`../assets/posters-pro/${id}.jpg`, import.meta.url).href
 });
 
 const premium = (id, data) => ({
@@ -196,5 +192,65 @@ export const premiumExerciseData = {
     mistakes: ['Abrir los codos.', 'Inclinar el torso en exceso.', 'Mover los hombros.', 'Usar impulso para bajar la carga.'],
     tips: ['Separa ligeramente la cuerda al final si resulta cómodo.', 'Mantén las muñecas neutrales.', 'Usa un peso que permita detener la carga.'],
     breathing: 'Expulsa al extender e inspira al regresar.', tempo: '1 s de extensión · 2–3 s de regreso'
+  }),
+  reverse_fly: premium('reverse_fly', {
+    englishName: 'Dumbbell Reverse Fly', level: 'Principiante', movementType: 'Apertura posterior',
+    primaryMuscles: ['Deltoides posterior'], secondaryMuscles: ['Trapecio', 'Espalda alta'],
+    summary: 'Apertura inclinada para hombro posterior y control escapular.',
+    breathing: 'Expulsa al abrir e inspira al regresar.', tempo: '1–2 s de apertura · 3 s de bajada'
+  }),
+  preacher_curl: premium('preacher_curl', {
+    englishName: 'Preacher Curl', level: 'Principiante', movementType: 'Flexión de codo apoyada',
+    primaryMuscles: ['Bíceps'], secondaryMuscles: ['Antebrazos'],
+    summary: 'Curl con el brazo apoyado para reducir el impulso y aislar el bíceps.',
+    breathing: 'Expulsa al flexionar e inspira al bajar.', tempo: '1 s de subida · 3 s de bajada'
+  }),
+  overhead_triceps: premium('overhead_triceps', {
+    englishName: 'Overhead Triceps Extension', level: 'Principiante', movementType: 'Extensión de codo superior',
+    primaryMuscles: ['Tríceps'], secondaryMuscles: [],
+    summary: 'Extensión por encima de la cabeza con énfasis en la porción larga del tríceps.',
+    breathing: 'Expulsa al extender e inspira al flexionar.', tempo: '1 s de extensión · 2–3 s de regreso'
+  }),
+  assisted_dip: premium('assisted_dip', {
+    englishName: 'Assisted Dip', level: 'Principiante', movementType: 'Empuje vertical asistido',
+    primaryMuscles: ['Tríceps'], secondaryMuscles: ['Pectoral', 'Deltoides anterior'],
+    summary: 'Fondos con asistencia para practicar el recorrido con una carga adaptada.',
+    breathing: 'Expulsa al subir e inspira al bajar.', tempo: '2–3 s de bajada · subida firme'
+  }),
+  cable_crunch: premium('cable_crunch', {
+    englishName: 'Cable Crunch', level: 'Principiante', movementType: 'Flexión de tronco',
+    primaryMuscles: ['Abdominales'], secondaryMuscles: [],
+    summary: 'Flexión controlada del tronco contra la resistencia de una polea.',
+    breathing: 'Expulsa al acercar costillas y pelvis.', tempo: '1 s de flexión · 2 s de regreso'
+  }),
+  plank: premium('plank', {
+    englishName: 'Forearm Plank', level: 'Principiante', movementType: 'Antiextensión de core',
+    primaryMuscles: ['Core'], secondaryMuscles: ['Hombros', 'Glúteos'],
+    summary: 'Isometría para mantener tronco y pelvis alineados bajo tensión.',
+    breathing: 'Respira de forma continua sin perder la tensión.', tempo: 'Mantén una postura estable'
+  }),
+  dead_bug: premium('dead_bug', {
+    englishName: 'Dead Bug', level: 'Principiante', movementType: 'Control lumbopélvico',
+    primaryMuscles: ['Core'], secondaryMuscles: [],
+    summary: 'Movimiento contralateral para aprender a estabilizar la zona media.',
+    breathing: 'Expulsa al extender brazo y pierna.', tempo: 'Lento y controlado'
+  }),
+  side_plank: premium('side_plank', {
+    englishName: 'Side Plank', level: 'Principiante', movementType: 'Antiflexión lateral',
+    primaryMuscles: ['Oblicuos'], secondaryMuscles: ['Hombros', 'Glúteos'],
+    summary: 'Isometría lateral para oblicuos, hombro y estabilidad de cadera.',
+    breathing: 'Respira sin dejar caer la cadera.', tempo: 'Mantén una postura estable'
+  }),
+  hip_abduction: premium('hip_abduction', {
+    englishName: 'Hip Abduction Machine', level: 'Principiante', movementType: 'Abducción de cadera',
+    primaryMuscles: ['Glúteo medio'], secondaryMuscles: [],
+    summary: 'Apertura guiada de las piernas para trabajar la estabilidad lateral de la cadera.',
+    breathing: 'Expulsa al abrir e inspira al cerrar.', tempo: '1 s de apertura · 3 s de regreso'
+  }),
+  split_squat: premium('split_squat', {
+    englishName: 'Dumbbell Split Squat', level: 'Intermedio', movementType: 'Zancada unilateral',
+    primaryMuscles: ['Cuádriceps'], secondaryMuscles: ['Glúteos', 'Isquiotibiales'],
+    summary: 'Trabajo unilateral con mancuernas para pierna, equilibrio y control.',
+    breathing: 'Inspira al bajar y expulsa al subir.', tempo: '2–3 s de bajada · subida estable'
   })
 };

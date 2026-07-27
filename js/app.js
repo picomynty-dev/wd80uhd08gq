@@ -1105,8 +1105,8 @@ function renderLibrary() {
     <section class="page library-page">
       <div class="section-title-row"><div><p class="eyebrow">${Object.keys(all).length} ejercicios</p><h1>Biblioteca</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
       <button class="premium-pilot-banner media-banner" type="button" data-action="library-mode" data-mode="media">
-        <span class="pilot-banner-badge">20 ANIMACIONES</span>
-        <span><strong>Aprende viendo el recorrido</strong><small>Demostraciones en bucle, anatomía frontal y posterior y técnica paso a paso.</small></span>
+        <span class="pilot-banner-badge">30 PREMIUM MOTION</span>
+        <span><strong>Aprende viendo el recorrido</strong><small>Movimiento y activación muscular en un único visor, con técnica paso a paso.</small></span>
         <b>→</b>
       </button>
       <section class="card library-controls">
@@ -1874,7 +1874,7 @@ function openExerciseDetails(id) {
       <header class="premium-detail-header">
         <button class="premium-detail-back" type="button" data-close-modal aria-label="Volver">←</button>
         <div class="premium-detail-title">
-          <p class="eyebrow">${hasMotion ? 'MULTIMEDIA · TÉCNICA' : (isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`)}</p>
+          <p class="eyebrow">${hasMotion ? 'PREMIUM MOTION · TÉCNICA' : (isPilot ? 'FICHA PREMIUM · TÉCNICA' : `${esc(exercise.muscle)} · ${esc(exercise.equipment)}`)}</p>
           <h2>${esc(exercise.name)}</h2>
           ${exercise.englishName ? `<p>${esc(exercise.englishName)}</p>` : ''}
         </div>
@@ -1992,6 +1992,20 @@ function openExerciseDetails(id) {
     }));
     updateMotionToggle();
   }
+  wrapper.querySelector('[data-motion-fullscreen]')?.addEventListener('click', async () => {
+    if (!motionVideo) return;
+    try {
+      if (typeof motionVideo.webkitEnterFullscreen === 'function') {
+        motionVideo.webkitEnterFullscreen();
+      } else if (motionVideo.requestFullscreen) {
+        await motionVideo.requestFullscreen();
+      } else {
+        await motionVideo.closest('.premium-motion-stage')?.requestFullscreen?.();
+      }
+    } catch (error) {
+      showToast('La pantalla completa no está disponible en este navegador.');
+    }
+  });
 
   wrapper.querySelector('[data-premium-favorite]')?.addEventListener('click', (event) => {
     const button = event.currentTarget;

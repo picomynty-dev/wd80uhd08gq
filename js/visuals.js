@@ -107,66 +107,46 @@ export function exerciseVisual(exercise, { large = false } = {}) {
 export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
   const media = exercise?.media;
   const reduceMotion = Boolean(options.reduceMotion);
-  if (media?.video && media?.anatomyFront && media?.anatomyBack) {
-    return `<section class="premium-exercise-visual multimedia-visual" data-premium-visual="${esc(exerciseId)}">
-      <div class="premium-visual-tabs" role="tablist" aria-label="Vista del ejercicio">
-        <button type="button" class="active" data-exercise-visual-tab="motion" role="tab" aria-selected="true">Demostración</button>
-        <button type="button" data-exercise-visual-tab="muscles" role="tab" aria-selected="false">Músculos</button>
-        <button type="button" data-exercise-visual-tab="positions" role="tab" aria-selected="false">Claves</button>
-      </div>
-      <div class="premium-visual-panel active" data-exercise-visual-panel="motion">
-        <div class="motion-video-shell">
-          <video data-motion-video muted loop playsinline preload="auto" poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'} aria-label="Demostración animada de ${esc(exercise.name)}">
-            <source src="${esc(media.video)}" type="video/mp4">
-          </video>
-          <div class="motion-media-error" data-motion-error hidden><strong>No se pudo cargar la demostración</strong><small>Usa la pestaña Claves mientras recargas la ficha.</small></div>
-          <div class="motion-video-overlay"><span>ANIMACIÓN TÉCNICA</span><small>Observa el recorrido y después revisa los pasos.</small></div>
+  if (media?.video) {
+    const primary = (exercise.primaryMuscles || [exercise.muscle]).join(' · ');
+    const secondary = (exercise.secondaryMuscles || []).join(' · ');
+    const stepA = exercise.steps?.[0] || 'Ajusta la posición antes de iniciar el movimiento.';
+    const stepB = exercise.steps?.[1] || 'Mantén una trayectoria estable y evita usar impulso.';
+    const stepC = exercise.steps?.[exercise.steps.length - 1] || 'Completa la repetición conservando el control.';
+    return `<section class="premium-exercise-visual premium-motion-unified" data-premium-visual="${esc(exerciseId)}">
+      <div class="premium-motion-stage">
+        <video data-motion-video muted loop playsinline preload="metadata" poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'} aria-label="Demostración técnica de ${esc(exercise.name)} con activación muscular integrada">
+          <source src="${esc(media.video)}" type="video/mp4">
+        </video>
+        <div class="motion-media-error" data-motion-error hidden><strong>No se pudo cargar la demostración</strong><small>Recarga la ficha o revisa tu conexión.</small></div>
+        <div class="premium-motion-badges" aria-label="Músculos trabajados">
+          <span class="primary"><i></i><small>Principal</small><strong>${esc(primary)}</strong></span>
+          ${secondary ? `<span class="secondary"><i></i><small>Secundarios</small><strong>${esc(secondary)}</strong></span>` : ''}
         </div>
-        <div class="motion-controls" aria-label="Controles de demostración">
-          <button type="button" data-motion-toggle>❚❚ <span>Pausar</span></button>
-          <button type="button" data-motion-replay>↺ <span>Repetir</span></button>
-          <div class="motion-speed" role="group" aria-label="Velocidad"><button type="button" data-motion-speed="0.75">0,75×</button><button type="button" class="active" data-motion-speed="1">1×</button><button type="button" data-motion-speed="1.25">1,25×</button></div>
-        </div>
-        <p class="visual-swipe-hint">Animación orientativa sin audio. Ajusta el movimiento a tu movilidad y material.</p>
+        <button type="button" class="motion-fullscreen" data-motion-fullscreen aria-label="Ver demostración a pantalla completa">⛶</button>
       </div>
-      <div class="premium-visual-panel" data-exercise-visual-panel="muscles" hidden>
-        <div class="anatomy-compare-grid anatomy-v2-grid">
-          <figure><img data-anatomy-image src="${esc(media.anatomyFront)}" alt="Vista frontal de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista frontal</figcaption></figure>
-          <figure><img data-anatomy-image src="${esc(media.anatomyBack)}" alt="Vista posterior de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista posterior</figcaption></figure>
-        </div>
-        <div class="anatomy-legend"><span><i class="primary"></i>Principal</span><span><i class="secondary"></i>Secundario</span><span><i class="neutral"></i>No prioritario</span></div>
+      <div class="motion-controls premium-motion-controls" aria-label="Controles de demostración">
+        <button type="button" data-motion-toggle>❚❚ <span>Pausar</span></button>
+        <button type="button" data-motion-replay>↺ <span>Repetir</span></button>
+        <div class="motion-speed" role="group" aria-label="Velocidad"><button type="button" data-motion-speed="0.75">0,75×</button><button type="button" class="active" data-motion-speed="1">1×</button><button type="button" data-motion-speed="1.25">1,25×</button></div>
       </div>
-      <div class="premium-visual-panel" data-exercise-visual-panel="positions" hidden>
-        <div class="movement-key-grid">
-          <article><span>01</span><div><strong>Colócate</strong><p>${esc(exercise.steps?.[0] || 'Ajusta tu posición antes de mover la carga.')}</p></div></article>
-          <article><span>02</span><div><strong>Controla</strong><p>${esc(exercise.steps?.[1] || 'Mantén una trayectoria estable y sin impulso.')}</p></div></article>
-          <article><span>03</span><div><strong>Completa</strong><p>${esc(exercise.steps?.[exercise.steps.length - 1] || 'Finaliza la repetición conservando la postura.')}</p></div></article>
-        </div>
-        ${(exercise.breathing || exercise.tempo) ? `<div class="movement-cue-strip">${exercise.breathing ? `<span><small>Respiración</small><strong>${esc(exercise.breathing)}</strong></span>` : ''}${exercise.tempo ? `<span><small>Ritmo</small><strong>${esc(exercise.tempo)}</strong></span>` : ''}</div>` : ''}
+      <div class="premium-motion-keys">
+        <article><span>01</span><div><strong>Colócate</strong><p>${esc(stepA)}</p></div></article>
+        <article><span>02</span><div><strong>Controla</strong><p>${esc(stepB)}</p></div></article>
+        <article><span>03</span><div><strong>Completa</strong><p>${esc(stepC)}</p></div></article>
       </div>
+      ${(exercise.breathing || exercise.tempo) ? `<div class="movement-cue-strip premium-motion-cues">${exercise.breathing ? `<span><small>Respiración</small><strong>${esc(exercise.breathing)}</strong></span>` : ''}${exercise.tempo ? `<span><small>Ritmo</small><strong>${esc(exercise.tempo)}</strong></span>` : ''}</div>` : ''}
+      <p class="visual-swipe-hint">El color rojo señala el músculo principal y el naranja los músculos secundarios. La demostración es orientativa y no sustituye una corrección presencial.</p>
     </section>`;
   }
   if (!exercise?.movementImages?.start || !exercise?.movementImages?.end || !exercise?.anatomyImages?.front || !exercise?.anatomyImages?.back) {
     return `<div class="premium-exercise-fallback">${exerciseVisual(exercise, { large: true })}</div>`;
   }
   return `<section class="premium-exercise-visual" data-premium-visual="${esc(exerciseId)}">
-    <div class="premium-visual-tabs" role="tablist" aria-label="Vista del ejercicio">
-      <button type="button" class="active" data-exercise-visual-tab="movement" role="tab" aria-selected="true">Movimiento</button>
-      <button type="button" data-exercise-visual-tab="muscles" role="tab" aria-selected="false">Músculos</button>
+    <div class="movement-compare-grid">
+      <figure><img src="${esc(exercise.movementImages.start)}" alt="Posición inicial de ${esc(exercise.name)}" loading="eager"><figcaption><span>01</span><strong>Inicio</strong><small>Colocación antes de mover la carga</small></figcaption></figure>
+      <figure><img src="${esc(exercise.movementImages.end)}" alt="Posición final de ${esc(exercise.name)}" loading="eager"><figcaption><span>02</span><strong>Final</strong><small>Recorrido controlado y estable</small></figcaption></figure>
     </div>
-    <div class="premium-visual-panel active" data-exercise-visual-panel="movement">
-      <div class="movement-compare-grid">
-        <figure><img src="${esc(exercise.movementImages.start)}" alt="Posición inicial de ${esc(exercise.name)}" loading="eager"><figcaption><span>01</span><strong>Inicio</strong><small>Colocación antes de mover la carga</small></figcaption></figure>
-        <figure><img src="${esc(exercise.movementImages.end)}" alt="Posición final de ${esc(exercise.name)}" loading="eager"><figcaption><span>02</span><strong>Final</strong><small>Recorrido controlado y estable</small></figcaption></figure>
-      </div>
-      <p class="visual-swipe-hint">Compara las dos posiciones antes de empezar la serie.</p>
-    </div>
-    <div class="premium-visual-panel" data-exercise-visual-panel="muscles" hidden>
-      <div class="anatomy-compare-grid">
-        <figure><img src="${esc(exercise.anatomyImages.front)}" alt="Vista frontal de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista frontal</figcaption></figure>
-        <figure><img src="${esc(exercise.anatomyImages.back)}" alt="Vista posterior de músculos trabajados en ${esc(exercise.name)}" loading="lazy"><figcaption>Vista posterior</figcaption></figure>
-      </div>
-      <div class="anatomy-legend"><span><i class="primary"></i>Principal</span><span><i class="secondary"></i>Secundario</span><span><i class="neutral"></i>No prioritario</span></div>
-    </div>
+    <div class="anatomy-legend"><span><i class="primary"></i>Principal</span><span><i class="secondary"></i>Secundario</span></div>
   </section>`;
 }
