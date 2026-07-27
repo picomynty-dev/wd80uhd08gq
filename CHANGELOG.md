@@ -1,3 +1,16 @@
+# My Fit Plan v3.4B
+
+- Añade check-in previo de tiempo, energía, sueño y molestias.
+- Crea versiones temporales de 25, 40 y 60 minutos.
+- Prioriza los movimientos principales.
+- Reduce accesorios, series y descansos de forma prudente.
+- Mantiene intacta la rutina permanente.
+- Permite restaurar la sesión completa antes de comenzar.
+- Añade banner y explicación de los cambios durante el entrenamiento.
+- Guarda preparación y adaptación en el historial.
+- Bloquea la adaptación ante molestias importantes.
+- Renueva la caché PWA.
+
 # My Fit Plan v3.4A
 
 - Añade un motor profesional de progresión.
