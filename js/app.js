@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=323b';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=323b';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=323b';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=33';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=33';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=33';
 import {
   buildCalendar,
   calculateStreak,
@@ -18,7 +18,7 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=323b';
+} from './stats.js?v=33';
 import {
   clamp,
   clone,
@@ -34,10 +34,20 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=323b';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=323b';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=323b';
-import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=323b';
+} from './utils.js?v=33';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=33';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=33';
+import { exerciseVisual, premiumExerciseVisual } from './visuals.js?v=33';
+import {
+  clearProgressPhotoStore,
+  compressProgressImage,
+  deleteProgressPhotos,
+  downloadProgressPhoto,
+  getProgressPhotoUrl,
+  hashPrivatePin,
+  hydrateProgressImages,
+  saveProgressPhoto
+} from './photo-progress.js?v=33';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -60,6 +70,8 @@ let collapsedPlanDays = new Set();
 let collapsedWorkoutExercises = new Set();
 let planAccordionPlanId = null;
 let workoutAccordionSessionId = null;
+let photoVaultUnlocked = false;
+let bodyMetric = 'waist';
 
 init();
 
@@ -301,6 +313,7 @@ function renderHome() {
 
       <section class="section quick-launch-grid">
         <button class="quick-launch-card" type="button" data-action="quick-weight"><span class="quick-launch-icon">⚖</span><span><strong>Registrar peso</strong><small>Actualiza tu evolución</small></span><b>＋</b></button>
+        <button class="quick-launch-card" type="button" data-action="body-progress-home"><span class="quick-launch-icon">◫</span><span><strong>Progreso físico</strong><small>Fotos, medidas y comparación</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-nav-local="library"><span class="quick-launch-icon">⌕</span><span><strong>Buscar ejercicio</strong><small>Más de 280 opciones</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-nav-local="plan"><span class="quick-launch-icon">▤</span><span><strong>Editar mi plan</strong><small>Series, reps y orden</small></span><b>→</b></button>
         <button class="quick-launch-card" type="button" data-action="go-history"><span class="quick-launch-icon">◷</span><span><strong>Ver historial</strong><small>Sesiones y récords</small></span><b>→</b></button>
@@ -1191,6 +1204,7 @@ function renderProfile() {
 
       <section class="section profile-tabs segmented-control profile-sections">
         <button type="button" class="active" data-profile-tab="progress">Progreso</button>
+        <button type="button" data-profile-tab="body">Cuerpo</button>
         <button type="button" data-profile-tab="history">Historial</button>
         <button type="button" data-profile-tab="data">Datos</button>
         <button type="button" data-profile-tab="settings">Ajustes</button>
@@ -1223,6 +1237,408 @@ function profileProgressHtml(summary, bmi, bmiData, records, calendar) {
     </div>
     <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Récords personales</p><h2>Tus mejores marcas</h2></div><span class="pill">${records.length}</span></div>${records.length ? `<div class="records-list">${records.slice(0, 12).map((record) => `<button type="button" class="record-row" data-action="filter-history-exercise" data-id="${esc(record.exerciseId)}"><span><strong>${esc(record.name)}</strong><small>Mejor volumen: ${formatWeight(record.bestVolume)} kg</small></span><strong>${record.bestWeight ? `${formatWeight(record.bestWeight)} kg` : '—'}</strong></button>`).join('')}</div>` : emptyState('Todavía no hay récords', 'Completa series con peso y repeticiones para crear tus primeras marcas.')}</section>
   </section>`;
+}
+
+
+function profileBodyHtml() {
+  if (state.photoPrivacy?.lockEnabled && !photoVaultUnlocked) {
+    return `<section class="profile-tab-panel body-progress-panel">
+      <article class="body-vault-lock card">
+        <div class="vault-lock-icon">⌾</div>
+        <p class="eyebrow">Álbum privado</p>
+        <h2>Progreso físico bloqueado</h2>
+        <p class="muted">Introduce tu PIN para abrir las fotografías y medidas guardadas en este dispositivo.</p>
+        <form id="photoUnlockForm" class="vault-pin-form">
+          <input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="off" placeholder="PIN de 4–8 números" required>
+          <button class="button button-primary" type="submit">Desbloquear</button>
+        </form>
+        <p class="privacy-note">Este bloqueo protege la vista dentro de My Fit Plan. No sustituye el código de seguridad del dispositivo.</p>
+      </article>
+    </section>`;
+  }
+
+  const entries = [...(state.bodyProgress || [])].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const latest = entries[0];
+  const first = entries[entries.length - 1];
+  const measurementLabels = {
+    chest: 'Pecho',
+    waist: 'Cintura',
+    hips: 'Cadera',
+    arm: 'Brazo',
+    thigh: 'Muslo',
+    calf: 'Gemelo'
+  };
+
+  return `<section class="profile-tab-panel body-progress-panel">
+    <section class="body-progress-hero">
+      <div>
+        <p class="eyebrow">Progreso físico privado</p>
+        <h2>Compara cambios más allá de la báscula</h2>
+        <p>Guarda fotografías con una postura similar, registra medidas y compara dos fechas sin subir las imágenes a un servidor.</p>
+      </div>
+      <div class="body-progress-actions">
+        <button class="button button-primary" type="button" data-action="body-progress-new">＋ Nueva revisión</button>
+        <button class="button button-secondary" type="button" data-action="body-progress-compare" ${entries.length >= 2 ? '' : 'disabled'}>Comparar</button>
+      </div>
+    </section>
+
+    ${latest ? `<section class="body-latest-grid section">
+      ${['front','side','back'].map((view) => bodyPhotoFrame(latest.photos?.[view], view, latest.date, true)).join('')}
+    </section>` : `<section class="card body-empty-state">
+      <div class="body-empty-figure">◫</div>
+      <h3>Aún no tienes revisiones físicas</h3>
+      <p>Haz fotografías frontal, lateral y posterior con luz y distancia parecidas. Puedes guardar solo una vista si lo prefieres.</p>
+      <button class="button button-primary" type="button" data-action="body-progress-new">Crear primera revisión</button>
+    </section>`}
+
+    ${latest ? `<section class="section body-summary-grid">
+      <article class="card body-summary-card"><small>Última revisión</small><strong>${formatDate(latest.date)}</strong><span>${latest.weight ? `${formatWeight(latest.weight)} kg` : 'Sin peso'}</span></article>
+      <article class="card body-summary-card"><small>Revisiones</small><strong>${entries.length}</strong><span>guardadas localmente</span></article>
+      <article class="card body-summary-card"><small>Cambio de peso</small><strong>${first?.weight && latest.weight ? `${signedNumber(numberValue(latest.weight) - numberValue(first.weight))} kg` : '—'}</strong><span>entre primera y última</span></article>
+    </section>` : ''}
+
+    ${entries.length ? `<section class="section card body-measurement-card">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Medidas corporales</p><h2>Evolución</h2></div>
+        <select id="bodyMetricSelect" aria-label="Medida a representar">
+          ${Object.entries(measurementLabels).map(([key,label]) => `<option value="${key}" ${bodyMetric === key ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+      </div>
+      <div id="bodyMetricChart">${bodyMeasurementChartHtml(entries, bodyMetric, measurementLabels[bodyMetric])}</div>
+    </section>` : ''}
+
+    ${entries.length ? `<section class="section">
+      <div class="section-title-row"><div><p class="eyebrow">Historial visual</p><h2>Tus revisiones</h2></div><span class="pill">${entries.length}</span></div>
+      <div class="body-entry-list">
+        ${entries.map((entry) => `<button class="body-entry-card" type="button" data-action="body-progress-open" data-id="${esc(entry.id)}">
+          ${bodyPhotoFrame(entry.photos?.front || entry.photos?.side || entry.photos?.back, entry.photos?.front ? 'front' : entry.photos?.side ? 'side' : 'back', entry.date, false)}
+          <span class="body-entry-copy"><strong>${formatDate(entry.date)}</strong><small>${entry.weight ? `${formatWeight(entry.weight)} kg` : 'Sin peso'} · ${bodyMeasurementCount(entry)} medidas</small></span>
+          <b>›</b>
+        </button>`).join('')}
+      </div>
+    </section>` : ''}
+
+    <section class="section card body-privacy-card">
+      <div><p class="eyebrow">Privacidad</p><h2>${state.photoPrivacy?.lockEnabled ? 'Bloqueo activado' : 'Sin bloqueo adicional'}</h2><p class="muted small">Las fotografías se guardan en el almacenamiento privado del navegador de este dispositivo. No se incluyen automáticamente en la copia JSON.</p></div>
+      <div class="body-privacy-actions">
+        <button class="button button-secondary" type="button" data-action="body-progress-lock">${state.photoPrivacy?.lockEnabled ? 'Cambiar o quitar PIN' : 'Crear PIN'}</button>
+        ${state.photoPrivacy?.lockEnabled ? '<button class="button button-ghost" type="button" data-action="body-progress-lock-now">Bloquear ahora</button>' : ''}
+      </div>
+    </section>
+  </section>`;
+}
+
+function bodyPhotoFrame(photoId, view, date, large = false) {
+  const labels = { front: 'Frontal', side: 'Lateral', back: 'Posterior' };
+  return `<figure class="body-photo-frame ${large ? 'body-photo-large' : 'body-photo-thumb'}" data-photo-frame>
+    ${photoId ? `<img data-photo-id="${esc(photoId)}" alt="Fotografía ${labels[view].toLowerCase()} del ${esc(formatDate(date))}">` : ''}
+    <span class="body-photo-placeholder">${photoId ? 'Cargando…' : 'Sin foto'}</span>
+    <figcaption>${labels[view]}</figcaption>
+  </figure>`;
+}
+
+function bodyMeasurementCount(entry) {
+  return Object.values(entry.measurements || {}).filter((value) => numberValue(value) > 0).length;
+}
+
+function bodyMeasurementChartHtml(entries, key, label) {
+  const values = [...entries]
+    .filter((entry) => numberValue(entry.measurements?.[key]) > 0)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  if (values.length < 2) return `<div class="body-chart-empty"><p>Registra ${esc(label.toLowerCase())} en al menos dos fechas para ver la evolución.</p></div>`;
+  const numbers = values.map((entry) => numberValue(entry.measurements[key]));
+  const min = Math.min(...numbers);
+  const max = Math.max(...numbers);
+  const range = Math.max(1, max - min);
+  const points = values.map((entry, index) => {
+    const x = 18 + (index / (values.length - 1)) * 364;
+    const y = 120 - ((numberValue(entry.measurements[key]) - min) / range) * 86;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const latest = numbers[numbers.length - 1];
+  const first = numbers[0];
+  return `<div class="body-chart-summary"><span><small>${esc(label)} actual</small><strong>${formatWeight(latest)} cm</strong></span><span><small>Cambio</small><strong>${signedNumber(latest - first)} cm</strong></span></div>
+    <svg class="body-measurement-chart" viewBox="0 0 400 145" role="img" aria-label="Evolución de ${esc(label.toLowerCase())}">
+      <line x1="18" y1="120" x2="382" y2="120"></line>
+      <polyline points="${points}"></polyline>
+      ${points.split(' ').map((point) => { const [x,y] = point.split(','); return `<circle cx="${x}" cy="${y}" r="4"></circle>`; }).join('')}
+    </svg>
+    <div class="body-chart-dates"><span>${formatDate(values[0].date)}</span><span>${formatDate(values[values.length - 1].date)}</span></div>`;
+}
+
+async function refreshBodyProgressImages(rootNode = document.querySelector('#profileTabContent')) {
+  if (rootNode) await hydrateProgressImages(rootNode);
+}
+
+function openBodyProgressForm() {
+  const today = isoDay();
+  const wrapper = openModal(`<div class="modal-header">
+      <div><p class="eyebrow">Nueva revisión corporal</p><h2>Fotografías y medidas</h2></div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <form id="bodyProgressForm" class="body-progress-form">
+      <div class="body-form-guidance"><strong>Para comparar mejor:</strong><span>misma luz, distancia, postura y hora aproximada. No es necesario subir las tres vistas.</span></div>
+      <div class="body-photo-input-grid">
+        ${bodyPhotoInput('front','Frontal')}
+        ${bodyPhotoInput('side','Lateral')}
+        ${bodyPhotoInput('back','Posterior')}
+      </div>
+      <div class="form-fields">
+        <label class="field"><span>Fecha</span><input name="date" type="date" max="${today}" value="${today}" required></label>
+        <label class="field"><span>Peso (kg)</span><input name="weight" type="number" inputmode="decimal" min="30" max="350" step="0.1" value="${esc(state.profile?.weight || '')}"></label>
+      </div>
+      <fieldset class="fieldset"><legend>Medidas opcionales (cm)</legend>
+        <div class="body-measure-grid">
+          ${[['chest','Pecho'],['waist','Cintura'],['hips','Cadera'],['arm','Brazo'],['thigh','Muslo'],['calf','Gemelo']].map(([name,label]) => `<label class="field"><span>${label}</span><input name="${name}" type="number" inputmode="decimal" min="10" max="250" step="0.1"></label>`).join('')}
+        </div>
+      </fieldset>
+      <label class="field"><span>Notas</span><textarea name="notes" maxlength="500" placeholder="Sensaciones, fase del plan, condiciones de las fotografías…"></textarea></label>
+      <p class="privacy-note">Las imágenes se comprimen y se guardan únicamente en este navegador. Si borras los datos de Safari o cambias de dispositivo sin exportarlas, podrías perderlas.</p>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Guardar revisión</button></div>
+    </form>`, { wide: true });
+
+  const form = wrapper.querySelector('#bodyProgressForm');
+  const previewUrls = [];
+  wrapper.querySelectorAll('input[type="file"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      const preview = wrapper.querySelector(`[data-photo-preview="${input.dataset.view}"]`);
+      if (!file || !preview) return;
+      const url = URL.createObjectURL(file);
+      previewUrls.push(url);
+      preview.src = url;
+      preview.hidden = false;
+      preview.closest('.body-photo-upload')?.classList.add('has-preview');
+    });
+  });
+
+  wrapper.addEventListener('modal-close-internal', () => previewUrls.forEach((url) => URL.revokeObjectURL(url)));
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = 'Guardando…';
+    try {
+      const data = new FormData(form);
+      const photoIds = { front: '', side: '', back: '' };
+      for (const view of ['front','side','back']) {
+        const file = form.querySelector(`input[data-view="${view}"]`)?.files?.[0];
+        if (!file) continue;
+        const compressed = await compressProgressImage(file);
+        const photoId = uid(`body-${view}`);
+        await saveProgressPhoto(photoId, compressed);
+        photoIds[view] = photoId;
+      }
+      if (!Object.values(photoIds).some(Boolean) && !['chest','waist','hips','arm','thigh','calf'].some((key) => numberValue(data.get(key)) > 0)) {
+        throw new Error('Añade al menos una fotografía o una medida.');
+      }
+      const entry = {
+        id: uid('body'),
+        date: String(data.get('date') || isoDay()),
+        weight: numberValue(data.get('weight')) || '',
+        measurements: Object.fromEntries(['chest','waist','hips','arm','thigh','calf'].map((key) => [key, numberValue(data.get(key)) || ''])),
+        photos: photoIds,
+        notes: String(data.get('notes') || '').trim(),
+        createdAt: new Date().toISOString()
+      };
+      state.bodyProgress = [entry, ...(state.bodyProgress || [])].sort((a,b) => String(b.date).localeCompare(String(a.date)));
+      if (entry.weight) {
+        const existing = state.weightHistory.find((item) => item.date === entry.date);
+        if (existing) existing.weight = entry.weight;
+        else state.weightHistory.push({ id: uid('weight'), date: entry.date, weight: entry.weight });
+        state.weightHistory.sort((a,b) => String(a.date).localeCompare(String(b.date)));
+        if (entry.date === isoDay()) state.profile.weight = entry.weight;
+      }
+      save();
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      wrapper._closeModal();
+      renderProfile();
+      showProfileTab('body');
+      showToast('Revisión corporal guardada.', 'success');
+    } catch (error) {
+      showToast(error.message || 'No se pudo guardar la revisión.', 'danger');
+      submit.disabled = false;
+      submit.textContent = 'Guardar revisión';
+    }
+  });
+}
+
+function bodyPhotoInput(view, label) {
+  return `<label class="body-photo-upload">
+    <input type="file" accept="image/*" data-view="${view}">
+    <img data-photo-preview="${view}" alt="Previsualización ${label.toLowerCase()}" hidden>
+    <span class="body-upload-icon">＋</span>
+    <strong>${label}</strong>
+    <small>Elegir o hacer foto</small>
+  </label>`;
+}
+
+async function openBodyProgressEntry(id) {
+  const entry = state.bodyProgress?.find((item) => item.id === id);
+  if (!entry) return;
+  const views = [['front','Frontal'],['side','Lateral'],['back','Posterior']];
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">${formatDate(entry.date)}</p><h2>Revisión corporal</h2><p class="muted small">${entry.weight ? `${formatWeight(entry.weight)} kg · ` : ''}${bodyMeasurementCount(entry)} medidas registradas</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <div class="body-detail-photos">${views.map(([view,label]) => bodyPhotoFrame(entry.photos?.[view], view, entry.date, true)).join('')}</div>
+    ${bodyMeasurementsTable(entry)}
+    ${entry.notes ? `<section class="notice"><strong>Notas</strong><p>${esc(entry.notes)}</p></section>` : ''}
+    <div class="modal-actions body-detail-actions">
+      <button class="button button-secondary" type="button" id="exportBodyEntry">Exportar fotos</button>
+      <button class="button button-danger" type="button" id="deleteBodyEntry">Eliminar revisión</button>
+    </div>`, { wide: true });
+  await hydrateProgressImages(wrapper);
+  wrapper.querySelector('#exportBodyEntry').addEventListener('click', async () => {
+    const labels = { front: 'frontal', side: 'lateral', back: 'posterior' };
+    let exported = 0;
+    for (const [view, photoId] of Object.entries(entry.photos || {})) {
+      if (!photoId) continue;
+      await downloadProgressPhoto(photoId, `my-fit-plan-${entry.date}-${labels[view]}.jpg`);
+      exported += 1;
+    }
+    showToast(exported ? `${exported} fotografía${exported === 1 ? '' : 's'} preparada${exported === 1 ? '' : 's'}.` : 'Esta revisión no contiene fotografías.');
+  });
+  wrapper.querySelector('#deleteBodyEntry').addEventListener('click', () => {
+    wrapper._closeModal();
+    confirmAction({
+      title: 'Eliminar revisión corporal',
+      message: 'Se eliminarán definitivamente sus fotografías y medidas de este dispositivo.',
+      confirmLabel: 'Eliminar',
+      danger: true,
+      onConfirm: async () => {
+        await deleteProgressPhotos(Object.values(entry.photos || {}));
+        state.bodyProgress = state.bodyProgress.filter((item) => item.id !== entry.id);
+        save();
+        renderProfile();
+        showProfileTab('body');
+        showToast('Revisión eliminada.');
+      }
+    });
+  });
+}
+
+function bodyMeasurementsTable(entry) {
+  const labels = { chest:'Pecho', waist:'Cintura', hips:'Cadera', arm:'Brazo', thigh:'Muslo', calf:'Gemelo' };
+  const values = Object.entries(entry.measurements || {}).filter(([,value]) => numberValue(value) > 0);
+  if (!values.length) return '<p class="muted body-no-measures">No se registraron medidas en esta revisión.</p>';
+  return `<div class="body-measure-table">${values.map(([key,value]) => `<span><small>${labels[key]}</small><strong>${formatWeight(value)} cm</strong></span>`).join('')}</div>`;
+}
+
+function openBodyProgressCompare() {
+  const entries = [...(state.bodyProgress || [])].sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  if (entries.length < 2) {
+    showToast('Necesitas al menos dos revisiones para comparar.', 'danger');
+    return;
+  }
+  const before = entries[0];
+  const after = entries[entries.length - 1];
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Antes y después</p><h2>Comparar progreso físico</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <div class="body-compare-controls">
+      <label><span>Primera fecha</span><select id="compareBefore">${entries.map((entry) => `<option value="${esc(entry.id)}" ${entry.id === before.id ? 'selected' : ''}>${formatDate(entry.date)}</option>`).join('')}</select></label>
+      <label><span>Segunda fecha</span><select id="compareAfter">${entries.map((entry) => `<option value="${esc(entry.id)}" ${entry.id === after.id ? 'selected' : ''}>${formatDate(entry.date)}</option>`).join('')}</select></label>
+      <label><span>Vista</span><select id="compareView"><option value="front">Frontal</option><option value="side">Lateral</option><option value="back">Posterior</option></select></label>
+    </div>
+    <div id="bodyCompareCanvas"></div>`, { wide: true });
+
+  const renderCompare = async () => {
+    const a = state.bodyProgress.find((entry) => entry.id === wrapper.querySelector('#compareBefore').value);
+    const b = state.bodyProgress.find((entry) => entry.id === wrapper.querySelector('#compareAfter').value);
+    const view = wrapper.querySelector('#compareView').value;
+    const canvas = wrapper.querySelector('#bodyCompareCanvas');
+    const photoA = a?.photos?.[view];
+    const photoB = b?.photos?.[view];
+    if (!photoA || !photoB) {
+      canvas.innerHTML = `<div class="body-compare-missing"><h3>Falta la vista seleccionada</h3><p>Las dos revisiones necesitan una fotografía ${view === 'front' ? 'frontal' : view === 'side' ? 'lateral' : 'posterior'}.</p></div>`;
+      return;
+    }
+    const [urlA, urlB] = await Promise.all([getProgressPhotoUrl(photoA), getProgressPhotoUrl(photoB)]);
+    if (!urlA || !urlB) {
+      canvas.innerHTML = '<div class="body-compare-missing"><h3>No se pudieron recuperar las fotografías</h3><p>Comprueba que no se hayan borrado los datos del navegador.</p></div>';
+      return;
+    }
+    canvas.innerHTML = `<div class="body-compare-side">
+        <figure><img src="${urlA}" alt="Antes"><figcaption><strong>Antes</strong><small>${formatDate(a.date)}${a.weight ? ` · ${formatWeight(a.weight)} kg` : ''}</small></figcaption></figure>
+        <figure><img src="${urlB}" alt="Después"><figcaption><strong>Después</strong><small>${formatDate(b.date)}${b.weight ? ` · ${formatWeight(b.weight)} kg` : ''}</small></figcaption></figure>
+      </div>
+      <div class="body-compare-slider-wrap">
+        <div class="body-before-after-slider">
+          <img src="${urlB}" alt="Fotografía posterior">
+          <div class="body-before-layer" style="width:50%"><img src="${urlA}" alt="Fotografía anterior"></div>
+          <span class="body-slider-line" style="left:50%"><i>↔</i></span>
+        </div>
+        <label class="body-slider-control"><span>Desliza para comparar</span><input type="range" min="0" max="100" value="50" id="bodyCompareRange"></label>
+      </div>
+      <div class="body-compare-measures">${bodyComparisonMeasurements(a,b)}</div>`;
+    canvas.querySelector('#bodyCompareRange').addEventListener('input', (event) => {
+      const value = event.target.value;
+      canvas.querySelector('.body-before-layer').style.width = `${value}%`;
+      canvas.querySelector('.body-slider-line').style.left = `${value}%`;
+    });
+  };
+
+  wrapper.querySelectorAll('select').forEach((select) => select.addEventListener('change', renderCompare));
+  renderCompare();
+}
+
+function bodyComparisonMeasurements(a, b) {
+  const labels = { chest:'Pecho', waist:'Cintura', hips:'Cadera', arm:'Brazo', thigh:'Muslo', calf:'Gemelo' };
+  const rows = Object.keys(labels).map((key) => {
+    const first = numberValue(a.measurements?.[key]);
+    const second = numberValue(b.measurements?.[key]);
+    if (!first || !second) return '';
+    return `<span><small>${labels[key]}</small><strong>${signedNumber(second - first)} cm</strong><em>${formatWeight(first)} → ${formatWeight(second)}</em></span>`;
+  }).filter(Boolean);
+  return rows.length ? rows.join('') : '<p class="muted">No hay medidas coincidentes entre ambas fechas.</p>';
+}
+
+function openPhotoPrivacySettings() {
+  const enabled = Boolean(state.photoPrivacy?.lockEnabled);
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Privacidad</p><h2>${enabled ? 'Gestionar PIN' : 'Crear bloqueo'}</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="photoPrivacyForm" class="form-grid">
+      ${enabled ? '<label class="field"><span>PIN actual</span><input name="currentPin" type="password" inputmode="numeric" minlength="4" maxlength="8" required></label>' : ''}
+      <label class="field"><span>${enabled ? 'Nuevo PIN (vacío para quitarlo)' : 'PIN de 4–8 números'}</span><input name="newPin" type="password" inputmode="numeric" minlength="${enabled ? '0' : '4'}" maxlength="8" ${enabled ? '' : 'required'}></label>
+      <label class="field"><span>Repetir nuevo PIN</span><input name="confirmPin" type="password" inputmode="numeric" maxlength="8"></label>
+      <p class="privacy-note">El PIN se guarda transformado en este dispositivo. No podemos recuperarlo si lo olvidas.</p>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">${enabled ? 'Guardar cambios' : 'Activar bloqueo'}</button></div>
+    </form>`);
+  wrapper.querySelector('#photoPrivacyForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.target);
+    try {
+      if (enabled) {
+        const currentHash = await hashPrivatePin(data.get('currentPin'));
+        if (currentHash !== state.photoPrivacy.pinHash) throw new Error('El PIN actual no es correcto.');
+      }
+      const newPin = String(data.get('newPin') || '').trim();
+      const confirmPin = String(data.get('confirmPin') || '').trim();
+      if (!newPin && enabled) {
+        state.photoPrivacy = { lockEnabled: false, pinHash: '' };
+        photoVaultUnlocked = true;
+      } else {
+        if (newPin !== confirmPin) throw new Error('Los nuevos PIN no coinciden.');
+        state.photoPrivacy = { lockEnabled: true, pinHash: await hashPrivatePin(newPin) };
+        photoVaultUnlocked = true;
+      }
+      save();
+      wrapper._closeModal();
+      renderProfile();
+      showProfileTab('body');
+      showToast(state.photoPrivacy.lockEnabled ? 'Bloqueo activado.' : 'Bloqueo eliminado.', 'success');
+    } catch (error) {
+      showToast(error.message || 'No se pudo cambiar el PIN.', 'danger');
+    }
+  });
+}
+
+async function unlockPhotoVault(form) {
+  const pin = new FormData(form).get('pin');
+  try {
+    const hash = await hashPrivatePin(pin);
+    if (hash !== state.photoPrivacy.pinHash) throw new Error('PIN incorrecto.');
+    photoVaultUnlocked = true;
+    showProfileTab('body');
+    showToast('Álbum desbloqueado.', 'success');
+  } catch (error) {
+    showToast(error.message || 'No se pudo desbloquear.', 'danger');
+  }
 }
 
 function profileHistoryHtml(filterExerciseId = null) {
@@ -1368,6 +1784,12 @@ async function handleAppClick(event) {
     'demo-plan': createDemoPlan,
     'home-workout': () => setView('workout'),
     'quick-weight': openWeightModal,
+    'body-progress-home': () => { setView('profile'); showProfileTab('body'); },
+    'body-progress-new': openBodyProgressForm,
+    'body-progress-compare': openBodyProgressCompare,
+    'body-progress-open': () => openBodyProgressEntry(target.dataset.id),
+    'body-progress-lock': openPhotoPrivacySettings,
+    'body-progress-lock-now': () => { photoVaultUnlocked = false; showProfileTab('body'); },
     'create-folder': createRoutineFolder,
     'select-folder': () => selectRoutineFolder(target.dataset.id),
     'rename-folder': () => renameRoutineFolder(target.dataset.id),
@@ -1435,6 +1857,12 @@ function handleAppChange(event) {
   if (target.id === 'libraryEquipment') { libraryFilters.equipment = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'libraryLevel') { libraryFilters.level = target.value; libraryPageSize = 36; refreshLibraryResults(); }
   if (target.id === 'backupFile') importBackup(target.files?.[0]);
+  if (target.id === 'bodyMetricSelect') {
+    bodyMetric = target.value;
+    const chart = document.querySelector('#bodyMetricChart');
+    const labels = { chest:'Pecho', waist:'Cintura', hips:'Cadera', arm:'Brazo', thigh:'Muslo', calf:'Gemelo' };
+    if (chart) chart.innerHTML = bodyMeasurementChartHtml(state.bodyProgress || [], bodyMetric, labels[bodyMetric]);
+  }
   if (target.name === 'appearance') previewThemeFromSettingsForm();
   if (target.matches('[data-profile-tab]')) showProfileTab(target.dataset.profileTab);
 }
@@ -1469,6 +1897,7 @@ function handleAppSubmit(event) {
   if (event.target.id === 'planForm') submitPlanForm(event.target);
   if (event.target.id === 'profileForm') submitProfileForm(event.target);
   if (event.target.id === 'settingsForm') submitSettingsForm(event.target);
+  if (event.target.id === 'photoUnlockForm') unlockPhotoVault(event.target);
 }
 
 function submitPlanForm(form) {
@@ -2246,7 +2675,10 @@ function showProfileTab(tab, filterExerciseId = null) {
   const content = document.querySelector('#profileTabContent');
   if (!content) return;
   if (tab === 'history') content.innerHTML = profileHistoryHtml(filterExerciseId);
-  else if (tab === 'data') content.innerHTML = profileDataHtml();
+  else if (tab === 'body') {
+    content.innerHTML = profileBodyHtml();
+    refreshBodyProgressImages(content);
+  } else if (tab === 'data') content.innerHTML = profileDataHtml();
   else if (tab === 'settings') content.innerHTML = profileSettingsHtml();
   else {
     const bmi = calculateBMI();
@@ -2335,7 +2767,7 @@ function recordProfileWeight(weight) {
 function exportBackup() {
   const filename = `my-fit-plan-copia-${isoDay()}.json`;
   downloadJson(filename, { app: 'My Fit Plan', version: APP_VERSION, exportedAt: new Date().toISOString(), data: state });
-  showToast('Copia de seguridad preparada.', 'success');
+  showToast('Copia preparada. Las fotografías se exportan por separado desde cada revisión.', 'success');
 }
 
 async function importBackup(file) {
@@ -2352,7 +2784,7 @@ async function importBackup(file) {
 
 function resetAllData() {
   confirmAction({ title: 'Borrar todos los datos', message: 'Se eliminarán perfil, plan, historial, medidas, favoritos y ejercicios personalizados de este dispositivo.', confirmLabel: 'Borrar definitivamente', danger: true, onConfirm: () => {
-    clearRestTimer(); state = createEmptyState(); save(); applySettings(); updateProfileShortcut(); setView('home'); showToast('Datos eliminados.');
+    clearRestTimer(); clearProgressPhotoStore(); state = createEmptyState(); save(); applySettings(); updateProfileShortcut(); setView('home'); showToast('Datos eliminados.');
   }});
 }
 

@@ -1,9 +1,9 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
 
-export const STORAGE_KEY = 'myFitPlanStateV322';
-export const LEGACY_KEYS = ['myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.2.3B';
+export const STORAGE_KEY = 'myFitPlanStateV33';
+export const LEGACY_KEYS = ['myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.3';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -19,7 +19,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 322,
+  schemaVersion: 330,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -36,6 +36,11 @@ export const defaultState = {
   favorites: [],
   searchHistory: [],
   weightHistory: [],
+  bodyProgress: [],
+  photoPrivacy: {
+    lockEnabled: false,
+    pinHash: ''
+  },
   createdAt: null,
   updatedAt: null
 };
@@ -118,7 +123,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 322,
+    schemaVersion: 330,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -133,6 +138,8 @@ export function normalizeState(saved = {}) {
     favorites: Array.isArray(saved.favorites) ? [...new Set(saved.favorites)] : [],
     searchHistory: Array.isArray(saved.searchHistory) ? [...new Set(saved.searchHistory.map((item) => String(item).trim()).filter(Boolean))].slice(0, 8) : [],
     weightHistory: normalizeWeightHistory(saved.weightHistory, profile),
+    bodyProgress: normalizeBodyProgress(saved.bodyProgress),
+    photoPrivacy: normalizePhotoPrivacy(saved.photoPrivacy),
     nextWorkoutIndex: Number(saved.nextWorkoutIndex) || 0,
     createdAt: saved.createdAt || (profile ? new Date().toISOString() : null),
     updatedAt: saved.updatedAt || new Date().toISOString()
@@ -201,6 +208,38 @@ function normalizeWeightHistory(history, profile) {
     : [];
   if (!clean.length && numberValue(profile?.weight) > 0) clean.push({ id: uid('weight'), date: isoDay(new Date()), weight: numberValue(profile.weight) });
   return clean.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
+
+function normalizeBodyProgress(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries.map((entry) => ({
+    id: entry.id || uid('body'),
+    date: entry.date || isoDay(entry.createdAt || new Date()),
+    weight: numberValue(entry.weight) || '',
+    measurements: {
+      chest: numberValue(entry.measurements?.chest) || '',
+      waist: numberValue(entry.measurements?.waist) || '',
+      hips: numberValue(entry.measurements?.hips) || '',
+      arm: numberValue(entry.measurements?.arm) || '',
+      thigh: numberValue(entry.measurements?.thigh) || '',
+      calf: numberValue(entry.measurements?.calf) || ''
+    },
+    photos: {
+      front: entry.photos?.front || '',
+      side: entry.photos?.side || '',
+      back: entry.photos?.back || ''
+    },
+    notes: String(entry.notes || ''),
+    createdAt: entry.createdAt || new Date().toISOString()
+  })).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+function normalizePhotoPrivacy(privacy = {}) {
+  return {
+    lockEnabled: Boolean(privacy.lockEnabled && privacy.pinHash),
+    pinHash: String(privacy.pinHash || '')
+  };
 }
 
 function normalizeCustomExercise(item = {}) {
