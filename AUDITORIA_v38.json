@@ -1,0 +1,89 @@
+{
+  "app": "My Fit Plan",
+  "version": "3.8",
+  "generatedAt": "2026-08-06T15:44:03",
+  "summary": {
+    "filesReviewed": 174,
+    "javascriptModules": 21,
+    "clickActionsReferenced": 97,
+    "clickActionsHandled": 97,
+    "pwaShellResources": 31,
+    "responsiveCasesPassed": 9
+  },
+  "checks": {
+    "javascriptSyntax": true,
+    "clickActionsCovered": true,
+    "serviceWorkerShellComplete": true,
+    "manifestValid": true,
+    "adaptiveBootPresent": true,
+    "adaptiveRuntimePresent": true,
+    "mobileRailHardHidden": true,
+    "mobileDockForced": true,
+    "compactRailPresent": true,
+    "keyboardProtectionPresent": true,
+    "horizontalOverflowProtection": true
+  },
+  "responsiveValidation": [
+    {
+      "viewport": "320×720",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "375×812",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "390×844",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "393×852",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "430×932",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "980×844 with phone screen 390×844",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "768×1024",
+      "expectedMode": "mobile",
+      "result": "passed"
+    },
+    {
+      "viewport": "1024×768",
+      "expectedMode": "compact",
+      "result": "passed"
+    },
+    {
+      "viewport": "1366×900",
+      "expectedMode": "desktop",
+      "result": "passed"
+    }
+  ],
+  "navigationValidation": {
+    "views": [
+      "home",
+      "plan",
+      "workout",
+      "library",
+      "profile"
+    ],
+    "controlCenter": "passed",
+    "orientationChange": "passed",
+    "horizontalOverflow": "not detected"
+  },
+  "limitations": [
+    "El service worker se validó de forma estática; el modo sin conexión debe comprobarse una vez desplegado en GitHub Pages.",
+    "La persistencia de fotografías debe comprobarse en el iPhone real."
+  ]
+}

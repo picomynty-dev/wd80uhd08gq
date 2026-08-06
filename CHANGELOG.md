@@ -1,3 +1,18 @@
+# My Fit Plan v3.8
+
+- Corrige el rail de escritorio visible en iPhone.
+- Añade detector adaptativo independiente de las media queries.
+- Añade modos mobile, compact y desktop.
+- Rediseña el dock inferior para 320–430 px.
+- Añade rail compacto para tablet y ventanas intermedias.
+- Corrige orientación horizontal y teclado de iOS.
+- Evita desplazamiento horizontal del documento.
+- Mejora modales y acciones en móvil.
+- Añade diagnóstico de layout al Centro de control.
+- Añade `aria-current` a la navegación.
+- Permite cualquier orientación en la PWA.
+- Renueva almacenamiento y caché a v3.8.
+
 # My Fit Plan v3.7
 
 - Remodelación completa del HUD móvil y escritorio.

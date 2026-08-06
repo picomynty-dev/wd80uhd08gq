@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Entrenamiento inteligente, rutinas, progresión, calendario y seguimiento local.",
+  "description": "Entrenamiento inteligente, rutinas, progresión y seguimiento con HUD adaptativo.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -44,5 +44,6 @@
         }
       ]
     }
-  ]
+  ],
+  "orientation": "any"
 }
