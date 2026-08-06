@@ -1,15 +1,48 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Crea, organiza y entrena tus propias rutinas con planes profesionales y seguimiento serie a serie.",
+  "description": "Entrenamiento inteligente, rutinas, progresión, calendario y seguimiento local.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#070b14",
-  "theme_color": "#0a0f1c",
-  "orientation": "portrait-primary",
+  "background_color": "#05080d",
+  "theme_color": "#070b12",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Entrenar",
+      "short_name": "Entrenar",
+      "url": "./?view=workout",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ejercicios",
+      "short_name": "Ejercicios",
+      "url": "./?view=library",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

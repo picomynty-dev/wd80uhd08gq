@@ -3,40 +3,70 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0f1c">
-  <meta name="description" content="My Fit Plan: registra tus entrenamientos serie a serie, controla descansos y observa tu progreso.">
+  <meta name="theme-color" content="#070b12">
+  <meta name="description" content="My Fit Plan: entrenamiento inteligente, rutinas, progresión y seguimiento personal.">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="My Fit Plan">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css?v=36">
+  <link rel="stylesheet" href="./styles.css?v=37">
   <title>My Fit Plan</title>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <button class="brand" type="button" data-nav="home" aria-label="Ir al inicio">
+  <div class="hud-background" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="app-shell hud-shell">
+    <aside class="desktop-rail" aria-label="Navegación principal de escritorio">
+      <button class="rail-brand" type="button" data-nav="home" aria-label="Ir al inicio">
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span><strong>MY FIT</strong><small>PLAN · TRAIN SMART</small></span>
+        <span><strong>MY FIT</strong><small>PLAN</small></span>
       </button>
-      <div class="topbar-actions">
-        <span class="version-badge" aria-label="Versión 3.6">v3.6</span>
-        <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
-        <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
+      <nav class="rail-nav">
+        <button type="button" data-nav="home" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1A1.2 1.2 0 0 1 19.8 21h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><span><strong>Inicio</strong><small>Resumen</small></span></button>
+        <button type="button" data-nav="plan" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><span><strong>Plan</strong><small>Rutinas</small></span></button>
+        <button type="button" data-nav="workout" class="nav-item rail-train"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><span><strong>Entrenar</strong><small>Sesión</small></span></button>
+        <button type="button" data-nav="library" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><span><strong>Ejercicios</strong><small>Biblioteca</small></span></button>
+        <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><span><strong>Perfil</strong><small>Progreso</small></span></button>
+      </nav>
+      <div class="rail-footer">
+        <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Centro de control</strong><small id="railHealthText">Sistema operativo</small></div></button>
+        <div class="rail-version"><span class="status-dot"></span><span>v3.7 · Stable HUD</span></div>
       </div>
-    </header>
+    </aside>
 
-    <button id="updateBanner" class="update-banner" type="button" hidden></button>
-    <main id="app" tabindex="-1" aria-live="polite"></main>
+    <section class="app-stage">
+      <header class="topbar hud-topbar">
+        <button class="mobile-brand" type="button" data-nav="home" aria-label="Ir al inicio">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span><strong>MY FIT</strong><small>PLAN</small></span>
+        </button>
+        <div class="hud-context">
+          <small id="hudEyebrow">MY FIT PLAN · CONTROL</small>
+          <strong id="hudTitle">Panel de control</strong>
+          <span id="hudSubtitle">Resumen de entrenamiento y progreso</span>
+        </div>
+        <div class="topbar-actions">
+          <span id="networkStatus" class="network-status is-online"><span class="network-dot"></span><span class="network-label">Online</span></span>
+          <span class="version-badge" aria-label="Versión 3.7">v3.7</span>
+          <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
+          <button id="hudControlButton" class="hud-control-button" type="button" data-action="hud-control" aria-label="Abrir centro de control"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></button>
+          <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
+        </div>
+      </header>
+
+      <button id="activeSessionBar" class="active-session-bar" type="button" data-nav="workout" hidden></button>
+      <button id="updateBanner" class="update-banner" type="button" hidden></button>
+      <button id="hudErrorBanner" class="hud-error-banner" type="button" data-action="hud-control" hidden></button>
+      <main id="app" tabindex="-1" aria-live="polite"></main>
+    </section>
 
     <nav class="bottom-nav premium-nav" aria-label="Navegación principal">
-      <button type="button" data-nav="home" class="nav-item active"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><small>Inicio</small></button>
-      <button type="button" data-nav="plan" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><small>Plan</small></button>
-      <button type="button" data-nav="workout" class="nav-item nav-train"><span class="nav-icon train-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><small>Entrenar</small></button>
-      <button type="button" data-nav="library" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><small>Ejercicios</small></button>
-      <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><small>Perfil</small></button>
+      <button type="button" data-nav="home" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1A1.2 1.2 0 0 1 19.8 21h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><small>Inicio</small></button>
+      <button type="button" data-nav="plan" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><small>Plan</small></button>
+      <button type="button" data-nav="workout" class="nav-item nav-train"><span class="nav-train-orbit"></span><span class="nav-icon train-icon"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><small>Entrenar</small></button>
+      <button type="button" data-nav="library" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><small>Ejercicios</small></button>
+      <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><small>Perfil</small></button>
     </nav>
   </div>
 
@@ -46,59 +76,32 @@
     window.addEventListener('DOMContentLoaded', () => {
       if (window.location.protocol === 'file:') {
         const app = document.querySelector('#app');
-        const nav = document.querySelector('.bottom-nav');
-        if (nav) nav.hidden = true;
-        if (app) app.innerHTML = `
-          <section class="page boot-help">
-            <div class="hero">
-              <p class="eyebrow">My Fit Plan 3.1</p>
-              <h1>Abre la aplicación desde su enlace web</h1>
-              <p>Este archivo no puede ejecutarse correctamente al abrir <strong>index.html</strong> directamente. Los módulos de la aplicación necesitan GitHub Pages o un servidor local.</p>
-              <p class="notice">En el ordenador, abre la misma dirección de GitHub Pages que utilizas en el iPhone. No abras el archivo desde la carpeta.</p>
-            </div>
-          </section>`;
+        document.querySelectorAll('.bottom-nav,.desktop-rail').forEach((node) => node.hidden = true);
+        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 3.7</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
       }
     });
     window.setTimeout(() => {
       if (window.__mfpBooted || window.location.protocol === 'file:') return;
       const app = document.querySelector('#app');
-      if (app && !app.innerHTML.trim()) {
-        app.innerHTML = `
-          <section class="page boot-help">
-            <div class="hero">
-              <p class="eyebrow">Error de carga</p>
-              <h1>No se ha podido iniciar My Fit Plan</h1>
-              <p>Recarga la página. Si continúa igual, comprueba que la carpeta <strong>js</strong> está subida completa junto a <strong>index.html</strong>.</p>
-            </div>
-          </section>`;
-      }
-    }, 3500);
+      if (app && !app.innerHTML.trim()) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">Recuperación</p><h1>No se ha podido iniciar My Fit Plan</h1><p>Recarga la página. Si continúa igual, comprueba que la carpeta <strong>js</strong> está subida completa.</p><button class="button button-primary" type="button" onclick="location.reload()">Recargar</button></div></section>`;
+    }, 4000);
   </script>
-
   <script>
     (() => {
       const marker = 'mfp-clean-runtime-version';
-      if (localStorage.getItem(marker) === '36') return;
-      localStorage.setItem(marker, '36');
-
+      if (localStorage.getItem(marker) === '37') return;
+      localStorage.setItem(marker, '37');
       Promise.all([
-        'caches' in window
-          ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-          : Promise.resolve(),
-        'serviceWorker' in navigator
-          ? navigator.serviceWorker.getRegistrations().then((registrations) =>
-              Promise.all(registrations.map((registration) => registration.unregister()))
-            )
-          : Promise.resolve()
+        'caches' in window ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))) : Promise.resolve(),
+        'serviceWorker' in navigator ? navigator.serviceWorker.getRegistrations().then((items) => Promise.all(items.map((item) => item.unregister()))) : Promise.resolve()
       ]).then(() => {
         const url = new URL(window.location.href);
-        url.searchParams.set('v', '36');
+        url.searchParams.set('v', '37');
         url.searchParams.set('fresh', Date.now().toString());
         window.location.replace(url.toString());
       }).catch(() => {});
     })();
   </script>
-
-  <script type="module" src="./js/app.js?v=36"></script>
+  <script type="module" src="./js/app.js?v=37"></script>
 </body>
 </html>

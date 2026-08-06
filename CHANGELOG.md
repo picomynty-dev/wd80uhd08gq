@@ -1,3 +1,23 @@
+# My Fit Plan v3.7
+
+- Remodelación completa del HUD móvil y escritorio.
+- Centro de control, diagnóstico y exportación de incidencias.
+- Error boundary con pantalla de recuperación.
+- Corrige acciones dentro de modales que no respondían.
+- Corrige el botón “Entrenar este día” para iniciar la rutina directamente.
+- Corrige el origen de sesiones My Fit Plan en historial y finalización.
+- Evita duplicar listeners del tema en cada guardado.
+- Mejora el borrado asíncrono de fotografías y datos.
+- Rehace la estrategia de caché y actualización PWA.
+- Mejora accesibilidad, foco, botones, iconos y estados online/offline.
+- Corrige los atajos PWA de Entrenar y Ejercicios.
+- Evita ejecutar el diagnóstico completo cuatro veces por segundo durante el descanso.
+- Evita falsos errores por ejercicios personalizados eliminados del historial.
+- Mejora el aviso cuando el navegador bloquea IndexedDB para fotografías.
+- Amplía los objetivos táctiles pequeños.
+- Permite usar la PWA en orientación vertical u horizontal.
+- Elimina recursos multimedia antiguos no utilizados y reduce el proyecto.
+
 # My Fit Plan v3.6
 
 - Añade motor de doble progresión.

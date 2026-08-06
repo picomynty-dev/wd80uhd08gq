@@ -1,25 +1,43 @@
-# My Fit Plan v3.6 · Progresión automática y cargas inteligentes
+# My Fit Plan v3.7 · Estabilización, supervisión de fallos y nuevo HUD
 
-## Motor de progresión
-- Analiza hasta ocho sesiones comparables por ejercicio.
-- Aplica doble progresión por carga y repeticiones.
-- Sugiere subir, mantener o reducir la carga.
-- Ajusta objetivos de ejercicios por tiempo y peso corporal.
-- Tiene en cuenta RIR y el check-in del día.
-- Detecta estancamientos de tres sesiones.
-- Muestra nivel de confianza y evidencias.
+Esta versión convierte la v3.6 en una candidata estable para el cierre del proyecto.
 
-## Descarga inteligente
-- Observa sueño, energía, molestias, densidad de entrenamiento y caídas de
-  rendimiento.
-- Nunca se aplica automáticamente.
-- Al aceptarla reduce aproximadamente un 10 % la carga y una serie por
-  ejercicio solo durante la sesión actual.
+## Nuevo HUD
 
-## Historial avanzado
-- Mejor carga.
-- 1RM estimado.
-- Mejor volumen.
-- Tendencia gráfica.
-- Últimas cinco referencias.
-- Panel general de progresión en Inicio.
+- Barra lateral profesional en escritorio.
+- Dock flotante optimizado en móvil.
+- Botón central de entrenamiento.
+- Iconos SVG coherentes en navegación y acciones.
+- Cabecera contextual según la pantalla.
+- Indicador online/sin conexión.
+- Acceso persistente a la sesión en curso.
+- Diseño responsive sin desplazamiento horizontal.
+
+## Supervisión y recuperación
+
+- Centro de control con diagnóstico local.
+- Exportación de informes de incidencias.
+- Pantalla segura cuando falla un renderizado.
+- Captura de errores globales y promesas rechazadas.
+- Normalización de datos dañados.
+- Copia de seguridad e importación comprobadas.
+
+## Correcciones principales
+
+- Acciones dentro de modales reparadas.
+- Rutina, My Fit Plan y personalizado conservan sus flujos separados.
+- Origen de My Fit Plan corregido en historial y finalización.
+- Calendario, reprogramación y entrenamiento desde agenda comprobados.
+- Listener de tema duplicado eliminado.
+- Borrado de fotografías ahora espera a IndexedDB.
+- Mensaje claro cuando Safari bloquea el almacenamiento de fotografías.
+- Atajos PWA de Entrenar y Ejercicios ahora abren su pantalla correcta.
+- Estrategia de caché y actualización rehecha.
+- Diagnóstico histórico sin falsos errores tras eliminar un ejercicio personalizado.
+- Eliminados dos paquetes multimedia antiguos no utilizados.
+
+## Migración
+
+La v3.7 importa automáticamente los datos de la v3.6 y versiones anteriores. No es necesario borrar la aplicación.
+
+Consulta `AUDITORIA_v37.md` para ver la matriz completa de pruebas y las limitaciones pendientes de comprobar en un dispositivo real.
