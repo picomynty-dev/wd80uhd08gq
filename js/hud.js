@@ -125,3 +125,97 @@ export function pageHudMeta(view, state = {}) {
   const [title, subtitle] = map[view] || map.home;
   return { title, subtitle, eyebrow: active ? 'MY FIT PLAN · LIVE' : 'MY FIT PLAN · CONTROL' };
 }
+
+
+let adaptiveHudBound = false;
+let adaptiveHudFrame = 0;
+
+function hudViewportMetrics() {
+  const values = [
+    window.innerWidth,
+    window.visualViewport?.width,
+    document.documentElement.clientWidth
+  ].map(Number).filter((value) => Number.isFinite(value) && value > 0);
+  const width = values.length ? Math.min(...values) : 1024;
+  const height = Number(window.visualViewport?.height || window.innerHeight || 768);
+  const screenWidth = Number(window.screen?.width || width);
+  const screenHeight = Number(window.screen?.height || height);
+  const shortSide = Math.min(screenWidth, screenHeight);
+  const touch = Number(navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+  const phone = touch && shortSide <= 600;
+  const keyboardOpen = touch
+    && document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"]')
+    && window.visualViewport
+    && window.visualViewport.height < window.innerHeight * 0.74;
+
+  return {
+    width,
+    height,
+    shortSide,
+    touch,
+    phone,
+    keyboardOpen,
+    orientation: width > height ? 'landscape' : 'portrait'
+  };
+}
+
+export function getHudLayoutSnapshot() {
+  const metrics = hudViewportMetrics();
+  const mode = metrics.phone || metrics.width <= 820
+    ? 'mobile'
+    : metrics.width <= 1180
+      ? 'compact'
+      : 'desktop';
+  const rail = document.querySelector('#desktopRail, .desktop-rail');
+  const dock = document.querySelector('#mobileDock, .bottom-nav');
+  const stage = document.querySelector('.app-stage');
+  const styleVisible = (node) => Boolean(node)
+    && getComputedStyle(node).display !== 'none'
+    && getComputedStyle(node).visibility !== 'hidden';
+
+  return {
+    ...metrics,
+    mode,
+    railVisible: styleVisible(rail),
+    dockVisible: styleVisible(dock),
+    documentWidth: document.documentElement.scrollWidth,
+    stageWidth: stage?.getBoundingClientRect?.().width || 0
+  };
+}
+
+export function syncAdaptiveHudMode() {
+  window.cancelAnimationFrame(adaptiveHudFrame);
+  adaptiveHudFrame = window.requestAnimationFrame(() => {
+    const snapshot = getHudLayoutSnapshot();
+    const root = document.documentElement;
+    root.dataset.hudMode = snapshot.mode;
+    root.dataset.hudOrientation = snapshot.orientation;
+    root.style.setProperty('--mfp-viewport-width', `${Math.round(snapshot.width)}px`);
+    root.style.setProperty('--mfp-viewport-height', `${Math.round(snapshot.height)}px`);
+    document.body?.classList.toggle('hud-keyboard-open', snapshot.keyboardOpen);
+    document.body?.classList.toggle('hud-touch-device', snapshot.touch);
+  });
+}
+
+export function initAdaptiveHud() {
+  if (adaptiveHudBound) {
+    syncAdaptiveHudMode();
+    return;
+  }
+  adaptiveHudBound = true;
+  syncAdaptiveHudMode();
+
+  const sync = () => syncAdaptiveHudMode();
+  window.addEventListener('resize', sync, { passive: true });
+  window.addEventListener('orientationchange', sync, { passive: true });
+  window.addEventListener('pageshow', sync, { passive: true });
+  window.visualViewport?.addEventListener('resize', sync, { passive: true });
+  window.visualViewport?.addEventListener('scroll', sync, { passive: true });
+  document.addEventListener('focusin', sync, true);
+  document.addEventListener('focusout', () => window.setTimeout(sync, 80), true);
+
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(sync);
+    observer.observe(document.documentElement);
+  }
+}

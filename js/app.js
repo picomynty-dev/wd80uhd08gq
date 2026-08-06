@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=37';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=37';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=37';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=38';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=38';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=38';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=37';
+} from './stats.js?v=38';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=37';
+} from './coach.js?v=38';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=37';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=37';
+} from './adaptive.js?v=38';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=38';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=37';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=37';
+} from './calendar-planner.js?v=38';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=38';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=37';
+} from './progression-engine.js?v=38';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=37';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=37';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=37';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=37';
-import { decorateInteractiveElements, hudIcon, pageHudMeta } from './hud.js?v=37';
+} from './utils.js?v=38';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=38';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=38';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=38';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=38';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -81,7 +81,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=37';
+} from './photo-progress.js?v=38';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -127,6 +127,7 @@ init();
 
 function init() {
   window.__mfpBooted = true;
+  initAdaptiveHud();
   applySettings();
   bindSystemThemeListener();
   updateProfileShortcut();
@@ -4673,6 +4674,8 @@ function updateLiveDuration() {
 
 
 function updateHud() {
+  syncAdaptiveHudMode();
+  document.body.dataset.currentView = currentView;
   const meta = pageHudMeta(currentView, state);
   const title = document.querySelector('#hudTitle');
   const subtitle = document.querySelector('#hudSubtitle');
@@ -4690,7 +4693,10 @@ function updateHud() {
 
   document.querySelectorAll('.nav-item').forEach((item) => {
     const activeNav = currentView === 'calendar' ? 'plan' : currentView;
-    item.classList.toggle('active', item.dataset.nav === activeNav);
+    const active = item.dataset.nav === activeNav;
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
   });
 
   const health = getHudHealth();
@@ -4739,7 +4745,14 @@ function runHudHealthCheck() {
   const nextIndexValid = !state.plan?.days?.length || (state.nextWorkoutIndex >= 0 && state.nextWorkoutIndex < state.plan.days.length);
   const plannerValid = !state.plan || !state.planner || state.planner.planId === state.plan.id;
   const workoutValid = !state.activeWorkout || Boolean(state.activeWorkout.exercises?.length);
+  const layout = getHudLayoutSnapshot();
+  const responsiveValid = layout.mode === 'mobile'
+    ? !layout.railVisible && layout.dockVisible
+    : layout.railVisible && !layout.dockVisible;
+  const horizontalOverflow = layout.documentWidth > Math.ceil(layout.width) + 2;
 
+  add('responsive', responsiveValid, 'Navegación adaptativa', `${layout.mode} · rail ${layout.railVisible ? 'visible' : 'oculto'} · dock ${layout.dockVisible ? 'visible' : 'oculto'}`);
+  add('viewport', !horizontalOverflow, 'Anchura de interfaz', horizontalOverflow ? `El documento mide ${layout.documentWidth}px para un viewport de ${Math.round(layout.width)}px.` : 'Sin desplazamiento horizontal.');
   add('storage', (() => { try { const key='__mfp_health__'; localStorage.setItem(key,'1'); localStorage.removeItem(key); return true; } catch { return false; } })(), 'Guardado local', 'El navegador permite escribir datos.');
   add('profile', !state.onboardingCompleted || Boolean(state.profile), 'Perfil', state.profile ? 'Perfil disponible.' : 'Falta el perfil.');
   add('plan', planValid, 'Rutina activa', state.plan?.days?.length ? `${state.plan.days.length} días configurados.` : 'No hay una rutina válida.');
@@ -4784,7 +4797,12 @@ function exportHudDiagnostics() {
   const health = getHudHealth(true);
   downloadJson(`my-fit-plan-diagnostico-${isoDay()}.json`, {
     app: 'My Fit Plan', version: APP_VERSION, generatedAt: new Date().toISOString(),
-    environment: { online: navigator.onLine !== false, userAgent: navigator.userAgent, standalone: window.matchMedia?.('(display-mode: standalone)').matches || false },
+    environment: {
+      online: navigator.onLine !== false,
+      userAgent: navigator.userAgent,
+      standalone: window.matchMedia?.('(display-mode: standalone)').matches || false,
+      layout: getHudLayoutSnapshot()
+    },
     counts: { sessions: state.history.length, folders: state.routineFolders.length, customExercises: state.customExercises.length, bodyEntries: state.bodyProgress.length },
     health, runtimeIssues
   });
@@ -4825,7 +4843,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=37', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=38', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
