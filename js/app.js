@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=36';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=36';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=36';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=37';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=37';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=37';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=36';
+} from './stats.js?v=37';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=36';
+} from './coach.js?v=37';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=36';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=36';
+} from './adaptive.js?v=37';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=37';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=36';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=36';
+} from './calendar-planner.js?v=37';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=37';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=36';
+} from './progression-engine.js?v=37';
 import {
   clamp,
   clone,
@@ -67,10 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=36';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=36';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=36';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=36';
+} from './utils.js?v=37';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=37';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=37';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=37';
+import { decorateInteractiveElements, hudIcon, pageHudMeta } from './hud.js?v=37';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -80,13 +81,16 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=36';
+} from './photo-progress.js?v=37';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
 const profileShortcut = document.querySelector('#profileShortcut');
 const restTimerDock = document.querySelector('#restTimerDock');
 const updateBanner = document.querySelector('#updateBanner');
+const activeSessionBar = document.querySelector('#activeSessionBar');
+const hudErrorBanner = document.querySelector('#hudErrorBanner');
+const networkStatus = document.querySelector('#networkStatus');
 const root = document.documentElement;
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -113,6 +117,11 @@ let recommendationCacheKey = '';
 let recommendationPreviewHistory = [];
 let showOptionalAlternative = false;
 let plannerWeekOffset = 0;
+let systemThemeListenerBound = false;
+let uiObserver = null;
+let cachedHudHealth = null;
+let cachedHudHealthAt = 0;
+const runtimeIssues = [];
 
 init();
 
@@ -122,18 +131,23 @@ function init() {
   bindSystemThemeListener();
   updateProfileShortcut();
   bindGlobalEvents();
+  bindRuntimeGuards();
+  initUiObserver();
   registerServiceWorker();
   restoreRestTimer();
+  updateHud();
   if (!state.profile) renderWelcome();
   else if (!state.onboardingCompleted) renderOnboardingUpgrade();
-  else setView('home');
+  else setView(requestedInitialView());
+}
+
+function requestedInitialView() {
+  const requested = new URLSearchParams(window.location.search).get('view');
+  return ['home', 'plan', 'calendar', 'workout', 'library', 'profile'].includes(requested) ? requested : 'home';
 }
 
 function bindGlobalEvents() {
-  document.querySelectorAll('[data-nav]').forEach((button) => {
-    button.addEventListener('click', () => setView(button.dataset.nav));
-  });
-  app.addEventListener('click', handleAppClick);
+  document.addEventListener('click', handleAppClick);
   app.addEventListener('change', handleAppChange);
   app.addEventListener('input', handleAppInput);
   app.addEventListener('submit', handleAppSubmit);
@@ -155,8 +169,52 @@ function bindGlobalEvents() {
     deferredInstallPrompt = null;
     installButton.hidden = true;
   });
+
+  window.addEventListener('online', updateHud);
+  window.addEventListener('offline', updateHud);
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      openHudControlCenter();
+    }
+  });
 }
 
+function bindRuntimeGuards() {
+  window.addEventListener('error', (event) => reportRuntimeIssue(event.error || new Error(event.message), 'Error global'));
+  window.addEventListener('unhandledrejection', (event) => reportRuntimeIssue(event.reason || new Error('Promesa rechazada'), 'Promesa no controlada'));
+}
+
+function initUiObserver() {
+  if (uiObserver) return;
+  uiObserver = new MutationObserver((records) => {
+    records.forEach((record) => record.addedNodes.forEach((node) => {
+      if (!(node instanceof Element)) return;
+      decorateInteractiveElements(node);
+      if (node.matches('.modal-backdrop')) decorateInteractiveElements(node);
+    }));
+  });
+  uiObserver.observe(document.body, { childList: true, subtree: true });
+  decorateInteractiveElements(document);
+}
+
+function reportRuntimeIssue(error, context = 'Aplicación') {
+  const issue = {
+    id: uid('runtime-error'),
+    context,
+    message: String(error?.message || error || 'Error desconocido'),
+    stack: String(error?.stack || ''),
+    createdAt: new Date().toISOString()
+  };
+  runtimeIssues.unshift(issue);
+  runtimeIssues.splice(8);
+  console.error(`[My Fit Plan] ${context}:`, error);
+  if (hudErrorBanner) {
+    hudErrorBanner.hidden = false;
+    hudErrorBanner.innerHTML = `${hudIcon('warning')}<span><strong>Se ha detectado una incidencia</strong><small>${esc(issue.message)}</small></span><b>Revisar</b>`;
+  }
+  updateHud();
+}
 
 function setOnboardingMode(enabled) {
   document.body.classList.toggle('onboarding-mode', Boolean(enabled));
@@ -180,7 +238,14 @@ function setView(view) {
     library: renderLibrary,
     profile: renderProfile
   };
-  (renderers[view] || renderHome)();
+  try {
+    (renderers[view] || renderHome)();
+    decorateInteractiveElements(app);
+  } catch (error) {
+    reportRuntimeIssue(error, `Renderizado: ${view}`);
+    renderRecoveryScreen(view, error);
+  }
+  updateHud();
   app.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: state.settings.reduceMotion ? 'auto' : 'smooth' });
 }
@@ -198,14 +263,24 @@ function ensurePlanner() {
 }
 
 function save() {
-  syncActiveRoutineFromPlan();
-  state = persistState(state);
-  applySettings();
-  bindSystemThemeListener();
-  updateProfileShortcut();
+  try {
+    syncActiveRoutineFromPlan();
+    state = persistState(state);
+    cachedHudHealthAt = 0;
+    applySettings();
+    updateProfileShortcut();
+    updateHud();
+    return true;
+  } catch (error) {
+    reportRuntimeIssue(error, 'Guardado local');
+    showToast('No se pudo guardar. Exporta una copia desde el centro de control.', 'danger');
+    return false;
+  }
 }
 
 function bindSystemThemeListener() {
+  if (systemThemeListenerBound) return;
+  systemThemeListenerBound = true;
   const refresh = () => {
     if ((state.settings.appearance || 'system') === 'system') applySettings();
   };
@@ -2055,7 +2130,7 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
       sessionSource: resolved.source || 'routine',
       sourceLabel: resolved.sourceLabel,
       sourceReason: resolved.reason,
-      sourcePlanDayIndex: resolved.planDayIndex
+      sourcePlanDayIndex: resolved.sourcePlanDayIndex ?? resolved.planDayIndex
     }
   );
 
@@ -2717,7 +2792,11 @@ function openBodyProgressForm() {
       showProfileTab('body');
       showToast('Revisión corporal guardada.', 'success');
     } catch (error) {
-      showToast(error.message || 'No se pudo guardar la revisión.', 'danger');
+      const storageBlocked = /indexed database|idbfactory|denied|quota|almacenamiento/i.test(String(error?.message || ''));
+      if (storageBlocked) reportRuntimeIssue(error, 'Almacenamiento privado de fotografías');
+      showToast(storageBlocked
+        ? 'El navegador no permite guardar fotografías ahora. Sal del modo privado o quita la foto para guardar solo las medidas.'
+        : (error.message || 'No se pudo guardar la revisión.'), 'danger');
       submit.disabled = false;
       submit.textContent = 'Guardar revisión';
     }
@@ -3175,17 +3254,18 @@ function renderLocked(title, description) {
 }
 
 async function handleAppClick(event) {
+  const globalNav = event.target.closest('[data-nav]');
+  if (globalNav) return setView(globalNav.dataset.nav);
   const nav = event.target.closest('[data-nav-local]');
   if (nav) return setView(nav.dataset.navLocal);
   const profileTab = event.target.closest('[data-profile-tab]');
   if (profileTab) return showProfileTab(profileTab.dataset.profileTab);
   const target = event.target.closest('[data-action]');
-  if (!target) return;
+  if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
   const action = target.dataset.action;
 
   const actions = {
     'start-questionnaire': startOnboarding,
-    'open-questionnaire': startOnboarding,
     'onboarding-start': startOnboarding,
     'onboarding-keep-current': keepCurrentConfiguration,
     'onboarding-next': () => { captureOnboardingStep(); if (!validateOnboardingStep()) return; onboardingStep = Math.min(6, onboardingStep + 1); renderOnboarding(); },
@@ -3196,8 +3276,6 @@ async function handleAppClick(event) {
     'training-routine-direct': startRoutineWorkoutDirect,
     'training-mfp': startMfpWorkoutCheckin,
     'training-refresh-recommended': rotateRecommendedSession,
-    'training-show-alternative': showAlternativeOption,
-    'training-restore-coach': restoreCoachRecommendation,
     'training-custom': startCustomWorkoutBuilder,
     'workout-selector-back': backToWorkoutSelector,
     'custom-session-add': () => openExercisePicker({ mode: 'custom-session-add' }),
@@ -3250,7 +3328,6 @@ async function handleAppClick(event) {
     'add-set': () => addSet(Number(target.dataset.exercise)),
     'manual-rest': () => manualRest(Number(target.dataset.exercise)),
     'remove-set': () => removeSet(Number(target.dataset.exercise), Number(target.dataset.set)),
-    'apply-suggested-weight': () => applySuggestedWeight(Number(target.dataset.exercise), numberValue(target.dataset.weight)),
     'apply-progression-target': () => applyProgressionTarget(Number(target.dataset.exercise)),
     'progression-details': () => openWorkoutProgressionDetails(Number(target.dataset.exercise)),
     'progression-dashboard': openProgressionDashboard,
@@ -3278,9 +3355,21 @@ async function handleAppClick(event) {
     'clear-history-filter': () => showProfileTab('history'),
     'export-backup': exportBackup,
     'accent-preset': () => applyAccentPreset(target.dataset.color),
-    'reset-data': resetAllData
+    'reset-data': resetAllData,
+    'hud-control': openHudControlCenter,
+    'hud-run-diagnostics': openHudDiagnostics,
+    'hud-export-diagnostics': exportHudDiagnostics,
+    'hud-repair-data': repairApplicationState,
+    'hud-force-update': forceApplicationUpdate,
+    'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
-  actions[action]?.();
+  try {
+    const result = actions[action]?.();
+    if (result && typeof result.catch === 'function') result.catch((error) => reportRuntimeIssue(error, `Acción: ${action}`));
+  } catch (error) {
+    reportRuntimeIssue(error, `Acción: ${action}`);
+    showToast('La acción no pudo completarse. Revisa el centro de control.', 'danger');
+  }
 }
 
 function handleAppChange(event) {
@@ -3681,11 +3770,22 @@ function restoreRecommendedPlan() {
 
 function startSpecificDay(dayIndex) {
   const prepare = () => {
+    const day = state.plan?.days?.[dayIndex];
+    if (!day?.exercises?.length) return showToast('Este día no tiene ejercicios.', 'danger');
     state.nextWorkoutIndex = dayIndex;
-    pendingWorkoutSelection = routineSelection(dayIndex);
+    pendingWorkoutSelection = null;
     customWorkoutDraft = null;
+    const workout = createActiveWorkout(dayIndex, {
+      dayOverride: day,
+      sessionSource: 'routine',
+      sourceLabel: 'Tu rutina',
+      sourceReason: 'Día elegido manualmente desde el plan.',
+      sourcePlanDayIndex: dayIndex
+    });
+    if (!workout) return showToast('No se pudo preparar este entrenamiento.', 'danger');
     save();
     setView('workout');
+    showToast('Día de rutina preparado.', 'success');
   };
 
   if (state.activeWorkout) {
@@ -4244,8 +4344,13 @@ function openSessionCompleted(session) {
   const deloadTag = session.deload?.applied
     ? '<span class="completion-deload-tag">Descarga aplicada</span>'
     : '';
-  const sourceTag = session.sessionSource && session.sessionSource !== 'routine'
-    ? `<span class="completion-source-tag">${session.sessionSource === 'recommended' ? 'Recomendada por MFP' : 'Entrenamiento personalizado'}</span>`
+  const completionSourceLabel = session.sourceLabel || ({
+    mfp: 'My Fit Plan',
+    recommended: 'Recomendada por MFP',
+    custom: 'Entrenamiento personalizado'
+  }[session.sessionSource] || '');
+  const sourceTag = completionSourceLabel && completionSourceLabel !== 'Tu rutina'
+    ? `<span class="completion-source-tag">${esc(completionSourceLabel)}</span>`
     : '';
   const wrapper = openModal(`<div class="completion-hero"><div class="completion-icon">✓</div><p class="eyebrow">Sesión completada</p><h2>${esc(session.name)}</h2><p>${formatDuration(session.durationSeconds)} · ${session.exercises.length} ejercicios · ${formatWeight(session.volume)} kg de volumen</p>${adaptationTag}${deloadTag}${sourceTag}</div>${session.prs.length ? `<div class="pr-celebration"><h3>Nuevos récords</h3>${session.prs.map((pr) => `<div class="record-row"><span>${esc(pr.name)}</span><strong>${pr.type === 'weight' ? `${formatWeight(pr.value)} kg` : `${pr.value} reps`}</strong></div>`).join('')}</div>` : '<p class="muted">La constancia también es progreso. Tu historial se ha actualizado.</p>'}${coachBlock}<button class="button button-primary button-block" type="button" id="completedContinue">Ver mi progreso</button>`, {
     onClose: () => setView(destination)
@@ -4447,8 +4552,15 @@ async function importBackup(file) {
 }
 
 function resetAllData() {
-  confirmAction({ title: 'Borrar todos los datos', message: 'Se eliminarán perfil, plan, historial, medidas, favoritos y ejercicios personalizados de este dispositivo.', confirmLabel: 'Borrar definitivamente', danger: true, onConfirm: () => {
-    clearRestTimer(); clearProgressPhotoStore(); state = createEmptyState(); save(); applySettings(); updateProfileShortcut(); setView('home'); showToast('Datos eliminados.');
+  confirmAction({ title: 'Borrar todos los datos', message: 'Se eliminarán perfil, plan, historial, medidas, favoritos, fotografías y ejercicios personalizados de este dispositivo.', confirmLabel: 'Borrar definitivamente', danger: true, onConfirm: async () => {
+    clearRestTimer();
+    try { await clearProgressPhotoStore(); } catch (error) { reportRuntimeIssue(error, 'Borrado de fotografías'); }
+    state = createEmptyState();
+    save();
+    applySettings();
+    updateProfileShortcut();
+    setView('home');
+    showToast('Datos eliminados.', 'success');
   }});
 }
 
@@ -4559,10 +4671,161 @@ function updateLiveDuration() {
   tick();
 }
 
+
+function updateHud() {
+  const meta = pageHudMeta(currentView, state);
+  const title = document.querySelector('#hudTitle');
+  const subtitle = document.querySelector('#hudSubtitle');
+  const eyebrow = document.querySelector('#hudEyebrow');
+  if (title) title.textContent = meta.title;
+  if (subtitle) subtitle.textContent = meta.subtitle;
+  if (eyebrow) eyebrow.textContent = meta.eyebrow;
+
+  if (networkStatus) {
+    const online = navigator.onLine !== false;
+    networkStatus.classList.toggle('is-online', online);
+    networkStatus.classList.toggle('is-offline', !online);
+    networkStatus.innerHTML = `<span class="network-dot"></span><span class="network-label">${online ? 'Online' : 'Sin conexión'}</span>`;
+  }
+
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const activeNav = currentView === 'calendar' ? 'plan' : currentView;
+    item.classList.toggle('active', item.dataset.nav === activeNav);
+  });
+
+  const health = getHudHealth();
+  const railHealth = document.querySelector('#railHealthText');
+  if (railHealth) railHealth.textContent = health.errors ? `${health.errors} incidencia${health.errors === 1 ? '' : 's'}` : health.warnings ? `${health.warnings} aviso${health.warnings === 1 ? '' : 's'}` : 'Sistema operativo';
+  document.body.classList.toggle('has-runtime-issue', Boolean(runtimeIssues.length));
+
+  if (activeSessionBar) {
+    const workout = state.activeWorkout;
+    const visible = Boolean(workout && currentView !== 'workout');
+    activeSessionBar.hidden = !visible;
+    if (visible) {
+      const sets = workout.exercises.flatMap((exercise) => exercise.sets || []);
+      const done = sets.filter((set) => set.completed).length;
+      const percentage = sets.length ? Math.round(done / sets.length * 100) : 0;
+      activeSessionBar.innerHTML = `${hudIcon('train')}<span><small>SESIÓN EN CURSO</small><strong>${esc(workout.name)}</strong></span><span class="active-session-progress"><i style="--progress:${percentage}%"></i><b>${percentage}%</b></span>${hudIcon('arrow')}`;
+    }
+  }
+}
+
+function renderRecoveryScreen(view, error) {
+  app.innerHTML = `<section class="page recovery-page"><div class="recovery-card">${hudIcon('shield')}<p class="eyebrow">Modo seguro</p><h1>Esta pantalla no pudo cargarse</h1><p>Los datos siguen guardados. Puedes volver al inicio, exportar una copia o revisar el diagnóstico.</p><code>${esc(String(error?.message || 'Error desconocido'))}</code><div class="recovery-actions"><button class="button button-primary" type="button" data-nav-local="home">Volver al inicio</button><button class="button button-secondary" type="button" data-action="export-backup">Exportar copia</button><button class="button button-secondary" type="button" data-action="hud-control">Centro de control</button></div></div></section>`;
+  decorateInteractiveElements(app);
+}
+
+function getHudHealth(force = false) {
+  const now = Date.now();
+  if (force || !cachedHudHealth || now - cachedHudHealthAt > 5000) {
+    cachedHudHealth = runHudHealthCheck();
+    cachedHudHealthAt = now;
+  }
+  return cachedHudHealth;
+}
+
+function runHudHealthCheck() {
+  const checks = [];
+  const add = (id, ok, label, detail = '', severity = 'error') => checks.push({ id, ok: Boolean(ok), label, detail, severity });
+  const allExercises = getAllExercises(state.customExercises);
+  const planIds = (state.plan?.days || []).flatMap((day) => day.exercises || []).map((item) => item.exerciseId);
+  const activeIds = (state.activeWorkout?.exercises || []).map((item) => item.exerciseId);
+  const historyIds = (state.history || []).flatMap((session) => session.exercises || []).map((item) => item.exerciseId);
+  const missingCriticalIds = [...new Set([...planIds, ...activeIds].filter((id) => id && !allExercises[id]))];
+  const missingHistoryIds = [...new Set(historyIds.filter((id) => id && !allExercises[id] && !missingCriticalIds.includes(id)))];
+  const activeRoutineExists = !state.activeRoutineId || (state.routineFolders || []).some((folder) => (folder.routines || []).some((routine) => routine.id === state.activeRoutineId));
+  const planValid = !state.profile || Boolean(state.plan?.days?.length);
+  const nextIndexValid = !state.plan?.days?.length || (state.nextWorkoutIndex >= 0 && state.nextWorkoutIndex < state.plan.days.length);
+  const plannerValid = !state.plan || !state.planner || state.planner.planId === state.plan.id;
+  const workoutValid = !state.activeWorkout || Boolean(state.activeWorkout.exercises?.length);
+
+  add('storage', (() => { try { const key='__mfp_health__'; localStorage.setItem(key,'1'); localStorage.removeItem(key); return true; } catch { return false; } })(), 'Guardado local', 'El navegador permite escribir datos.');
+  add('profile', !state.onboardingCompleted || Boolean(state.profile), 'Perfil', state.profile ? 'Perfil disponible.' : 'Falta el perfil.');
+  add('plan', planValid, 'Rutina activa', state.plan?.days?.length ? `${state.plan.days.length} días configurados.` : 'No hay una rutina válida.');
+  add('routine', activeRoutineExists, 'Biblioteca de rutinas', activeRoutineExists ? 'La rutina activa está vinculada.' : 'La rutina activa no existe en su carpeta.');
+  add('index', nextIndexValid, 'Orden de rutina', nextIndexValid ? 'Índice dentro de rango.' : 'El siguiente día está fuera de rango.');
+  add('planner', plannerValid, 'Calendario', plannerValid ? 'Calendario vinculado al plan.' : 'El calendario pertenece a otra rutina.', 'warning');
+  add('workout', workoutValid, 'Sesión activa', workoutValid ? 'Estructura de sesión correcta.' : 'La sesión activa no contiene ejercicios.');
+  add('exercises', missingCriticalIds.length === 0, 'Referencias activas de ejercicios', missingCriticalIds.length ? `Faltan ${missingCriticalIds.length}: ${missingCriticalIds.slice(0,3).join(', ')}` : `${Object.keys(allExercises).length} ejercicios disponibles.`);
+  add('history-exercises', missingHistoryIds.length === 0, 'Referencias históricas', missingHistoryIds.length ? `${missingHistoryIds.length} ejercicio${missingHistoryIds.length === 1 ? '' : 's'} eliminado${missingHistoryIds.length === 1 ? '' : 's'} conserva${missingHistoryIds.length === 1 ? '' : 'n'} registros sin ficha técnica.` : 'Todo el historial mantiene una ficha disponible.', 'warning');
+  add('runtime', runtimeIssues.length === 0, 'Errores de ejecución', runtimeIssues.length ? `${runtimeIssues.length} incidencia${runtimeIssues.length === 1 ? '' : 's'} detectada${runtimeIssues.length === 1 ? '' : 's'}.` : 'Sin errores detectados durante esta apertura.', 'warning');
+
+  const errors = checks.filter((item) => !item.ok && item.severity === 'error').length;
+  const warnings = checks.filter((item) => !item.ok && item.severity === 'warning').length;
+  return { checks, errors, warnings, missingIds: missingCriticalIds, missingHistoryIds, status: errors ? 'error' : warnings ? 'warning' : 'ok' };
+}
+
+function openHudControlCenter() {
+  const health = getHudHealth(true);
+  const statusText = health.errors ? 'Necesita revisión' : health.warnings ? 'Funciona con avisos' : 'Sistema operativo';
+  const wrapper = openModal(`<div class="modal-header hud-control-modal-header"><div><p class="eyebrow">CENTRO DE CONTROL</p><h2>${esc(statusText)}</h2><p class="muted">Estado local de datos, almacenamiento, PWA y ejecución.</p></div><button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button></div>
+    <section class="hud-health-hero status-${health.status}"><span>${health.status === 'ok' ? hudIcon('shield') : hudIcon('warning')}</span><div><small>DIAGNÓSTICO RÁPIDO</small><strong>${health.errors ? `${health.errors} errores` : health.warnings ? `${health.warnings} avisos` : 'Todo correcto'}</strong><p>${runtimeIssues[0] ? esc(runtimeIssues[0].message) : 'La estructura principal de la aplicación es válida.'}</p></div></section>
+    <div class="hud-control-grid">
+      <button type="button" data-action="hud-run-diagnostics">${hudIcon('shield')}<span><strong>Diagnóstico completo</strong><small>Revisar datos y funciones críticas</small></span>${hudIcon('arrow')}</button>
+      <button type="button" data-action="export-backup">${hudIcon('download')}<span><strong>Exportar copia</strong><small>Guardar perfil, planes e historial</small></span>${hudIcon('arrow')}</button>
+      <button type="button" data-action="hud-open-settings">${hudIcon('settings')}<span><strong>Ajustes de interfaz</strong><small>Tema, color y accesibilidad</small></span>${hudIcon('arrow')}</button>
+      <button type="button" data-action="hud-force-update">${hudIcon('refresh')}<span><strong>Buscar actualización</strong><small>Comprobar la PWA y la caché</small></span>${hudIcon('arrow')}</button>
+    </div>
+    <div class="hud-control-footer"><span>${navigator.onLine === false ? 'Modo sin conexión' : 'Conexión disponible'}</span><span>My Fit Plan v${APP_VERSION}</span><span>${state.history.length} sesiones guardadas</span></div>`, { wide: true });
+  decorateInteractiveElements(wrapper);
+}
+
+function openHudDiagnostics() {
+  const health = getHudHealth(true);
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">SUPERVISIÓN DE FALLOS</p><h2>Diagnóstico de My Fit Plan</h2><p class="muted">Comprobación local sin enviar información fuera del dispositivo.</p></div><button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button></div>
+    <div class="hud-diagnostic-list">${health.checks.map((item) => `<article class="${item.ok ? 'is-ok' : `is-${item.severity}`} "><span>${item.ok ? hudIcon('check') : hudIcon(item.severity === 'warning' ? 'warning' : 'close')}</span><div><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></div><b>${item.ok ? 'Correcto' : item.severity === 'warning' ? 'Aviso' : 'Error'}</b></article>`).join('')}</div>
+    ${runtimeIssues.length ? `<section class="hud-runtime-log"><p class="eyebrow">INCIDENCIAS DE ESTA APERTURA</p>${runtimeIssues.map((issue) => `<article><strong>${esc(issue.context)}</strong><p>${esc(issue.message)}</p><small>${formatDateTime(issue.createdAt)}</small></article>`).join('')}</section>` : ''}
+    <div class="modal-actions"><button class="button button-secondary" type="button" data-action="hud-export-diagnostics">Exportar informe</button><button class="button button-secondary" type="button" data-action="hud-repair-data">Normalizar datos</button><button class="button button-primary" type="button" data-close-modal>Cerrar</button></div>`, { wide: true });
+  decorateInteractiveElements(wrapper);
+}
+
+function exportHudDiagnostics() {
+  const health = getHudHealth(true);
+  downloadJson(`my-fit-plan-diagnostico-${isoDay()}.json`, {
+    app: 'My Fit Plan', version: APP_VERSION, generatedAt: new Date().toISOString(),
+    environment: { online: navigator.onLine !== false, userAgent: navigator.userAgent, standalone: window.matchMedia?.('(display-mode: standalone)').matches || false },
+    counts: { sessions: state.history.length, folders: state.routineFolders.length, customExercises: state.customExercises.length, bodyEntries: state.bodyProgress.length },
+    health, runtimeIssues
+  });
+  showToast('Informe de diagnóstico preparado.', 'success');
+}
+
+function repairApplicationState() {
+  try {
+    state = persistState(state);
+    ensurePlanner();
+    save();
+    runtimeIssues.splice(0);
+    cachedHudHealthAt = 0;
+    if (hudErrorBanner) hudErrorBanner.hidden = true;
+    closeModal();
+    setView(currentView || 'home');
+    showToast('Estructura de datos normalizada.', 'success');
+  } catch (error) {
+    reportRuntimeIssue(error, 'Normalización de datos');
+    showToast('No se pudo normalizar. Exporta una copia antes de continuar.', 'danger');
+  }
+}
+
+async function forceApplicationUpdate() {
+  closeModal();
+  showToast('Comprobando actualización…');
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration?.();
+    await registration?.update?.();
+    if (registration?.waiting) showUpdateBanner(registration.waiting);
+    else showToast('My Fit Plan está actualizado.', 'success');
+  } catch (error) {
+    reportRuntimeIssue(error, 'Actualización PWA');
+    showToast('No se pudo comprobar la actualización.', 'danger');
+  }
+}
+
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=36', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=37', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

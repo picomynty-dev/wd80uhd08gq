@@ -1,0 +1,113 @@
+{
+  "root": "/mnt/data/my-fit-plan-v37-build",
+  "files": {
+    "total": 174,
+    "js": 21,
+    "assets": 144,
+    "icons": 2,
+    "bytes": 6979416
+  },
+  "checks": {
+    "js_syntax": true,
+    "module_graph": true,
+    "action_coverage": true,
+    "navigation_coverage": true,
+    "button_types": true,
+    "static_ids_unique": true,
+    "service_worker_shell": true,
+    "manifest_assets": true,
+    "shortcut_routes": true,
+    "version_consistency": true,
+    "css_structure": true
+  },
+  "details": {
+    "js_syntax_errors": [],
+    "module_errors": [],
+    "actions": {
+      "referenced": 102,
+      "handlers": 97,
+      "unknown": [],
+      "unreferenced_handlers": []
+    },
+    "navigation": {
+      "references": [
+        "calendar",
+        "home",
+        "library",
+        "plan",
+        "profile",
+        "workout"
+      ],
+      "views": [
+        "calendar",
+        "home",
+        "library",
+        "plan",
+        "profile",
+        "workout"
+      ],
+      "unknown": []
+    },
+    "buttons_without_type": [],
+    "duplicate_ids": [],
+    "service_worker": {
+      "cache": "my-fit-plan-v37-20260806-1",
+      "entries": 30,
+      "missing": [],
+      "skip_waiting_install": false,
+      "html_asset_fallback_only_navigation": true
+    },
+    "manifest": {
+      "icons_missing": [],
+      "shortcuts": [
+        {
+          "name": "Entrenar",
+          "short_name": "Entrenar",
+          "url": "./?view=workout",
+          "icons": [
+            {
+              "src": "./icons/icon-192.png",
+              "sizes": "192x192"
+            }
+          ]
+        },
+        {
+          "name": "Ejercicios",
+          "short_name": "Ejercicios",
+          "url": "./?view=library",
+          "icons": [
+            {
+              "src": "./icons/icon-192.png",
+              "sizes": "192x192"
+            }
+          ]
+        }
+      ],
+      "orientation": "unlocked"
+    },
+    "versions": {
+      "app_imports_37": true,
+      "storage_app_version": true,
+      "index_badge": true,
+      "cache_v37": true,
+      "storage_key": true
+    },
+    "css": {
+      "open": 2439,
+      "close": 2439,
+      "lines": 7231,
+      "hidden_rule": true
+    },
+    "critical_hashes": {
+      "index.html": "c624932c200a6c3c",
+      "styles.css": "eebcd119da3451d8",
+      "service-worker.js": "4c852900be7854b0",
+      "app.js": "1f68e345e3678216",
+      "storage.js": "dd7f011f32916881",
+      "hud.js": "df9d9fc0f8957ab4"
+    }
+  },
+  "passed": 11,
+  "total_checks": 11,
+  "ok": true
+}

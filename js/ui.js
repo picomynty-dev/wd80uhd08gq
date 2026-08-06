@@ -1,4 +1,4 @@
-import { esc } from './utils.js';
+import { esc } from './utils.js?v=37';
 
 export function showToast(message, tone = 'neutral') {
   document.querySelectorAll('.toast').forEach((node) => node.remove());
@@ -19,21 +19,32 @@ export function openModal(content, { wide = false, onClose = null } = {}) {
   const wrapper = document.createElement('div');
   wrapper.className = 'modal-backdrop';
   wrapper.innerHTML = `<section class="modal-card ${wide ? 'modal-wide' : ''}" role="dialog" aria-modal="true">${content}</section>`;
+  const previousFocus = document.activeElement;
   document.body.appendChild(wrapper);
   document.body.classList.add('modal-open');
 
   const close = () => {
     wrapper.remove();
     document.body.classList.remove('modal-open');
-    document.removeEventListener('keydown', escapeHandler);
+    document.removeEventListener('keydown', keyHandler);
+    if (previousFocus instanceof HTMLElement && document.body.contains(previousFocus)) previousFocus.focus({ preventScroll: true });
     onClose?.();
   };
-  const escapeHandler = (event) => { if (event.key === 'Escape') close(); };
-  document.addEventListener('keydown', escapeHandler);
+  const keyHandler = (event) => {
+    if (event.key === 'Escape') return close();
+    if (event.key !== 'Tab') return;
+    const focusable = [...wrapper.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')];
+    if (!focusable.length) return event.preventDefault();
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  };
+  document.addEventListener('keydown', keyHandler);
   wrapper.addEventListener('click', (event) => {
     if (event.target === wrapper || event.target.closest('[data-close-modal]')) close();
   });
-  wrapper.querySelector('button, input, select, textarea')?.focus();
+  wrapper.querySelector('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')?.focus();
   wrapper._closeModal = close;
   return wrapper;
 }
