@@ -1,13 +1,23 @@
-# My Fit Plan v3.9 RC · Release Candidate
+# My Fit Plan v4.0 — Cloud Foundation
 
-Versión centrada en estabilidad e integridad antes de v4.0.
+Primera versión de My Fit Plan con cuentas y sincronización cloud, manteniendo
+el funcionamiento local/offline de la aplicación.
 
-- Avance de rutina solo al finalizar una sesión.
-- Migración correcta de series antiguas.
-- Guardado de campos pendientes al minimizar/cerrar la PWA.
-- Validación de objetivos y registros.
-- Fotografías privadas tolerantes a fallos de almacenamiento.
-- Cache y service workers aislados al proyecto.
-- Precache offline tolerante a recursos opcionales.
-- Imports JavaScript versionados de forma uniforme.
-- Diagnóstico de integridad ampliado.
+## Incluye
+- Registro con email y contraseña.
+- Confirmación por email compatible con Supabase Auth.
+- Inicio/cierre de sesión.
+- Recuperación y cambio de contraseña.
+- Migración automática de datos locales al crear una cuenta nueva.
+- Descarga automática de datos cloud en un dispositivo nuevo.
+- Sincronización automática después de cambios locales.
+- Protección frente a conflictos entre dos dispositivos.
+- Plan Free/Premium preparado mediante `mfp_entitlements`.
+- Eliminación completa de cuenta.
+- Modo invitado sin necesidad de registrarse.
+- Sincronización local-first para seguir entrenando sin internet.
+
+## Importante
+Las fotografías siguen siendo locales en esta fase. No se envían a Supabase.
+
+Consulta `CLOUD_SETUP_v40.md` antes del primer despliegue.

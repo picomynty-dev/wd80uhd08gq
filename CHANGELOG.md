@@ -1,3 +1,20 @@
+# My Fit Plan v4.0 — Cloud Foundation
+
+- Añade cuentas My Fit Plan con Supabase Auth.
+- Añade registro, login, logout y recuperación de contraseña.
+- Mantiene un modo invitado completamente funcional.
+- Migra automáticamente el estado local a una cuenta nueva.
+- Restaura cloud automáticamente en un dispositivo sin datos locales.
+- Añade sincronización automática local-first.
+- Añade control de revisiones para evitar sobrescribir cambios de otro dispositivo.
+- Añade resolución manual de conflictos local/cloud.
+- Añade estado de sincronización en Perfil.
+- Añade pestaña Cuenta.
+- Añade eliminación completa de cuenta.
+- Mantiene las fotografías solo en almacenamiento privado local durante esta fase.
+- Evita que el service worker intercepte las llamadas externas a Supabase.
+- Versiona todos los módulos como v4.0.
+
 # My Fit Plan v3.9 RC
 
 - Release Candidate previa a v4.0.

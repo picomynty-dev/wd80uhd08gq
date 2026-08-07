@@ -7969,3 +7969,83 @@ html[data-hud-mode="mobile"][data-hud-orientation="landscape"] .bottom-nav.premi
   transform: translateX(-50%) !important;
   box-sizing: border-box !important;
 }
+
+
+/* =========================================================
+   My Fit Plan v4.0 · Cloud Foundation
+   ========================================================= */
+.cloud-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: .67rem;
+  font-weight: 850;
+}
+.cloud-profile-badge::before { content: ''; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: currentColor; }
+.cloud-profile-badge.is-synced { color: #22c55e; border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.08); }
+.cloud-profile-badge.is-pending { color: #eab308; border-color: rgba(234,179,8,.28); background: rgba(234,179,8,.08); }
+.cloud-profile-badge.is-alert { color: #ef4444; border-color: rgba(239,68,68,.28); background: rgba(239,68,68,.08); }
+.cloud-profile-badge.is-syncing { color: var(--accent); }
+.cloud-account-panel { display: grid; gap: 16px; }
+.cloud-account-hero { display: grid; grid-template-columns: 58px minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 22px; }
+.cloud-account-icon { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 17px; background: var(--accent-soft); color: var(--accent); font-size: 1.35rem; font-weight: 950; }
+.cloud-account-hero h2 { margin: 2px 0 6px; }
+.cloud-plan-pill { align-self: start; padding: 7px 11px; border: 1px solid rgba(var(--accent-rgb),.25); border-radius: 999px; background: rgba(var(--accent-rgb),.09); color: var(--accent); font-size: .68rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.cloud-benefit-grid article { min-height: 122px; }
+.cloud-benefit-grid strong { display: block; margin-bottom: 8px; }
+.cloud-auth-actions, .cloud-sync-card, .cloud-account-security { display: grid; gap: 14px; }
+.cloud-sync-card { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
+.cloud-photo-note { border-style: dashed; }
+.cloud-account-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.cloud-status-grid .metric-name { font-size: .88rem; line-height: 1.25; }
+.cloud-conflict-card { border-color: rgba(234,179,8,.35); background: linear-gradient(135deg, rgba(234,179,8,.08), var(--surface)); }
+.cloud-welcome-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 2px; color: var(--muted); font-size: .68rem; font-weight: 800; }
+.cloud-welcome-divider::before, .cloud-welcome-divider::after { content: ''; height: 1px; flex: 1; background: var(--line); }
+.cloud-welcome-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cloud-local-note { max-width: 560px; margin: 7px auto 0; text-align: center; }
+.cloud-consent { grid-column: 1 / -1; }
+.cloud-forgot-inline { justify-self: start; }
+.cloud-conflict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cloud-conflict-option { padding: 17px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.cloud-conflict-option.local { border-color: rgba(var(--accent-rgb),.32); }
+.cloud-conflict-option.remote { border-color: rgba(59,130,246,.30); }
+.cloud-conflict-option > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin: 13px 0; }
+.cloud-conflict-option span { display: grid; gap: 2px; padding: 8px; border-radius: 10px; background: var(--surface); color: var(--muted); font-size: .67rem; }
+.cloud-conflict-option span b { color: var(--text); font-size: .92rem; }
+.cloud-conflict-warning { padding: 11px 13px; border-radius: 12px; background: rgba(234,179,8,.08); color: var(--muted); font-size: .73rem; }
+body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pulse 1.2s infinite; }
+@keyframes cloud-pulse { 50% { opacity: .35; transform: scale(.7); } }
+@media (max-width: 720px) {
+  .cloud-account-hero { grid-template-columns: 46px minmax(0,1fr); padding: 17px; }
+  .cloud-account-icon { width: 44px; height: 44px; border-radius: 14px; }
+  .cloud-plan-pill { grid-column: 2; justify-self: start; }
+  .cloud-benefit-grid, .cloud-status-grid { grid-template-columns: 1fr !important; }
+  .cloud-sync-card { grid-template-columns: 1fr; }
+  .cloud-conflict-grid { grid-template-columns: 1fr; }
+  .cloud-welcome-actions { grid-template-columns: 1fr; }
+}
+
+/* v4.0 · Seis secciones de perfil sin romper móvil estrecho */
+.profile-tabs.profile-sections {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 620px) {
+  .profile-tabs.profile-sections {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+  .profile-tabs.profile-sections > button {
+    flex: 0 0 auto;
+    min-width: 74px;
+    scroll-snap-align: start;
+    font-size: .57rem;
+  }
+}

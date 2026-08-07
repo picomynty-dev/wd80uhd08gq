@@ -1,0 +1,41 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.0 Cloud Foundation",
+  "generatedAt": "2026-08-07T17:02:29",
+  "filesReviewed": 178,
+  "javascriptModules": 23,
+  "importsChecked": 44,
+  "missingImports": [],
+  "syntaxErrors": [],
+  "buttonActionsReferenced": 106,
+  "buttonActionHandlers": 106,
+  "missingButtonActions": [],
+  "security": {
+    "publishableKeyOnly": true,
+    "secretMarkersFound": [],
+    "serviceWorkerIgnoresCrossOrigin": true,
+    "rlsRequired": false
+  },
+  "cloudTests": [
+    "guest account UI",
+    "signup migrates local data",
+    "fresh device downloads cloud",
+    "conflict protected and manually resolved",
+    "automatic local-to-cloud sync",
+    "password recovery request",
+    "account deletion",
+    "responsive regression"
+  ],
+  "cloudModel": {
+    "localFirst": true,
+    "offlineTraining": true,
+    "photoCloudSync": false,
+    "conflictStrategy": "explicit local-or-cloud choice",
+    "premiumEntitlement": "read-only from client"
+  },
+  "limitations": [
+    "Email confirmation and password-reset redirect must be validated once the production Site URL is configured in Supabase.",
+    "Progress photos remain local in this phase.",
+    "The real Supabase project was not populated with automated test users."
+  ]
+}

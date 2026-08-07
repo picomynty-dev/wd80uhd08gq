@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'my-fit-plan-';
-const CACHE_NAME = 'my-fit-plan-v39-rc-20260807-1';
+const CACHE_NAME = 'my-fit-plan-v40-cloud-20260807-1';
 
 const CORE_SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
-  './js/app.js', './js/hud.js', './js/storage.js', './js/utils.js', './js/ui.js'
+  './js/app.js', './js/hud.js', './js/storage.js', './js/utils.js', './js/ui.js', './js/cloud.js', './js/cloud-config.js'
 ];
 
 const OPTIONAL_SHELL = [
@@ -86,6 +86,8 @@ async function cacheFirst(request) {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
   if (request.destination === 'video' || request.headers.has('range')) return;
   if (request.mode === 'navigate' || ['script', 'style', 'document'].includes(request.destination)) {
     event.respondWith(networkFirst(request));
