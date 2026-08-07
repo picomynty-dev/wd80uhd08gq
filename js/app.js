@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=381';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=381';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=381';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=39';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=39';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=39';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=381';
+} from './stats.js?v=39';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=381';
+} from './coach.js?v=39';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=381';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=381';
+} from './adaptive.js?v=39';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=39';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=381';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=381';
+} from './calendar-planner.js?v=39';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=39';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=381';
+} from './progression-engine.js?v=39';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=381';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=381';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=381';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=381';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=381';
+} from './utils.js?v=39';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=39';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=39';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=39';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=39';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -81,7 +81,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=381';
+} from './photo-progress.js?v=39';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -173,6 +173,10 @@ function bindGlobalEvents() {
 
   window.addEventListener('online', updateHud);
   window.addEventListener('offline', updateHud);
+  window.addEventListener('pagehide', persistPendingInputs);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistPendingInputs();
+  });
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
@@ -1275,7 +1279,6 @@ function startPlannerOccurrence(target) {
   if (!day?.exercises?.length) return showToast('Esta sesión no tiene ejercicios.', 'danger');
 
   const start = () => {
-    state.nextWorkoutIndex = occurrence.planDayIndex;
     const workout = createActiveWorkout(occurrence.planDayIndex, {
       dayOverride: day,
       sessionSource: 'routine',
@@ -1885,11 +1888,19 @@ function moveCustomSessionExercise(index, direction) {
   renderCustomWorkoutBuilder();
 }
 
+function targetNumber(target, fallback = 1) {
+  const min = Number.isFinite(Number(target.min)) ? Number(target.min) : -Infinity;
+  const max = Number.isFinite(Number(target.max)) ? Number(target.max) : Infinity;
+  const value = numberValue(target.value, fallback);
+  return clamp(value, min, max);
+}
+
 function updateCustomSessionTarget(target) {
   const item = customWorkoutDraft?.exercises?.[Number(target.dataset.index)];
   if (!item) return;
   const field = target.dataset.field;
-  item[field] = numberValue(target.value);
+  const fallback = numberValue(item[field], field === 'restSeconds' ? 75 : 1);
+  item[field] = targetNumber(target, fallback);
   if (field === 'repMin' && item.repMax < item.repMin) item.repMax = item.repMin;
   if (field === 'repMax' && item.repMin > item.repMax) item.repMin = item.repMax;
   renderCustomWorkoutBuilder();
@@ -2704,7 +2715,13 @@ function bodyMeasurementChartHtml(entries, key, label) {
 }
 
 async function refreshBodyProgressImages(rootNode = document.querySelector('#profileTabContent')) {
-  if (rootNode) await hydrateProgressImages(rootNode);
+  if (!rootNode) return;
+  try {
+    await hydrateProgressImages(rootNode);
+  } catch (error) {
+    rootNode.querySelectorAll('[data-photo-frame]').forEach((frame) => frame.classList.add('missing-photo'));
+    reportRuntimeIssue(error, 'Lectura de fotografías privadas');
+  }
 }
 
 function openBodyProgressForm() {
@@ -2755,6 +2772,7 @@ function openBodyProgressForm() {
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     submit.textContent = 'Guardando…';
+    const savedPhotoIds = [];
     try {
       const data = new FormData(form);
       const photoIds = { front: '', side: '', back: '' };
@@ -2764,6 +2782,7 @@ function openBodyProgressForm() {
         const compressed = await compressProgressImage(file);
         const photoId = uid(`body-${view}`);
         await saveProgressPhoto(photoId, compressed);
+        savedPhotoIds.push(photoId);
         photoIds[view] = photoId;
       }
       if (!Object.values(photoIds).some(Boolean) && !['chest','waist','hips','arm','thigh','calf'].some((key) => numberValue(data.get(key)) > 0)) {
@@ -2793,6 +2812,10 @@ function openBodyProgressForm() {
       showProfileTab('body');
       showToast('Revisión corporal guardada.', 'success');
     } catch (error) {
+      if (savedPhotoIds.length) {
+        try { await deleteProgressPhotos(savedPhotoIds); }
+        catch (cleanupError) { reportRuntimeIssue(cleanupError, 'Limpieza de fotografías incompletas'); }
+      }
       const storageBlocked = /indexed database|idbfactory|denied|quota|almacenamiento/i.test(String(error?.message || ''));
       if (storageBlocked) reportRuntimeIssue(error, 'Almacenamiento privado de fotografías');
       showToast(storageBlocked
@@ -2826,16 +2849,27 @@ async function openBodyProgressEntry(id) {
       <button class="button button-secondary" type="button" id="exportBodyEntry">Exportar fotos</button>
       <button class="button button-danger" type="button" id="deleteBodyEntry">Eliminar revisión</button>
     </div>`, { wide: true });
-  await hydrateProgressImages(wrapper);
+  try { await hydrateProgressImages(wrapper); }
+  catch (error) {
+    wrapper.querySelectorAll('[data-photo-frame]').forEach((frame) => frame.classList.add('missing-photo'));
+    reportRuntimeIssue(error, 'Lectura de revisión corporal');
+  }
   wrapper.querySelector('#exportBodyEntry').addEventListener('click', async () => {
     const labels = { front: 'frontal', side: 'lateral', back: 'posterior' };
     let exported = 0;
+    let failed = 0;
     for (const [view, photoId] of Object.entries(entry.photos || {})) {
       if (!photoId) continue;
-      await downloadProgressPhoto(photoId, `my-fit-plan-${entry.date}-${labels[view]}.jpg`);
-      exported += 1;
+      try {
+        await downloadProgressPhoto(photoId, `my-fit-plan-${entry.date}-${labels[view]}.jpg`);
+        exported += 1;
+      } catch (error) {
+        failed += 1;
+        reportRuntimeIssue(error, 'Exportación de fotografía');
+      }
     }
-    showToast(exported ? `${exported} fotografía${exported === 1 ? '' : 's'} preparada${exported === 1 ? '' : 's'}.` : 'Esta revisión no contiene fotografías.');
+    if (failed) showToast(`${exported} exportadas · ${failed} no disponibles.`, failed && !exported ? 'danger' : 'success');
+    else showToast(exported ? `${exported} fotografía${exported === 1 ? '' : 's'} preparada${exported === 1 ? '' : 's'}.` : 'Esta revisión no contiene fotografías.');
   });
   wrapper.querySelector('#deleteBodyEntry').addEventListener('click', () => {
     wrapper._closeModal();
@@ -2845,7 +2879,8 @@ async function openBodyProgressEntry(id) {
       confirmLabel: 'Eliminar',
       danger: true,
       onConfirm: async () => {
-        await deleteProgressPhotos(Object.values(entry.photos || {}));
+        try { await deleteProgressPhotos(Object.values(entry.photos || {})); }
+        catch (error) { reportRuntimeIssue(error, 'Borrado de fotografías de revisión'); }
         state.bodyProgress = state.bodyProgress.filter((item) => item.id !== entry.id);
         save();
         renderProfile();
@@ -3039,7 +3074,13 @@ function openBodyProgressCompare() {
       canvas.innerHTML = `<div class="body-compare-missing"><h3>Falta la vista seleccionada</h3><p>Las dos revisiones necesitan una fotografía ${view === 'front' ? 'frontal' : view === 'side' ? 'lateral' : 'posterior'}.</p></div>`;
       return;
     }
-    const [urlA, urlB] = await Promise.all([getProgressPhotoUrl(photoA), getProgressPhotoUrl(photoB)]);
+    let urlA = '';
+    let urlB = '';
+    try {
+      [urlA, urlB] = await Promise.all([getProgressPhotoUrl(photoA), getProgressPhotoUrl(photoB)]);
+    } catch (error) {
+      reportRuntimeIssue(error, 'Comparación de fotografías');
+    }
     if (!urlA || !urlB) {
       canvas.innerHTML = '<div class="body-compare-missing"><h3>No se pudieron recuperar las fotografías</h3><p>Comprueba que no se hayan borrado los datos del navegador.</p></div>';
       return;
@@ -3400,9 +3441,30 @@ function handleAppChange(event) {
 
 const delayedSaveField = debounce((target) => {
   if (target.dataset.action === 'set-field') updateSetField(target, false);
-  if (target.dataset.action === 'workout-notes') { state.activeWorkout.notes = target.value; save(); }
-  if (target.dataset.action === 'exercise-notes') { state.activeWorkout.exercises[Number(target.dataset.exercise)].notes = target.value; save(); }
+  if (target.dataset.action === 'workout-notes' && state.activeWorkout) {
+    state.activeWorkout.notes = target.value;
+    save();
+  }
+  if (target.dataset.action === 'exercise-notes') {
+    const exercise = state.activeWorkout?.exercises?.[Number(target.dataset.exercise)];
+    if (exercise) {
+      exercise.notes = target.value;
+      save();
+    }
+  }
 }, 220);
+
+function persistPendingInputs() {
+  try {
+    delayedSaveField.flush?.();
+    if (state.activeWorkout) {
+      syncActiveRoutineFromPlan();
+      state = persistState(state);
+    }
+  } catch (error) {
+    console.warn('No se pudo completar el guardado de cierre:', error);
+  }
+}
 
 function handleAppInput(event) {
   const target = event.target;
@@ -3746,11 +3808,15 @@ function removePlanExercise(dayIndex, exerciseIndex) {
 }
 
 function updatePlanTarget(target) {
-  const item = state.plan.days[Number(target.dataset.day)].exercises[Number(target.dataset.exercise)];
+  const day = state.plan?.days?.[Number(target.dataset.day)];
+  const item = day?.exercises?.[Number(target.dataset.exercise)];
+  if (!item) return;
   const field = target.dataset.field;
-  item[field] = numberValue(target.value);
+  const fallback = numberValue(item[field], field === 'restSeconds' ? 75 : 1);
+  item[field] = targetNumber(target, fallback);
   if (field === 'repMin' && item.repMax < item.repMin) item.repMax = item.repMin;
   if (field === 'repMax' && item.repMin > item.repMax) item.repMin = item.repMax;
+  target.value = item[field];
   save();
 }
 
@@ -3773,7 +3839,6 @@ function startSpecificDay(dayIndex) {
   const prepare = () => {
     const day = state.plan?.days?.[dayIndex];
     if (!day?.exercises?.length) return showToast('Este día no tiene ejercicios.', 'danger');
-    state.nextWorkoutIndex = dayIndex;
     pendingWorkoutSelection = null;
     customWorkoutDraft = null;
     const workout = createActiveWorkout(dayIndex, {
@@ -4029,7 +4094,15 @@ function updateSetField(target, rerender = false) {
   const exercise = state.activeWorkout?.exercises?.[Number(target.dataset.exercise)];
   const set = exercise?.sets?.[Number(target.dataset.set)];
   if (!set) return;
-  set[target.dataset.field] = target.value;
+  const field = target.dataset.field;
+  if (field === 'weight' || field === 'reps') {
+    if (String(target.value).trim() === '') set[field] = '';
+    else set[field] = String(Math.max(0, numberValue(target.value)));
+  } else if (field === 'rir') {
+    set.rir = target.value === '' ? '' : String(clamp(numberValue(target.value), 0, 3));
+  } else {
+    set[field] = target.value;
+  }
   save();
   if (rerender) renderWorkout();
 }
@@ -4745,6 +4818,16 @@ function runHudHealthCheck() {
   const nextIndexValid = !state.plan?.days?.length || (state.nextWorkoutIndex >= 0 && state.nextWorkoutIndex < state.plan.days.length);
   const plannerValid = !state.plan || !state.planner || state.planner.planId === state.plan.id;
   const workoutValid = !state.activeWorkout || Boolean(state.activeWorkout.exercises?.length);
+  const workoutSetMismatch = state.activeWorkout?.exercises?.filter((exercise) => exercise.targetSets !== exercise.sets?.length).length || 0;
+  const invalidPlanTargets = (state.plan?.days || []).flatMap((day) => day.exercises || []).filter((exercise) =>
+    numberValue(exercise.targetSets) < 1
+    || numberValue(exercise.repMin) < 1
+    || numberValue(exercise.repMax) < numberValue(exercise.repMin)
+    || numberValue(exercise.restSeconds) < 15
+  ).length;
+  const invalidHistorySessions = (state.history || []).filter((session) =>
+    !session.id || !Array.isArray(session.exercises) || !session.finishedAt
+  ).length;
   const layout = getHudLayoutSnapshot();
   const responsiveValid = layout.mode === 'mobile'
     ? !layout.railVisible && layout.dockVisible
@@ -4760,6 +4843,9 @@ function runHudHealthCheck() {
   add('index', nextIndexValid, 'Orden de rutina', nextIndexValid ? 'Índice dentro de rango.' : 'El siguiente día está fuera de rango.');
   add('planner', plannerValid, 'Calendario', plannerValid ? 'Calendario vinculado al plan.' : 'El calendario pertenece a otra rutina.', 'warning');
   add('workout', workoutValid, 'Sesión activa', workoutValid ? 'Estructura de sesión correcta.' : 'La sesión activa no contiene ejercicios.');
+  add('workout-sets', workoutSetMismatch === 0, 'Series de sesión', workoutSetMismatch ? `${workoutSetMismatch} ejercicio${workoutSetMismatch === 1 ? '' : 's'} tiene${workoutSetMismatch === 1 ? '' : 'n'} un contador de series incoherente.` : 'Contadores de series coherentes.');
+  add('plan-targets', invalidPlanTargets === 0, 'Objetivos de rutina', invalidPlanTargets ? `${invalidPlanTargets} objetivo${invalidPlanTargets === 1 ? '' : 's'} necesita${invalidPlanTargets === 1 ? '' : 'n'} normalización.` : 'Series, rangos y descansos válidos.');
+  add('history-structure', invalidHistorySessions === 0, 'Estructura del historial', invalidHistorySessions ? `${invalidHistorySessions} sesión${invalidHistorySessions === 1 ? '' : 'es'} presenta${invalidHistorySessions === 1 ? '' : 'n'} datos incompletos.` : 'Historial estructuralmente correcto.', 'warning');
   add('exercises', missingCriticalIds.length === 0, 'Referencias activas de ejercicios', missingCriticalIds.length ? `Faltan ${missingCriticalIds.length}: ${missingCriticalIds.slice(0,3).join(', ')}` : `${Object.keys(allExercises).length} ejercicios disponibles.`);
   add('history-exercises', missingHistoryIds.length === 0, 'Referencias históricas', missingHistoryIds.length ? `${missingHistoryIds.length} ejercicio${missingHistoryIds.length === 1 ? '' : 's'} eliminado${missingHistoryIds.length === 1 ? '' : 's'} conserva${missingHistoryIds.length === 1 ? '' : 'n'} registros sin ficha técnica.` : 'Todo el historial mantiene una ficha disponible.', 'warning');
   add('runtime', runtimeIssues.length === 0, 'Errores de ejecución', runtimeIssues.length ? `${runtimeIssues.length} incidencia${runtimeIssues.length === 1 ? '' : 's'} detectada${runtimeIssues.length === 1 ? '' : 's'}.` : 'Sin errores detectados durante esta apertura.', 'warning');
@@ -4843,7 +4929,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=381', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=39', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

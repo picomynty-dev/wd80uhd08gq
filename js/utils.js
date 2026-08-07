@@ -92,11 +92,41 @@ export function daysBetween(a, b) {
 }
 
 export function debounce(fn, wait = 180) {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), wait);
+  let timeout = null;
+  let lastArgs = null;
+  let lastThis = null;
+
+  const run = () => {
+    if (!lastArgs) return;
+    const args = lastArgs;
+    const context = lastThis;
+    lastArgs = null;
+    lastThis = null;
+    timeout = null;
+    fn.apply(context, args);
   };
+
+  function debounced(...args) {
+    lastArgs = args;
+    lastThis = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(run, wait);
+  }
+
+  debounced.flush = () => {
+    if (!lastArgs) return;
+    clearTimeout(timeout);
+    run();
+  };
+
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+    timeout = null;
+    lastArgs = null;
+    lastThis = null;
+  };
+
+  return debounced;
 }
 
 export function downloadJson(filename, data) {

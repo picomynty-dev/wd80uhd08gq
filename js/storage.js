@@ -1,10 +1,10 @@
-import { clone, isoDay, numberValue, uid } from './utils.js';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js';
-import { normalizePlanner } from './calendar-planner.js?v=381';
+import { clone, isoDay, numberValue, uid } from './utils.js?v=39';
+import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=39';
+import { normalizePlanner } from './calendar-planner.js?v=39';
 
-export const STORAGE_KEY = 'myFitPlanStateV381';
-export const LEGACY_KEYS = ['myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.8.1';
+export const STORAGE_KEY = 'myFitPlanStateV39';
+export const LEGACY_KEYS = ['myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.9 RC';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -20,7 +20,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 391,
+  schemaVersion: 400,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -53,20 +53,30 @@ export function createEmptyState() {
 }
 
 export function loadState() {
-  try {
-    const current = localStorage.getItem(STORAGE_KEY);
-    if (current) return normalizeState(JSON.parse(current));
+  const keys = [...new Set([STORAGE_KEY, ...LEGACY_KEYS])];
+  let lastError = null;
 
-    for (const key of LEGACY_KEYS) {
-      const legacy = localStorage.getItem(key);
-      if (!legacy) continue;
-      const migrated = normalizeState(JSON.parse(legacy));
-      saveState(migrated);
-      return migrated;
+  for (const key of keys) {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(key);
+    } catch (error) {
+      lastError = error;
+      break;
     }
-  } catch (error) {
-    console.warn('No se pudo cargar el progreso:', error);
+    if (!raw) continue;
+
+    try {
+      const migrated = normalizeState(JSON.parse(raw));
+      if (key !== STORAGE_KEY) saveState(migrated);
+      return migrated;
+    } catch (error) {
+      lastError = error;
+      console.warn(`No se pudo leer ${key}; se probará una copia anterior.`, error);
+    }
   }
+
+  if (lastError) console.warn('No se pudo recuperar el progreso guardado:', lastError);
   return createEmptyState();
 }
 
@@ -126,7 +136,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 391,
+    schemaVersion: 400,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),
@@ -323,24 +333,39 @@ function normalizeActiveWorkout(workout, plan, profile) {
 }
 
 function normalizeWorkoutExercise(item = {}, rules, exerciseIndex = 0) {
-  const targetSets = Number(item.targetSets ?? item.sets ?? 3) || 3;
+  const legacySetCount = Array.isArray(item.sets)
+    ? item.sets.length
+    : Array.isArray(item.setsData)
+      ? item.setsData.length
+      : item.sets;
+  const targetSets = Math.max(1, Number(item.targetSets ?? legacySetCount ?? 3) || 3);
   const repRange = parseLegacyRepRange(item.reps, rules);
   const restSeconds = parseLegacyRest(item.restSeconds ?? item.rest, rules.restSeconds);
   let sets = Array.isArray(item.setsData) ? item.setsData : (Array.isArray(item.sets) ? item.sets : null);
   if (!sets) {
     sets = Array.from({ length: targetSets }, (_, index) => ({ id: uid(`set-${exerciseIndex}-${index}`), weight: item.weight || '', reps: item.actualReps || '', rir: '', completed: Boolean(item.completed) }));
   }
+  const normalizedSets = sets.map((set, index) => ({
+    id: set.id || uid(`set-${exerciseIndex}-${index}`),
+    weight: set.weight ?? '',
+    reps: set.reps ?? set.actualReps ?? '',
+    rir: set.rir ?? '',
+    completed: Boolean(set.completed),
+    completedAt: set.completedAt || null
+  }));
+  const repMin = Math.max(1, Number(item.repMin ?? repRange.repMin) || rules.repMin);
+  const repMax = Math.max(repMin, Number(item.repMax ?? repRange.repMax) || rules.repMax);
   return {
     instanceId: item.instanceId || item.slotId || uid('instance'),
     slotId: item.slotId || uid('slot'),
     exerciseId: item.exerciseId,
-    targetSets,
-    repMin: Number(item.repMin ?? repRange.repMin) || rules.repMin,
-    repMax: Number(item.repMax ?? repRange.repMax) || rules.repMax,
+    targetSets: normalizedSets.length || targetSets,
+    repMin,
+    repMax,
     unit: item.unit || repRange.unit || 'reps',
-    restSeconds,
+    restSeconds: Math.max(15, restSeconds),
     notes: item.notes || '',
-    sets: sets.map((set, index) => ({ id: set.id || uid(`set-${exerciseIndex}-${index}`), weight: set.weight ?? '', reps: set.reps ?? set.actualReps ?? '', rir: set.rir ?? '', completed: Boolean(set.completed), completedAt: set.completedAt || null }))
+    sets: normalizedSets
   };
 }
 

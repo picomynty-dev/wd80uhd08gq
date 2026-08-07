@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=381';
+import { esc } from './utils.js?v=39';
 
 export function showToast(message, tone = 'neutral') {
   document.querySelectorAll('.toast').forEach((node) => node.remove());

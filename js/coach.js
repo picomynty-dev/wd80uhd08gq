@@ -4,12 +4,12 @@ import {
   completedSets,
   exerciseVolume,
   sessionsThisWeek
-} from './stats.js?v=34a';
-import { getExercise } from './exercises.js?v=34a';
+} from './stats.js?v=39';
+import { getExercise } from './exercises.js?v=39';
 import {
   numberValue,
   startOfWeek
-} from './utils.js?v=34a';
+} from './utils.js?v=39';
 
 const STATUS_PRIORITY = {
   reduce: 100,

@@ -1,7 +1,7 @@
 'use strict';
 
-import { getExercise } from './exercises.js?v=34b';
-import { clamp, numberValue } from './utils.js?v=34b';
+import { getExercise } from './exercises.js?v=39';
+import { clamp, numberValue } from './utils.js?v=39';
 
 const ENERGY_LABELS = {
   low: 'Baja',
