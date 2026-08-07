@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.0 Cloud Foundation: entrenamiento inteligente con cuenta, sincronización cloud y funcionamiento offline.",
+  "description": "My Fit Plan 4.0.1: entrenamiento inteligente con sincronización cloud automática y funcionamiento offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

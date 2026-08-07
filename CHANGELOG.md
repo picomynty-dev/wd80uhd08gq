@@ -1,3 +1,17 @@
+# My Fit Plan v4.0.1 — Cloud Sync UX
+
+- Elimina falsos conflictos de sincronización.
+- Usa la revisión remota como señal principal para detectar cambios externos.
+- La nube se carga automáticamente en dispositivos nuevos.
+- Los cambios locales se suben automáticamente si la nube no avanzó.
+- Los cambios remotos se descargan automáticamente si el dispositivo no cambió.
+- Solo pregunta ante conflictos reales entre dos dispositivos.
+- Guarda una copia local de recuperación antes de reemplazar datos por la nube.
+- Añade Descargar de la nube y Subir este dispositivo en Perfil > Cuenta.
+- Mantiene sesión, device ID y metadatos de v4.0.
+- Mantiene funcionamiento offline.
+- No requiere cambios SQL ni gastos adicionales.
+
 # My Fit Plan v4.0 — Cloud Foundation
 
 - Añade cuentas My Fit Plan con Supabase Auth.

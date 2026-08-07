@@ -1,0 +1,44 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.0.1 Cloud Sync UX",
+  "generatedAt": "2026-08-07T17:25:16",
+  "filesReviewed": 180,
+  "javascriptModules": 23,
+  "clickActions": {
+    "referenced": 108,
+    "handled": 108,
+    "missing": []
+  },
+  "imports": {
+    "missing": []
+  },
+  "pwaResources": {
+    "checked": 33,
+    "missing": []
+  },
+  "security": {
+    "clientSecretHits": [],
+    "rlsSqlChangeRequired": false
+  },
+  "cloudRegression": {
+    "newDeviceUsesCloudWithoutPrompt": "passed",
+    "firstLocalChangeUploadsWithoutPrompt": "passed",
+    "secondLocalChangeUploadsWithoutPrompt": "passed",
+    "realConcurrentConflictDetected": "passed",
+    "manualCloudDownload": "passed",
+    "manualDeviceUpload": "passed",
+    "localRecoverySnapshotBeforeCloudOverwrite": "passed"
+  },
+  "uiRegression": {
+    "mobileAccount390x844": "passed",
+    "desktopAccount1536x900": "passed",
+    "horizontalOverflow": "not detected",
+    "manualSyncControls": "passed"
+  },
+  "behavior": {
+    "default": "automatic-cloud",
+    "askUser": "only true two-device conflict",
+    "offline": "local save remains active",
+    "sqlMigration": "not required"
+  }
+}

@@ -1,23 +1,17 @@
-# My Fit Plan v4.0 — Cloud Foundation
+# My Fit Plan v4.0.1 · Cloud Sync UX
 
-Primera versión de My Fit Plan con cuentas y sincronización cloud, manteniendo
-el funcionamiento local/offline de la aplicación.
+## Objetivo
+Eliminar las preguntas repetitivas de sincronización y convertir My Fit Plan
+Cloud en una experiencia automática.
 
-## Incluye
-- Registro con email y contraseña.
-- Confirmación por email compatible con Supabase Auth.
-- Inicio/cierre de sesión.
-- Recuperación y cambio de contraseña.
-- Migración automática de datos locales al crear una cuenta nueva.
-- Descarga automática de datos cloud en un dispositivo nuevo.
-- Sincronización automática después de cambios locales.
-- Protección frente a conflictos entre dos dispositivos.
-- Plan Free/Premium preparado mediante `mfp_entitlements`.
-- Eliminación completa de cuenta.
-- Modo invitado sin necesidad de registrarse.
-- Sincronización local-first para seguir entrenando sin internet.
+## Comportamiento
+- La nube es la referencia principal al iniciar sesión en un dispositivo nuevo.
+- Cada cambio se guarda localmente de inmediato y se sincroniza en segundo plano.
+- Si solo cambió el dispositivo, se sube sin preguntar.
+- Si solo cambió la nube, se descarga sin preguntar.
+- Solo aparece un conflicto cuando nube y dispositivo cambiaron desde la misma revisión.
+- Antes de una descarga que reemplaza datos locales se crea una copia local de recuperación.
+- Perfil > Cuenta ofrece sincronización manual, descarga cloud y subida forzada del dispositivo.
 
-## Importante
-Las fotografías siguen siendo locales en esta fase. No se envían a Supabase.
-
-Consulta `CLOUD_SETUP_v40.md` antes del primer despliegue.
+## Coste
+No introduce ningún servicio nuevo de pago.
