@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Entrenamiento inteligente, rutinas, progresión y seguimiento con HUD adaptativo.",
+  "description": "Entrenamiento inteligente con HUD adaptativo optimizado para móvil, tablet y escritorio.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

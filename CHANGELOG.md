@@ -1,3 +1,14 @@
+# My Fit Plan v3.8.1
+
+- Corrige el dock cortado al usar un teléfono en horizontal.
+- Elimina el desbordamiento visual del botón Entrenar.
+- Normaliza iconos del rail a contenedores cuadrados 1:1.
+- Centra y estabiliza los SVG en escritorio.
+- Aumenta espaciados y padding del dashboard en PC.
+- Mejora proporciones del rail lateral.
+- Mantiene intactas las funciones y datos de v3.8.
+- Renueva caché y almacenamiento de la PWA.
+
 # My Fit Plan v3.8
 
 - Corrige el rail de escritorio visible en iPhone.

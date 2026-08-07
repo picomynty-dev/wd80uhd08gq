@@ -1,0 +1,61 @@
+{
+  "app": "My Fit Plan",
+  "version": "3.8.1",
+  "generatedAt": "2026-08-07T15:16:35",
+  "summary": {
+    "filesReviewed": 176,
+    "javascriptModules": 21,
+    "clickActionsReferenced": 97,
+    "clickActionsHandled": 97,
+    "pwaShellResources": 31,
+    "visualCasesPassed": 5,
+    "navigationViewsPassed": 5
+  },
+  "fixes": {
+    "mobileLandscapeDock": "passed",
+    "trainButtonContained": "passed",
+    "desktopSquareIconContainers": "passed",
+    "desktopSquareSvgIcons": "passed",
+    "desktopSectionSpacing": "20px",
+    "horizontalOverflow": "not detected"
+  },
+  "measuredLayouts": {
+    "iphonePortrait390x844": {
+      "mode": "mobile",
+      "dock": "374×77 within viewport",
+      "train": "40×40 fully inside dock"
+    },
+    "iphoneLandscape844x390": {
+      "mode": "mobile",
+      "dock": "560×52 centered within viewport",
+      "train": "35×35 fully inside dock"
+    },
+    "iphoneSELandscape667x375": {
+      "mode": "mobile",
+      "dock": "560×52 centered within viewport"
+    },
+    "tablet1024x768": {
+      "mode": "compact",
+      "icons": "44×44 containers / 21×21 SVG"
+    },
+    "desktop1536x900": {
+      "mode": "desktop",
+      "icons": "42×42 containers / 20–21×20–21 SVG",
+      "sectionGap": "20px"
+    }
+  },
+  "functionalSmoke": {
+    "home": "passed",
+    "plan": "passed",
+    "workout": "passed",
+    "library": "passed",
+    "profile": "passed",
+    "desktop": "passed",
+    "mobilePortrait": "passed",
+    "mobileLandscape": "passed"
+  },
+  "limitations": [
+    "El service worker se revisó estáticamente; la prueba offline final debe hacerse una vez desplegado en GitHub Pages.",
+    "La persistencia de fotografías sigue requiriendo comprobación en el iPhone real."
+  ]
+}
