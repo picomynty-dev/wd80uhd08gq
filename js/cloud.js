@@ -1,11 +1,12 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=40';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=401';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
 const DEVICE_KEY = 'mfpCloudDeviceV40';
 const SYNC_DELAY = 950;
+const RECOVERY_KEY = 'mfpCloudRecoveryV401';
 
 let hooks = {
   getState: () => null,
@@ -78,9 +79,37 @@ function userMeta(userId) {
   meta.users[userId] ||= {
     lastRevision: 0,
     lastSyncedHash: '',
-    lastSyncAt: null
+    lastSyncAt: null,
+    initialized: false,
+    preferredSource: 'cloud'
   };
-  return meta.users[userId];
+  const record = meta.users[userId];
+  if (record.lastSyncedHash || Number(record.lastRevision || 0) > 0) record.initialized = true;
+  if (!record.preferredSource) record.preferredSource = 'cloud';
+  return record;
+}
+
+function recoveryStore() {
+  return readJson(RECOVERY_KEY, { users: {} });
+}
+
+function saveRecoverySnapshot(localState, reason = 'cloud-download') {
+  const userId = session?.user?.id;
+  if (!userId || !meaningfulState(localState)) return false;
+  const store = recoveryStore();
+  store.users ||= {};
+  store.users[userId] = {
+    payload: cloudPayload(localState),
+    reason,
+    createdAt: new Date().toISOString()
+  };
+  return writeJson(RECOVERY_KEY, store);
+}
+
+function hasRecoverySnapshot() {
+  const userId = session?.user?.id;
+  if (!userId) return false;
+  return Boolean(recoveryStore()?.users?.[userId]?.payload);
 }
 
 function saveMeta() {
@@ -375,6 +404,8 @@ function markSynced(payload, revision) {
   record.lastRevision = Math.max(0, Number(revision || 0));
   record.lastSyncedHash = stateHash(payload);
   record.lastSyncAt = new Date().toISOString();
+  record.initialized = true;
+  record.preferredSource = record.preferredSource || 'cloud';
   saveMeta();
   conflictSnapshot = null;
   emit({ sync: 'synced', lastSyncAt: record.lastSyncAt, conflict: false, lastError: '' });
@@ -434,12 +465,13 @@ async function reconcile({ reason = 'manual', silent = false } = {}) {
   if (!session?.user?.id) return { status: 'guest' };
 
   if (!silent) emit({ sync: 'syncing', lastError: '' });
+
   try {
     const local = hooks.getState();
     const localPayload = cloudPayload(local);
     const localHash = stateHash(localPayload);
     const localHasData = meaningfulState(localPayload);
-    const remote = await fetchRemoteState();
+    let remote = await fetchRemoteState();
     const record = userMeta(session.user.id);
 
     if (!remote) {
@@ -447,47 +479,91 @@ async function reconcile({ reason = 'manual', silent = false } = {}) {
       return { status: 'uploaded', reason };
     }
 
-    const remotePayload = remote.payload || {};
-    const remoteHash = stateHash(remotePayload);
-    const remoteHasData = meaningfulState(remotePayload);
+    let remotePayload = remote.payload || {};
+    let remoteHash = stateHash(remotePayload);
+    let remoteHasData = meaningfulState(remotePayload);
+    let remoteRevision = Math.max(0, Number(remote.revision || 0));
+    let knownRevision = Math.max(0, Number(record.lastRevision || 0));
 
-    if (!localHasData && remoteHasData) {
-      await pullRemote(remote);
-      return { status: 'downloaded', reason };
-    }
+    // Primer enlace de este dispositivo: la nube es la referencia principal.
+    // Antes de sustituir datos locales distintos guardamos una copia de recuperación.
+    if (!record.initialized && !record.lastSyncedHash) {
+      if (remoteHasData) {
+        if (localHasData && localHash !== remoteHash) {
+          saveRecoverySnapshot(localPayload, 'first-device-link');
+        }
+        await pullRemote(remote);
+        return { status: 'downloaded', reason, autoResolved: 'cloud' };
+      }
 
-    if (localHash === remoteHash) {
-      markSynced(localPayload, remote.revision);
+      if (localHasData) {
+        const updated = await updateRemoteState(localPayload, remoteRevision);
+        if (updated) return { status: 'uploaded', reason };
+      }
+
+      markSynced(localPayload, remoteRevision);
       return { status: 'synced', reason };
     }
 
-    if (record.lastSyncedHash) {
-      const localChanged = localHash !== record.lastSyncedHash;
-      const remoteChanged = remoteHash !== record.lastSyncedHash || Number(remote.revision) !== Number(record.lastRevision || 0);
+    if (localHash === remoteHash) {
+      markSynced(localPayload, remoteRevision);
+      return { status: 'synced', reason };
+    }
 
-      if (!localChanged && remoteChanged) {
-        await pullRemote(remote);
-        return { status: 'downloaded', reason };
+    const localChanged = localHash !== record.lastSyncedHash;
+    const remoteAdvanced = remoteRevision > knownRevision;
+
+    // Nadie ha cambiado la nube desde nuestra última revisión:
+    // cualquier modificación local se puede subir sin preguntar.
+    if (localChanged && !remoteAdvanced && remoteRevision === knownRevision) {
+      const updated = await updateRemoteState(localPayload, knownRevision);
+      if (updated) return { status: 'uploaded', reason };
+
+      // Hubo una carrera entre el GET y el PATCH: releer antes de declarar conflicto.
+      remote = await fetchRemoteState();
+      if (!remote) {
+        await createRemoteState(localPayload);
+        return { status: 'uploaded', reason };
       }
-      if (localChanged && !remoteChanged) {
-        const updated = await updateRemoteState(localPayload, remote.revision);
-        if (updated) return { status: 'uploaded', reason };
-      }
-      if (!localChanged && !remoteChanged) {
-        markSynced(localPayload, remote.revision);
+      remotePayload = remote.payload || {};
+      remoteHash = stateHash(remotePayload);
+      remoteRevision = Math.max(0, Number(remote.revision || 0));
+      if (localHash === remoteHash) {
+        markSynced(localPayload, remoteRevision);
         return { status: 'synced', reason };
       }
     }
 
-    conflictSnapshot = {
-      local: localPayload,
-      remote,
-      localSummary: stateSummary(localPayload),
-      remoteSummary: stateSummary(remotePayload)
-    };
-    emit({ sync: 'conflict', conflict: true, lastError: '' });
-    hooks.onConflict({ ...conflictSnapshot });
-    return { status: 'conflict', reason, ...conflictSnapshot };
+    // Solo cambió la nube: descargar automáticamente.
+    if (!localChanged && remoteAdvanced) {
+      await pullRemote(remote);
+      return { status: 'downloaded', reason };
+    }
+
+    // Mismo número de revisión pero payload distinto y sin cambios locales:
+    // se considera la nube autoritativa y se normaliza silenciosamente.
+    if (!localChanged && !remoteAdvanced) {
+      await pullRemote(remote);
+      return { status: 'downloaded', reason };
+    }
+
+    // Ambos lados cambiaron desde el último punto común: conflicto REAL.
+    if (localChanged && remoteAdvanced) {
+      conflictSnapshot = {
+        local: localPayload,
+        remote,
+        localSummary: stateSummary(localPayload),
+        remoteSummary: stateSummary(remotePayload)
+      };
+      emit({ sync: 'conflict', conflict: true, lastError: '' });
+      hooks.onConflict({ ...conflictSnapshot });
+      return { status: 'conflict', reason, ...conflictSnapshot };
+    }
+
+    // Fallback seguro: la nube es principal, conservando una copia local.
+    if (localHasData && localHash !== remoteHash) saveRecoverySnapshot(localPayload, 'fallback-cloud');
+    await pullRemote(remote);
+    return { status: 'downloaded', reason, autoResolved: 'cloud' };
   } catch (error) {
     emit({ sync: 'error', lastError: asErrorMessage(error) });
     if (!silent) throw error;
@@ -649,6 +725,46 @@ export async function cloudSyncNow(options = {}) {
   return reconcile({ reason: 'manual', ...options });
 }
 
+export async function cloudDownloadNow() {
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  if (!navigator.onLine) return { status: 'offline' };
+  await ensureSession();
+  if (!session?.user?.id) throw new Error('Debes iniciar sesión.');
+
+  emit({ sync: 'syncing', lastError: '' });
+  const remote = await fetchRemoteState();
+  if (!remote?.payload) throw new Error('No hay una copia disponible en My Fit Plan Cloud.');
+
+  const localPayload = cloudPayload(hooks.getState());
+  if (stateHash(localPayload) !== stateHash(remote.payload)) {
+    saveRecoverySnapshot(localPayload, 'manual-cloud-download');
+  }
+
+  await pullRemote(remote);
+  return { status: 'downloaded' };
+}
+
+export async function cloudUploadNow() {
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  if (!navigator.onLine) return { status: 'offline' };
+  await ensureSession();
+  if (!session?.user?.id) throw new Error('Debes iniciar sesión.');
+
+  emit({ sync: 'syncing', lastError: '' });
+  const localPayload = cloudPayload(hooks.getState());
+  const remote = await fetchRemoteState();
+
+  if (!remote) {
+    await createRemoteState(localPayload);
+    return { status: 'uploaded' };
+  }
+
+  await updateRemoteState(localPayload, Number(remote.revision || 0), { force: true });
+  return { status: 'uploaded' };
+}
+
 export async function cloudResolveConflict(strategy) {
   if (!conflictSnapshot) {
     const result = await reconcile({ reason: 'resolve' });
@@ -694,6 +810,10 @@ export function cloudAccountSummary() {
     lastError: status.lastError,
     recovery: status.recovery,
     pendingEmail: status.pendingEmail,
-    conflict: status.conflict
+    conflict: status.conflict,
+    syncMode: 'automatic-cloud',
+    lastRevision: user?.id ? Number(userMeta(user.id).lastRevision || 0) : 0,
+    initialized: user?.id ? Boolean(userMeta(user.id).initialized) : false,
+    recoveryAvailable: hasRecoverySnapshot()
   };
 }

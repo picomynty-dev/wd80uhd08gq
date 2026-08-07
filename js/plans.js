@@ -1,4 +1,4 @@
-import { clone, uid } from './utils.js?v=40';
+import { clone, uid } from './utils.js?v=401';
 
 const DAY_LIBRARY = {
   fullBodyBase: { name: 'Fuerza total · Base', focus: 'Cuerpo completo', exercises: ['leg_press', 'chest_press', 'lat_pulldown', 'leg_curl', 'lateral_raise', 'plank'] },

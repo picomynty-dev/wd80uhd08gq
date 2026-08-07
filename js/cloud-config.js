@@ -6,7 +6,7 @@ export const CLOUD_CONFIG = Object.freeze({
   profileTable: 'mfp_profiles',
   entitlementTable: 'mfp_entitlements',
   schemaVersion: 410,
-  appVersion: '4.0 Cloud Foundation'
+  appVersion: '4.0.1 Cloud Sync UX'
 });
 
 export function cloudRedirectUrl() {

@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=40';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=40';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=40';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=401';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=401';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=401';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=40';
+} from './stats.js?v=401';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=40';
+} from './coach.js?v=401';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=40';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=40';
+} from './adaptive.js?v=401';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=401';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=40';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=40';
+} from './calendar-planner.js?v=401';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=401';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=40';
+} from './progression-engine.js?v=401';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=40';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=40';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=40';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=40';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=40';
+} from './utils.js?v=401';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=401';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=401';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=401';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=401';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -81,21 +81,23 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=40';
+} from './photo-progress.js?v=401';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
+  cloudDownloadNow,
   cloudResolveConflict,
   cloudSendPasswordReset,
   cloudSignIn,
   cloudSignOut,
   cloudSignUp,
+  cloudUploadNow,
   cloudSyncNow,
   cloudUpdatePassword,
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=40';
+} from './cloud.js?v=401';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -198,8 +200,8 @@ function handleCloudStatusChange(nextStatus) {
 
 function handleCloudConflict(info) {
   pendingCloudConflict = info;
-  showToast('Hay cambios distintos en este dispositivo y en la nube.', 'warning');
-  if (!state.activeWorkout) window.setTimeout(() => openCloudConflictModal(info), 80);
+  showToast('Hay un conflicto real entre dos dispositivos. Puedes resolverlo desde Perfil → Cuenta.', 'warning');
+  refreshCloudAccountDom();
 }
 
 function requestedInitialView() {
@@ -3374,13 +3376,25 @@ function profileAccountHtml() {
     <section class="grid grid-3 cloud-status-grid">
       <article class="card metric-card"><div class="metric metric-name">${esc(cloudSyncLabel())}</div><div class="metric-label">Estado</div></article>
       <article class="card metric-card"><div class="metric metric-name">${esc(cloudDate(info.lastSyncAt))}</div><div class="metric-label">Última sincronización</div></article>
-      <article class="card metric-card"><div class="metric metric-name">Local + Cloud</div><div class="metric-label">Modo de guardado</div></article>
+      <article class="card metric-card"><div class="metric metric-name">Automática</div><div class="metric-label">Nube principal</div></article>
     </section>
     ${info.conflict ? `<article class="card cloud-conflict-card"><p class="eyebrow">Requiere decisión</p><h2>Hay dos versiones distintas de tus datos</h2><p class="muted">No hemos sobrescrito ninguna. Revisa cuál quieres conservar.</p><button class="button button-primary" type="button" data-action="cloud-open-conflict">Resolver conflicto</button></article>` : ''}
     ${info.lastError ? `<article class="notice notice-warning"><strong>Cloud:</strong> ${esc(info.lastError)}</article>` : ''}
-    <article class="card cloud-sync-card">
-      <div><p class="eyebrow">Sincronización</p><h2>Local primero, nube después</h2><p class="muted small">Los entrenamientos se guardan en el dispositivo inmediatamente. La nube se actualiza en segundo plano cuando hay internet.</p></div>
-      <button class="button button-primary" type="button" data-action="cloud-sync">Sincronizar ahora</button>
+    <article class="card cloud-sync-card cloud-sync-automatic">
+      <div>
+        <p class="eyebrow">Sincronización automática</p>
+        <h2>Nube principal · sin preguntas repetitivas</h2>
+        <p class="muted small">Cada cambio se guarda primero en este dispositivo y después se sube automáticamente. En un dispositivo nuevo, My Fit Plan carga la nube por defecto. Solo te pediremos elegir si dos dispositivos han cambiado datos distintos al mismo tiempo.</p>
+      </div>
+      <div class="cloud-auto-status"><span class="cloud-auto-dot"></span><strong>Automática</strong><small>${info.lastRevision ? `Revisión cloud ${info.lastRevision}` : 'Preparada'}</small></div>
+    </article>
+    <article class="card cloud-manual-card">
+      <div><p class="eyebrow">Control manual</p><h2>Tú sigues teniendo el control</h2><p class="muted small">Normalmente no necesitas tocar nada. Estas opciones sirven para recuperación o para decidir conscientemente qué copia debe mandar.</p></div>
+      <div class="cloud-manual-actions">
+        <button class="button button-primary" type="button" data-action="cloud-sync">Sincronizar ahora</button>
+        <button class="button button-secondary" type="button" data-action="cloud-download">Descargar de la nube</button>
+        <button class="button button-secondary" type="button" data-action="cloud-upload">Subir este dispositivo</button>
+      </div>
     </article>
     <article class="card cloud-photo-note"><strong>Fotografías de progreso</strong><p class="muted small">En esta primera fase Cloud sincronizamos los datos y medidas. Las fotografías siguen privadas en este dispositivo; su sincronización cifrada llegará en la fase específica de fotos cloud.</p></article>
     <article class="card cloud-account-security">
@@ -3487,7 +3501,7 @@ async function submitCloudSignin(form) {
   try {
     await cloudSignIn({ email: data.get('email'), password: data.get('password') });
     closeModal();
-    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Revisa qué versión quieres conservar.' : 'Sesión iniciada y sincronización activada.', cloudAccountSummary().conflict ? 'warning' : 'success');
+    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Hay un conflicto real pendiente en Perfil → Cuenta.' : 'Sesión iniciada. La sincronización automática está activa.', cloudAccountSummary().conflict ? 'warning' : 'success');
     refreshCloudAccountDom();
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
@@ -3533,6 +3547,38 @@ async function runCloudSync() {
     showToast(messages[result.status] || 'Sincronización revisada.', result.status === 'offline' ? 'warning' : 'success');
     refreshCloudAccountDom();
   } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+}
+
+function downloadCloudManually() {
+  confirmAction({
+    title: 'Descargar datos de la nube',
+    message: 'La nube reemplazará los datos actuales de este dispositivo. Antes guardaremos automáticamente una copia local de recuperación.',
+    confirmLabel: 'Usar datos de la nube',
+    onConfirm: async () => {
+      try {
+        const result = await cloudDownloadNow();
+        closeModal();
+        showToast(result.status === 'offline' ? 'Necesitas conexión para descargar la nube.' : 'Datos de la nube restaurados.', result.status === 'offline' ? 'warning' : 'success');
+        refreshCloudAccountDom();
+      } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+    }
+  });
+}
+
+function uploadDeviceManually() {
+  confirmAction({
+    title: 'Subir este dispositivo',
+    message: 'Los datos actuales de este dispositivo pasarán a ser la versión principal en la nube. Utiliza esta opción solo cuando quieras reemplazar conscientemente la copia cloud.',
+    confirmLabel: 'Subir este dispositivo',
+    onConfirm: async () => {
+      try {
+        const result = await cloudUploadNow();
+        closeModal();
+        showToast(result.status === 'offline' ? 'Necesitas conexión para subir los datos.' : 'Este dispositivo ya es la versión principal de la nube.', result.status === 'offline' ? 'warning' : 'success');
+        refreshCloudAccountDom();
+      } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+    }
+  });
 }
 
 async function resolveCloudConflict(strategy) {
@@ -3728,6 +3774,8 @@ async function handleAppClick(event) {
     'cloud-signin': openCloudSigninModal,
     'cloud-forgot': openCloudRecoveryModal,
     'cloud-sync': runCloudSync,
+    'cloud-download': downloadCloudManually,
+    'cloud-upload': uploadDeviceManually,
     'cloud-open-conflict': () => openCloudConflictModal(),
     'cloud-conflict-local': () => resolveCloudConflict('local'),
     'cloud-conflict-cloud': () => resolveCloudConflict('cloud'),
@@ -5268,7 +5316,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=40', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=401', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

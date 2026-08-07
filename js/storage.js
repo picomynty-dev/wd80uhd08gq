@@ -1,10 +1,10 @@
-import { clone, isoDay, numberValue, uid } from './utils.js?v=40';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=40';
-import { normalizePlanner } from './calendar-planner.js?v=40';
+import { clone, isoDay, numberValue, uid } from './utils.js?v=401';
+import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=401';
+import { normalizePlanner } from './calendar-planner.js?v=401';
 
-export const STORAGE_KEY = 'myFitPlanStateV40';
-export const LEGACY_KEYS = ['myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '4.0 Cloud Foundation';
+export const STORAGE_KEY = 'myFitPlanStateV401';
+export const LEGACY_KEYS = ['myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '4.0.1 Cloud Sync UX';
 
 export const defaultSettings = {
   accent: 'custom',
