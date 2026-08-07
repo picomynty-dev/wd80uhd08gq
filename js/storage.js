@@ -1,10 +1,10 @@
 import { clone, isoDay, numberValue, uid } from './utils.js';
 import { buildPlan, normalizePlan, trainingRules } from './plans.js';
-import { normalizePlanner } from './calendar-planner.js?v=38';
+import { normalizePlanner } from './calendar-planner.js?v=381';
 
-export const STORAGE_KEY = 'myFitPlanStateV38';
-export const LEGACY_KEYS = ['myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '3.8';
+export const STORAGE_KEY = 'myFitPlanStateV381';
+export const LEGACY_KEYS = ['myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '3.8.1';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -20,7 +20,7 @@ export const defaultSettings = {
 };
 
 export const defaultState = {
-  schemaVersion: 390,
+  schemaVersion: 391,
   appVersion: APP_VERSION,
   profile: null,
   onboardingCompleted: false,
@@ -126,7 +126,7 @@ export function normalizeState(saved = {}) {
   const normalized = {
     ...createEmptyState(),
     ...saved,
-    schemaVersion: 390,
+    schemaVersion: 391,
     appVersion: APP_VERSION,
     profile,
     onboardingCompleted: Boolean(saved.onboardingCompleted || profile?.setupVersion === '3.1'),

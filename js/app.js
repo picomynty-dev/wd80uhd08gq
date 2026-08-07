@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=38';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=38';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=38';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=381';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=381';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=381';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=38';
+} from './stats.js?v=381';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=38';
+} from './coach.js?v=381';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=38';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=38';
+} from './adaptive.js?v=381';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=381';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=38';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=38';
+} from './calendar-planner.js?v=381';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=381';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=38';
+} from './progression-engine.js?v=381';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=38';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=38';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=38';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=38';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=38';
+} from './utils.js?v=381';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=381';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=381';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=381';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=381';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -81,7 +81,7 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=38';
+} from './photo-progress.js?v=381';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -4843,7 +4843,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=38', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=381', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
