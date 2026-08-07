@@ -8149,3 +8149,196 @@ body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pu
   .cloud-photo-live { grid-template-columns: 1fr; }
   .cloud-photo-stats { width: 100%; }
 }
+\n\n/* =========================================================
+   My Fit Plan v4.1 · Premium Foundation
+   ========================================================= */
+.premium-lock-badge,
+.premium-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: .56rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.premium-lock-badge,
+.premium-plan-badge {
+  border: 1px solid rgba(245, 158, 11, .28);
+  background: rgba(245, 158, 11, .10);
+  color: #fbbf24;
+}
+.premium-plan-badge.is-founder,
+.cloud-plan-pill.is-founder {
+  border-color: rgba(168, 85, 247, .32);
+  background: linear-gradient(135deg, rgba(168,85,247,.16), rgba(245,158,11,.10));
+  color: #d8b4fe;
+}
+.premium-card-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.training-option-mfp.is-premium-locked {
+  border-color: rgba(245,158,11,.24);
+  background: linear-gradient(150deg, rgba(245,158,11,.045), var(--surface));
+}
+.button-premium {
+  border: 1px solid rgba(245,158,11,.38);
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #111827;
+  font-weight: 900;
+  box-shadow: 0 12px 34px rgba(245,158,11,.18);
+}
+.button-premium:hover { transform: translateY(-1px); }
+.premium-preview-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  padding: 22px 24px;
+  border: 1px solid rgba(245,158,11,.20);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(245,158,11,.10), transparent 28%),
+    linear-gradient(145deg, rgba(245,158,11,.035), var(--surface));
+}
+.premium-preview-card.is-compact { padding: 14px 16px; border-radius: 16px; }
+.premium-preview-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(245,158,11,.12);
+  color: #fbbf24;
+  font-weight: 900;
+}
+.premium-preview-copy { min-width: 0; }
+.premium-preview-copy h2 { margin: 2px 0 4px; }
+.premium-preview-copy p:last-child { margin: 0; color: var(--muted); }
+.premium-paywall { position: relative; overflow: hidden; }
+.premium-paywall-glow {
+  position: absolute;
+  top: -120px;
+  right: -100px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(245,158,11,.13);
+  filter: blur(55px);
+  pointer-events: none;
+}
+.premium-paywall-header { position: relative; }
+.premium-paywall-plan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0;
+  padding: 17px 18px;
+  border: 1px solid rgba(245,158,11,.28);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(249,115,22,.05));
+}
+.premium-paywall-plan > div { display: flex; align-items: center; gap: 12px; }
+.premium-paywall-plan > div > div { display: grid; gap: 2px; }
+.premium-paywall-plan > div > div small { color: var(--muted); font-size: .58rem; }
+.premium-paywall-plan > span { color: #fbbf24; font-weight: 800; font-size: .72rem; }
+.premium-paywall-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: linear-gradient(135deg,#f59e0b,#f97316);
+  color: #111827;
+  font-weight: 950;
+}
+.premium-paywall-features {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 9px;
+  margin: 14px 0;
+}
+.premium-paywall-features article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+.premium-paywall-features article > span { color: #fbbf24; font-size: 1.1rem; }
+.premium-paywall-features article > div { display: grid; gap: 2px; }
+.premium-paywall-features small { color: var(--muted); }
+.premium-paywall-compare {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.premium-paywall-compare > div {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.premium-paywall-compare > div.is-premium { border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.045); }
+.premium-paywall-compare span { color: var(--muted); font-size: .7rem; }
+.premium-paywall-note { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--surface-soft); }
+.premium-paywall-note p { margin: 3px 0 0; color: var(--muted); font-size: .7rem; }
+.premium-account-card { display: grid; gap: 14px; border-color: rgba(245,158,11,.18); }
+.premium-account-card.is-unlocked { background: linear-gradient(145deg, rgba(245,158,11,.05), var(--surface)); }
+.premium-account-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.premium-account-check,
+.premium-account-lock { display:grid; width:40px; height:40px; place-items:center; border-radius:13px; background:rgba(245,158,11,.12); color:#fbbf24; font-weight:900; }
+.premium-account-mini-features { display:flex; flex-wrap:wrap; gap:6px; }
+.premium-account-mini-features span { padding:6px 9px; border-radius:999px; background:var(--surface-soft); color:var(--muted); font-size:.62rem; }
+.premium-account-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+/* v4.1 · las seis pestañas de Perfil permanecen visibles en móvil */
+@media (max-width: 620px) {
+  .profile-tabs.profile-sections {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    gap: 3px !important;
+    padding: 3px !important;
+    overflow: hidden !important;
+    scroll-snap-type: none !important;
+  }
+  .profile-tabs.profile-sections > button {
+    flex: initial !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 7px 1px !important;
+    border-radius: 9px !important;
+    font-size: clamp(.46rem, 1.95vw, .58rem) !important;
+    letter-spacing: -.02em !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+}
+@media (max-width: 340px) {
+  .profile-tabs.profile-sections > button { font-size: .44rem !important; }
+}
+@media (max-width: 820px) {
+  .premium-preview-card { grid-template-columns: auto minmax(0,1fr); padding: 16px; }
+  .premium-preview-card .button { grid-column: 1 / -1; width:100%; }
+  .premium-paywall-features,
+  .premium-paywall-compare { grid-template-columns: 1fr; }
+  .premium-paywall-plan { align-items:flex-start; flex-direction:column; }
+}

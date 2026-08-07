@@ -1,3 +1,15 @@
+# My Fit Plan v4.1 — Premium Foundation
+
+- Añade planes Free, Premium y Founder usando el entitlement read-only de Supabase.
+- Premium caducado vuelve a Free automáticamente sin perder datos.
+- Cachea entitlement para conservar Premium offline.
+- Añade paywall y pantalla de ventajas sin pagos activos todavía.
+- Bloquea My Fit Plan adaptativo, coach avanzado, progresión/deload, smart replan y comparación avanzada para Free.
+- Mantiene rutinas manuales, personalizado, biblioteca, historial, Cloud y fotos privadas en Free.
+- Añade actualización manual de plan desde Perfil > Cuenta.
+- Incluye SQL administrativo de prueba para asignar Founder/Premium/Free sin exponer permisos al cliente.
+- Corrige Perfil móvil: las 6 pestañas se ven simultáneamente, sin swipe.
+
 # My Fit Plan v4.0.2 — Cloud Photos
 
 - Sincronización privada de fotografías con Supabase Storage.

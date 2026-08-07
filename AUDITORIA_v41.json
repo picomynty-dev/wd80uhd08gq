@@ -1,0 +1,39 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.1 Premium Foundation",
+  "generatedAt": "2026-08-07T18:15:47",
+  "summary": {
+    "filesReviewed": 187,
+    "javascriptModules": 24,
+    "uiActions": 111,
+    "uiActionsHandled": 111,
+    "premiumActions": 10,
+    "pwaResources": 34
+  },
+  "testResults": {
+    "freeFeatureLocks": "passed",
+    "founderUnlock": "passed",
+    "activePremiumUnlock": "passed",
+    "expiredPremiumFallsBackToFree": "passed",
+    "offlineFounderCache": "passed",
+    "entitlementRefreshWithoutRelogin": "passed",
+    "cloudPhotosRegression": "passed",
+    "profileTabs320": "passed - 6/6 visible",
+    "profileTabs375": "passed - 6/6 visible",
+    "profileTabs390": "passed - 6/6 visible",
+    "profileTabs430": "passed - 6/6 visible",
+    "allProfileTabsClickable": "passed",
+    "routineRemainsFree": "passed",
+    "mfpSessionBlockedForFree": "passed",
+    "mfpSessionUnlockedForFounder": "passed"
+  },
+  "security": {
+    "entitlementClientPermissions": "read-only",
+    "clientSecretHits": [],
+    "clientEntitlementMutation": false,
+    "premiumExpiryEnforced": true,
+    "offlineEntitlementCache": true
+  },
+  "cost": "0 EUR additional recurring cost",
+  "payments": "not enabled in v4.1"
+}

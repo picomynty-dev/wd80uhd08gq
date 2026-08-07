@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-fit-plan-';
-const CACHE_NAME = 'my-fit-plan-v402-cloud-photos-20260807-1';
+const CACHE_NAME = 'my-fit-plan-v41-premium-foundation-20260807-1';
 
 const CORE_SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
@@ -13,7 +13,7 @@ const OPTIONAL_SHELL = [
   './js/exercises.js', './js/exercises-extra.js', './js/premium-data.js',
   './js/real-motion-bundle-v323a.js', './js/media-bundle-pro-v3222.js', './js/search.js', './js/visuals.js',
   './js/photo-progress.js', './js/plans.js', './js/stats.js', './js/coach.js', './js/adaptive.js',
-  './js/session-selector.js', './js/exercise-intelligence.js', './js/progression-engine.js', './js/calendar-planner.js'
+  './js/session-selector.js', './js/premium.js', './js/exercise-intelligence.js', './js/progression-engine.js', './js/calendar-planner.js'
 ];
 
 const APP_SHELL = [...CORE_SHELL, ...OPTIONAL_SHELL];
