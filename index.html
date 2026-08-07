@@ -44,7 +44,7 @@
       sync();
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=381">
+  <link rel="stylesheet" href="./styles.css?v=39">
   <title>My Fit Plan</title>
 </head>
 <body>
@@ -64,7 +64,7 @@
       </nav>
       <div class="rail-footer">
         <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Centro de control</strong><small id="railHealthText">Sistema operativo</small></div></button>
-        <div class="rail-version"><span class="status-dot"></span><span>v3.8.1 · HUD Polish</span></div>
+        <div class="rail-version"><span class="status-dot"></span><span>v3.9 · Release Candidate</span></div>
       </div>
     </aside>
 
@@ -81,7 +81,7 @@
         </div>
         <div class="topbar-actions">
           <span id="networkStatus" class="network-status is-online"><span class="network-dot"></span><span class="network-label">Online</span></span>
-          <span class="version-badge" aria-label="Versión 3.8.1">v3.8.1</span>
+          <span class="version-badge" aria-label="Versión 3.9 RC">v3.9 RC</span>
           <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
           <button id="hudControlButton" class="hud-control-button" type="button" data-action="hud-control" aria-label="Abrir centro de control"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></button>
           <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
@@ -95,11 +95,11 @@
     </section>
 
     <nav id="mobileDock" class="bottom-nav premium-nav" aria-label="Navegación principal">
-      <button type="button" data-nav="home" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1A1.2 1.2 0 0 1 19.8 21h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><small>Inicio</small></button>
-      <button type="button" data-nav="plan" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><small>Plan</small></button>
-      <button type="button" data-nav="workout" class="nav-item nav-train"><span class="nav-train-orbit"></span><span class="nav-icon train-icon"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><small>Entrenar</small></button>
-      <button type="button" data-nav="library" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><small>Ejercicios</small></button>
-      <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><small>Perfil</small></button>
+      <button type="button" data-nav="home" aria-label="Inicio" class="nav-item active"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7v9.1A1.2 1.2 0 0 1 19.8 21h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><small>Inicio</small></button>
+      <button type="button" data-nav="plan" aria-label="Plan" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12M6 10h12M6 16h8"/><circle cx="4" cy="4" r="1"/><circle cx="4" cy="10" r="1"/><circle cx="4" cy="16" r="1"/></svg></span><small>Plan</small></button>
+      <button type="button" data-nav="workout" aria-label="Entrenar" class="nav-item nav-train"><span class="nav-train-orbit"></span><span class="nav-icon train-icon"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><small>Entrenar</small></button>
+      <button type="button" data-nav="library" aria-label="Ejercicios" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><small>Ejercicios</small></button>
+      <button type="button" data-nav="profile" aria-label="Perfil" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><small>Perfil</small></button>
     </nav>
   </div>
 
@@ -110,7 +110,7 @@
       if (window.location.protocol === 'file:') {
         const app = document.querySelector('#app');
         document.querySelectorAll('.bottom-nav,.desktop-rail').forEach((node) => node.hidden = true);
-        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 3.8.1</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
+        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 3.9 RC</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
       }
     });
     window.setTimeout(() => {
@@ -123,22 +123,32 @@
     (() => {
       const marker = 'mfp-clean-runtime-version';
       try {
-        if (localStorage.getItem(marker) === '381') return;
-        localStorage.setItem(marker, '381');
+        if (localStorage.getItem(marker) === '39') return;
+        localStorage.setItem(marker, '39');
       } catch {
         if (window.location.search.includes('fresh=')) return;
       }
+      const appBase = new URL('./', window.location.href).pathname;
       Promise.all([
-        'caches' in window ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))) : Promise.resolve(),
-        'serviceWorker' in navigator ? navigator.serviceWorker.getRegistrations().then((items) => Promise.all(items.map((item) => item.unregister()))) : Promise.resolve()
+        'caches' in window
+          ? caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('my-fit-plan-')).map((key) => caches.delete(key))))
+          : Promise.resolve(),
+        'serviceWorker' in navigator
+          ? navigator.serviceWorker.getRegistrations().then((items) => Promise.all(items
+              .filter((item) => {
+                try { return new URL(item.scope).pathname.startsWith(appBase); }
+                catch { return false; }
+              })
+              .map((item) => item.unregister())))
+          : Promise.resolve()
       ]).then(() => {
         const url = new URL(window.location.href);
-        url.searchParams.set('v', '381');
+        url.searchParams.set('v', '39');
         url.searchParams.set('fresh', Date.now().toString());
         window.location.replace(url.toString());
       }).catch(() => {});
     })();
   </script>
-  <script type="module" src="./js/app.js?v=381"></script>
+  <script type="module" src="./js/app.js?v=39"></script>
 </body>
 </html>

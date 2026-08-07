@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Entrenamiento inteligente con HUD adaptativo optimizado para móvil, tablet y escritorio.",
+  "description": "My Fit Plan 3.9 RC: entrenamiento inteligente, progresión, calendario y seguimiento con estabilidad reforzada.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

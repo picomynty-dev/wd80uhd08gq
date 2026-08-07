@@ -1,3 +1,17 @@
+# My Fit Plan v3.9 RC
+
+- Release Candidate previa a v4.0.
+- Corrige avance prematuro de rutina al preparar días manuales/calendario.
+- Corrige migración de sesiones antiguas con series personalizadas.
+- Fuerza guardado de campos pendientes al cerrar/minimizar.
+- Acota objetivos, pesos, repeticiones y RIR.
+- Refuerza fotografías privadas ante fallos de IndexedDB.
+- Limita limpieza de caché/service workers a My Fit Plan.
+- Hace el precache offline tolerante a recursos opcionales.
+- Añade fallback a caché ante respuestas de red no válidas.
+- Versiona todos los imports de módulos.
+- Amplía comprobaciones del Centro de control.
+
 # My Fit Plan v3.8.1
 
 - Corrige el dock cortado al usar un teléfono en horizontal.

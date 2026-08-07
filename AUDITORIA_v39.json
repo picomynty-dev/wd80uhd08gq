@@ -1,0 +1,63 @@
+{
+  "app": "My Fit Plan",
+  "version": "3.9 RC",
+  "generatedAt": "2026-08-07",
+  "summary": {
+    "projectFiles": 173,
+    "javascriptModules": 21,
+    "reachableModules": 21,
+    "imports": 42,
+    "buttonActionsReferenced": 97,
+    "buttonActionsHandled": 97,
+    "serviceWorkerShellResources": 31
+  },
+  "regressionTests": {
+    "onboarding": "passed",
+    "primaryNavigation": "passed",
+    "controlCenterDiagnostics": "passed",
+    "manualPlanDayCancelAndFinish": "passed",
+    "myFitPlanSession": "passed",
+    "customSession": "passed",
+    "pagehidePersistence": "passed",
+    "numericValidation": "passed",
+    "legacySetMigration": "passed",
+    "corruptCurrentStateFallback": "passed",
+    "calendarCancelAndFinish": "passed",
+    "bodyProgressMeasures": "passed",
+    "backupExportAndReset": "passed",
+    "historyDetail": "passed",
+    "progressionEngine": "passed",
+    "plateauDetection": "passed",
+    "deloadEngine": "passed",
+    "plannerRotation": "passed",
+    "missedSessionDetection": "passed",
+    "smartReplanning": "passed",
+    "responsiveMobile390x844": "passed",
+    "responsiveLandscape844x390": "passed",
+    "responsiveTablet1024x768": "passed",
+    "responsiveDesktop1536x900": "passed",
+    "duplicateRenderedIds": "passed",
+    "horizontalOverflow": "passed",
+    "primaryButtonAccessibleNames": "passed"
+  },
+  "fixes": [
+    "La rutina solo avanza al finalizar una sesión de rutina, no al prepararla desde Plan o Calendario.",
+    "Migración de sesiones antiguas conserva el número real de series.",
+    "Peso, repeticiones y notas pendientes se fuerzan a guardar al minimizar o cerrar la PWA.",
+    "Objetivos, peso, repeticiones y RIR se normalizan y acotan.",
+    "Una clave de estado actual corrupta puede recuperar una copia legacy válida.",
+    "Operaciones de fotografías privadas fallan de forma controlada y limpian guardados parciales.",
+    "La limpieza de caché y service workers queda limitada a My Fit Plan.",
+    "El precache separa núcleo obligatorio y recursos opcionales.",
+    "Todos los imports internos usan ?v=39.",
+    "El Centro de control comprueba series, objetivos e historial.",
+    "El dock móvil conserva nombres accesibles incluso en horizontal."
+  ],
+  "limitations": [
+    "El service worker se validó por sintaxis, rutas y lógica estática; la prueba offline real debe realizarse tras desplegar en GitHub Pages.",
+    "El entorno de pruebas bloquea un origen HTTP/HTTPS local, por lo que la persistencia real de fotografías en IndexedDB debe confirmarse una vez en el iPhone; el flujo sin fotografía y el manejo de errores sí fueron probados."
+  ],
+  "optionalNotIncluded": [
+    "Copia de seguridad única que incluya fotografías: no incluida porque cambiaría el formato y el tamaño del backup; requiere decisión del usuario."
+  ]
+}
