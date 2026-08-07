@@ -8113,3 +8113,39 @@ body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pu
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   My Fit Plan v4.0.2 · Cloud Photos
+   ========================================================= */
+.cloud-photo-live {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+.cloud-photo-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(64px,1fr));
+  gap: 7px;
+}
+.cloud-photo-stats span {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 11px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+.cloud-photo-stats strong { font-size: 1rem; }
+.cloud-photo-stats small {
+  color: var(--muted);
+  font-size: .55rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+@media (max-width: 820px) {
+  .cloud-photo-live { grid-template-columns: 1fr; }
+  .cloud-photo-stats { width: 100%; }
+}

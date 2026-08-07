@@ -1,0 +1,46 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.0.2 Cloud Photos",
+  "generatedAt": "2026-08-07T17:51:02",
+  "filesReviewed": 183,
+  "javascriptModules": 23,
+  "uiActions": {
+    "referenced": 108,
+    "handled": 108,
+    "missing": []
+  },
+  "imports": {
+    "missing": []
+  },
+  "pwa": {
+    "resourcesChecked": 33,
+    "missing": [],
+    "externalSupabaseCaching": false
+  },
+  "security": {
+    "clientSecretHits": [],
+    "bucket": "mfp-progress-photos",
+    "userScopedPaths": true
+  },
+  "photoTests": {
+    "legacyLocalUpload": "passed",
+    "newDeviceRestore": "passed",
+    "offlineDeleteQueue": "passed",
+    "deleteFlushOnReconnect": "passed",
+    "existingObjectUpsert": "passed",
+    "integratedReviewSaveUpload": "passed",
+    "integratedReviewDeleteCloud": "passed",
+    "mobileAccountUI": "passed",
+    "desktopAccountUI": "passed",
+    "compressionUnder5MB": "passed"
+  },
+  "compressionTest": {
+    "inputBytes": 5323158,
+    "outputBytes": 24586,
+    "outputType": "image/jpeg"
+  },
+  "limitations": [
+    "La prueba final de RLS debe confirmarse con la cuenta real desplegada en Supabase.",
+    "La persistencia real de IndexedDB debe comprobarse en el iPhone, ya que el entorno automatizado usa un adaptador local simulado para el flujo UI."
+  ]
+}

@@ -1,3 +1,17 @@
+# My Fit Plan v4.0.2 — Cloud Photos
+
+- Sincronización privada de fotografías con Supabase Storage.
+- Migración automática de fotografías locales existentes.
+- Restauración automática en dispositivos nuevos.
+- Caché local conservada para funcionamiento offline.
+- Cola de borrados cuando el dispositivo está sin conexión.
+- Borrado cloud al eliminar revisiones.
+- Limpieza de fotos antes de eliminar la cuenta.
+- Estado de Cloud Photos en Perfil > Cuenta y Centro de control.
+- Compresión adaptativa para ahorrar almacenamiento gratuito.
+- Mantiene intacto el sistema automático de v4.0.1.
+- No requiere SQL adicional al Paso 2 ya ejecutado.
+
 # My Fit Plan v4.0.1 — Cloud Sync UX
 
 - Elimina falsos conflictos de sincronización.

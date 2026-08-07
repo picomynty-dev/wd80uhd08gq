@@ -44,7 +44,7 @@
       sync();
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=401">
+  <link rel="stylesheet" href="./styles.css?v=402">
   <title>My Fit Plan</title>
 </head>
 <body>
@@ -64,7 +64,7 @@
       </nav>
       <div class="rail-footer">
         <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Centro de control</strong><small id="railHealthText">Sistema operativo</small></div></button>
-        <div class="rail-version"><span class="status-dot"></span><span>v4.0.1 · Cloud Sync UX</span></div>
+        <div class="rail-version"><span class="status-dot"></span><span>v4.0.2 · Cloud Photos</span></div>
       </div>
     </aside>
 
@@ -81,7 +81,7 @@
         </div>
         <div class="topbar-actions">
           <span id="networkStatus" class="network-status is-online"><span class="network-dot"></span><span class="network-label">Online</span></span>
-          <span class="version-badge" aria-label="Versión 4.0.1">v4.0.1</span>
+          <span class="version-badge" aria-label="Versión 4.0.2">v4.0.2</span>
           <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
           <button id="hudControlButton" class="hud-control-button" type="button" data-action="hud-control" aria-label="Abrir centro de control"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></button>
           <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
@@ -123,8 +123,8 @@
     (() => {
       const marker = 'mfp-clean-runtime-version';
       try {
-        if (localStorage.getItem(marker) === '401') return;
-        localStorage.setItem(marker, '401');
+        if (localStorage.getItem(marker) === '402') return;
+        localStorage.setItem(marker, '402');
       } catch {
         if (window.location.search.includes('fresh=')) return;
       }
@@ -143,12 +143,12 @@
           : Promise.resolve()
       ]).then(() => {
         const url = new URL(window.location.href);
-        url.searchParams.set('v', '401');
+        url.searchParams.set('v', '402');
         url.searchParams.set('fresh', Date.now().toString());
         window.location.replace(url.toString());
       }).catch(() => {});
     })();
   </script>
-  <script type="module" src="./js/app.js?v=401"></script>
+  <script type="module" src="./js/app.js?v=402"></script>
 </body>
 </html>

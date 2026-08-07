@@ -1,17 +1,23 @@
-# My Fit Plan v4.0.1 · Cloud Sync UX
+# My Fit Plan v4.0.2 · Cloud Photos
 
 ## Objetivo
-Eliminar las preguntas repetitivas de sincronización y convertir My Fit Plan
-Cloud en una experiencia automática.
+Completar la sincronización cloud de las fotografías de progreso sin perder el
+funcionamiento offline ni introducir costes nuevos.
 
-## Comportamiento
-- La nube es la referencia principal al iniciar sesión en un dispositivo nuevo.
-- Cada cambio se guarda localmente de inmediato y se sincroniza en segundo plano.
-- Si solo cambió el dispositivo, se sube sin preguntar.
-- Si solo cambió la nube, se descarga sin preguntar.
-- Solo aparece un conflicto cuando nube y dispositivo cambiaron desde la misma revisión.
-- Antes de una descarga que reemplaza datos locales se crea una copia local de recuperación.
-- Perfil > Cuenta ofrece sincronización manual, descarga cloud y subida forzada del dispositivo.
+## Funcionamiento
+- Las fotografías se guardan primero en IndexedDB en el dispositivo.
+- Si existe una cuenta conectada, se suben automáticamente a Supabase Storage.
+- Cada objeto vive en `<user_id>/<photo_id>` dentro de `mfp-progress-photos`.
+- En un dispositivo nuevo se descargan automáticamente las fotos que falten.
+- Si no hay internet, la app sigue usando la copia local.
+- Los borrados offline quedan en cola y se ejecutan al recuperar conexión.
+- Al borrar una revisión se elimina su copia local y cloud.
+- Antes de eliminar una cuenta se eliminan las fotografías referenciadas.
+- Las imágenes se comprimen para reducir uso del almacenamiento gratuito.
 
-## Coste
-No introduce ningún servicio nuevo de pago.
+## Seguridad
+El bucket es privado. El acceso se limita mediante las políticas RLS ya
+instaladas en Supabase. La publishable key puede permanecer en el cliente; no
+se incluye ninguna service role ni secret key.
+
+No se implementa cifrado de extremo a extremo en esta versión.
