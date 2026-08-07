@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=401';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=402';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
@@ -32,7 +32,10 @@ let status = {
   lastError: '',
   recovery: false,
   pendingEmail: '',
-  conflict: false
+  conflict: false,
+  photoSync: session ? 'idle' : 'guest',
+  photoPending: 0,
+  photoError: ''
 };
 
 function readJson(key, fallback) {
@@ -86,6 +89,9 @@ function userMeta(userId) {
   const record = meta.users[userId];
   if (record.lastSyncedHash || Number(record.lastRevision || 0) > 0) record.initialized = true;
   if (!record.preferredSource) record.preferredSource = 'cloud';
+  record.photos ||= { synced: {}, pendingDeletes: [] };
+  record.photos.synced ||= {};
+  record.photos.pendingDeletes ||= [];
   return record;
 }
 
@@ -170,6 +176,118 @@ async function rawRequest(path, { method = 'GET', body = null, token = null, hea
   return data;
 }
 
+async function storageRequest(path, {
+  method = 'GET',
+  body = null,
+  contentType = '',
+  retryAuth = true
+} = {}) {
+  await ensureSession();
+  if (!session?.access_token) throw new Error('Debes iniciar sesión.');
+
+  const headers = {
+    apikey: CLOUD_CONFIG.publishableKey,
+    Authorization: `Bearer ${session.access_token}`
+  };
+  if (contentType) headers['Content-Type'] = contentType;
+
+  let response;
+  try {
+    response = await fetch(`${CLOUD_CONFIG.url}${path}`, { method, headers, body });
+  } catch (error) {
+    const networkError = new Error('No se pudo conectar con el almacenamiento privado.');
+    networkError.cause = error;
+    throw networkError;
+  }
+
+  if (response.status === 401 && retryAuth && session?.refresh_token) {
+    await refreshSession();
+    return storageRequest(path, { method, body, contentType, retryAuth: false });
+  }
+  return response;
+}
+
+function photoObjectName(photoId) {
+  const userId = session?.user?.id;
+  if (!userId) throw new Error('Debes iniciar sesión.');
+  const safeId = String(photoId || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (!safeId) throw new Error('Identificador de fotografía no válido.');
+  return `${userId}/${safeId}`;
+}
+
+function photoObjectUrl(photoId) {
+  const path = photoObjectName(photoId).split('/').map(encodeURIComponent).join('/');
+  return `/storage/v1/object/${encodeURIComponent(CLOUD_CONFIG.photoBucket)}/${path}`;
+}
+
+function referencedPhotoIds(value = hooks.getState()) {
+  return [...new Set((value?.bodyProgress || [])
+    .flatMap((entry) => Object.values(entry?.photos || {}))
+    .filter(Boolean)
+    .map(String))];
+}
+
+function photoMeta() {
+  const userId = session?.user?.id;
+  return userId ? userMeta(userId).photos : { synced: {}, pendingDeletes: [] };
+}
+
+function markPhotoSynced(photoId, blob = null) {
+  const photos = photoMeta();
+  photos.synced[photoId] = {
+    syncedAt: new Date().toISOString(),
+    size: Number(blob?.size || 0),
+    type: String(blob?.type || '')
+  };
+  photos.pendingDeletes = photos.pendingDeletes.filter((id) => id !== photoId);
+  saveMeta();
+}
+
+function markPhotoUnsynced(photoId) {
+  const photos = photoMeta();
+  delete photos.synced[photoId];
+  saveMeta();
+}
+
+function queuePhotoDeletes(ids = []) {
+  const photos = photoMeta();
+  const next = new Set(photos.pendingDeletes || []);
+  ids.filter(Boolean).forEach((id) => {
+    const value = String(id);
+    next.add(value);
+    delete photos.synced[value];
+  });
+  photos.pendingDeletes = [...next];
+  saveMeta();
+}
+
+async function flushPhotoDeletes() {
+  if (!session?.user?.id || !navigator.onLine) {
+    return { deleted: 0, pending: photoMeta().pendingDeletes.length };
+  }
+
+  const photos = photoMeta();
+  const ids = [...new Set(photos.pendingDeletes || [])];
+  if (!ids.length) return { deleted: 0, pending: 0 };
+
+  const prefixes = ids.map(photoObjectName);
+  const response = await storageRequest(`/storage/v1/object/${encodeURIComponent(CLOUD_CONFIG.photoBucket)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ prefixes }),
+    contentType: 'application/json'
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const data = await parseResponse(response);
+    throw new Error(asErrorMessage(data) || `No se pudieron borrar las fotografías (${response.status}).`);
+  }
+
+  photos.pendingDeletes = photos.pendingDeletes.filter((id) => !ids.includes(id));
+  ids.forEach((id) => delete photos.synced[id]);
+  saveMeta();
+  return { deleted: ids.length, pending: photos.pendingDeletes.length };
+}
+
 function saveSession(data) {
   if (!data?.access_token) return null;
   const expiresIn = Number(data.expires_in || 3600);
@@ -190,7 +308,7 @@ function clearSession() {
   conflictSnapshot = null;
   clearTimeout(syncTimer);
   syncTimer = null;
-  emit({ auth: 'guest', sync: 'guest', user: null, entitlement: null, conflict: false, recovery: false, lastError: '' });
+  emit({ auth: 'guest', sync: 'guest', user: null, entitlement: null, conflict: false, recovery: false, lastError: '', photoSync: 'guest', photoPending: 0, photoError: '' });
 }
 
 function sessionExpiring() {
@@ -691,9 +809,173 @@ export async function cloudUpdatePassword(password) {
   return true;
 }
 
+
+export async function cloudUploadProgressPhoto(photoId, blob) {
+  if (!photoId || !(blob instanceof Blob)) throw new Error('Fotografía no válida.');
+  if (!session?.user?.id) return { status: 'guest' };
+  if (!navigator.onLine) {
+    markPhotoUnsynced(String(photoId));
+    return { status: 'offline' };
+  }
+  if (blob.size > 5 * 1024 * 1024) {
+    markPhotoUnsynced(String(photoId));
+    throw new Error('La fotografía supera el límite cloud de 5 MB.');
+  }
+
+  let response = await storageRequest(photoObjectUrl(photoId), {
+    method: 'POST',
+    body: blob,
+    contentType: blob.type || 'image/jpeg'
+  });
+
+  if (response.status === 409) {
+    response = await storageRequest(photoObjectUrl(photoId), {
+      method: 'PUT',
+      body: blob,
+      contentType: blob.type || 'image/jpeg'
+    });
+  }
+
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    throw new Error(asErrorMessage(data) || `No se pudo subir la fotografía (${response.status}).`);
+  }
+
+  markPhotoSynced(String(photoId), blob);
+  return { status: 'uploaded', photoId: String(photoId) };
+}
+
+export async function cloudDownloadProgressPhoto(photoId) {
+  if (!photoId || !session?.user?.id || !navigator.onLine) return null;
+  const response = await storageRequest(photoObjectUrl(photoId), { method: 'GET' });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    throw new Error(asErrorMessage(data) || `No se pudo descargar la fotografía (${response.status}).`);
+  }
+  const blob = await response.blob();
+  markPhotoSynced(String(photoId), blob);
+  return blob;
+}
+
+export async function cloudDeleteProgressPhotos(ids = []) {
+  const clean = [...new Set(ids.filter(Boolean).map(String))];
+  if (!clean.length || !session?.user?.id) return { status: 'nothing', deleted: 0 };
+
+  queuePhotoDeletes(clean);
+  if (!navigator.onLine) {
+    emit({ photoSync: 'offline', photoPending: photoMeta().pendingDeletes.length });
+    return { status: 'queued', deleted: 0 };
+  }
+
+  try {
+    const result = await flushPhotoDeletes();
+    emit({ photoSync: 'synced', photoPending: result.pending, photoError: '' });
+    return { status: 'deleted', ...result };
+  } catch (error) {
+    emit({ photoSync: 'error', photoPending: photoMeta().pendingDeletes.length, photoError: asErrorMessage(error) });
+    throw error;
+  }
+}
+
+export async function cloudSyncProgressPhotos(photoIds = [], {
+  getLocalBlob = async () => null,
+  saveLocalBlob = async () => {}
+} = {}) {
+  const ids = [...new Set((photoIds || []).filter(Boolean).map(String))];
+  if (!session?.user?.id) return { status: 'guest', total: ids.length, uploaded: 0, downloaded: 0, failed: 0 };
+  if (!navigator.onLine) {
+    emit({
+      photoSync: 'offline',
+      photoPending: ids.filter((id) => !photoMeta().synced[id]).length + photoMeta().pendingDeletes.length
+    });
+    return { status: 'offline', total: ids.length, uploaded: 0, downloaded: 0, failed: 0 };
+  }
+
+  emit({ photoSync: 'syncing', photoError: '' });
+  let uploaded = 0;
+  let downloaded = 0;
+  let failed = 0;
+  const failures = [];
+
+  try {
+    await flushPhotoDeletes();
+  } catch (error) {
+    failed += 1;
+    failures.push({ type: 'delete', error: asErrorMessage(error) });
+  }
+
+  for (const photoId of ids) {
+    try {
+      let localBlob = null;
+      try { localBlob = await getLocalBlob(photoId); } catch {}
+
+      if (localBlob) {
+        if (!photoMeta().synced[photoId]) {
+          await cloudUploadProgressPhoto(photoId, localBlob);
+          uploaded += 1;
+        }
+        continue;
+      }
+
+      const remoteBlob = await cloudDownloadProgressPhoto(photoId);
+      if (remoteBlob) {
+        await saveLocalBlob(photoId, remoteBlob);
+        downloaded += 1;
+      } else {
+        failed += 1;
+        failures.push({ photoId, type: 'missing-cloud' });
+      }
+    } catch (error) {
+      failed += 1;
+      failures.push({ photoId, type: 'sync', error: asErrorMessage(error) });
+      markPhotoUnsynced(photoId);
+    }
+  }
+
+  const pending = ids.filter((id) => !photoMeta().synced[id]).length + photoMeta().pendingDeletes.length;
+  emit({
+    photoSync: failed ? 'warning' : 'synced',
+    photoPending: pending,
+    photoError: failures[0]?.error || (failures.length ? 'Hay fotografías pendientes de sincronizar.' : '')
+  });
+
+  return {
+    status: failed ? 'partial' : 'synced',
+    total: ids.length,
+    uploaded,
+    downloaded,
+    failed,
+    pending,
+    failures
+  };
+}
+
+export function cloudProgressPhotoSummary(photoIds = referencedPhotoIds()) {
+  const ids = [...new Set((photoIds || []).filter(Boolean).map(String))];
+  const photos = session?.user?.id ? photoMeta() : { synced: {}, pendingDeletes: [] };
+  const synced = ids.filter((id) => photos.synced[id]).length;
+  return {
+    signedIn: Boolean(session?.user?.id),
+    total: ids.length,
+    synced,
+    pending: Math.max(0, ids.length - synced) + (photos.pendingDeletes?.length || 0),
+    pendingDeletes: photos.pendingDeletes?.length || 0,
+    status: status.photoSync || (session ? 'idle' : 'guest'),
+    lastError: status.photoError || ''
+  };
+}
+
 export async function cloudDeleteAccount() {
   await ensureSession();
   if (!session?.access_token) throw new Error('Debes iniciar sesión.');
+
+  const photoIds = referencedPhotoIds();
+  if (photoIds.length) {
+    queuePhotoDeletes(photoIds);
+    await flushPhotoDeletes();
+  }
+
   await rawRequest('/rest/v1/rpc/delete_my_account', {
     method: 'POST',
     token: session.access_token,
@@ -814,6 +1096,7 @@ export function cloudAccountSummary() {
     syncMode: 'automatic-cloud',
     lastRevision: user?.id ? Number(userMeta(user.id).lastRevision || 0) : 0,
     initialized: user?.id ? Boolean(userMeta(user.id).initialized) : false,
-    recoveryAvailable: hasRecoverySnapshot()
+    recoveryAvailable: hasRecoverySnapshot(),
+    photos: cloudProgressPhotoSummary()
   };
 }

@@ -77,6 +77,17 @@ export async function getProgressPhotoBlob(id) {
   }
 }
 
+export async function listProgressPhotoIds() {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(STORE_NAME, 'readonly');
+    const keys = await requestResult(transaction.objectStore(STORE_NAME).getAllKeys());
+    return Array.isArray(keys) ? keys.map(String) : [];
+  } finally {
+    database.close();
+  }
+}
+
 export async function getProgressPhotoUrl(id) {
   if (!id) return '';
   if (objectUrls.has(id)) return objectUrls.get(id);
@@ -139,26 +150,52 @@ function loadImage(file) {
   });
 }
 
-export async function compressProgressImage(file, { maxDimension = 1600, quality = 0.84 } = {}) {
+function canvasBlob(canvas, quality) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+}
+
+function drawCompressedImage(image, maxDimension) {
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { alpha: false });
+  context.fillStyle = '#0b0f17';
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+  return canvas;
+}
+
+export async function compressProgressImage(file, {
+  maxDimension = 1440,
+  quality = 0.80,
+  targetBytes = 1800 * 1024
+} = {}) {
   if (!(file instanceof Blob)) throw new Error('Selecciona una imagen válida.');
   if (!String(file.type || '').startsWith('image/')) throw new Error('El archivo seleccionado no es una imagen.');
+
   try {
     const image = await loadImage(file);
-    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d', { alpha: false });
-    context.fillStyle = '#0b0f17';
-    context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+    let canvas = drawCompressedImage(image, maxDimension);
+    let blob = await canvasBlob(canvas, quality);
     if (!blob) throw new Error('No se pudo comprimir la fotografía.');
+
+    if (blob.size > targetBytes) {
+      canvas = drawCompressedImage(image, Math.min(1200, maxDimension));
+      blob = await canvasBlob(canvas, 0.72);
+      if (!blob) throw new Error('No se pudo optimizar la fotografía.');
+    }
+
+    if (blob.size > targetBytes) {
+      canvas = drawCompressedImage(image, Math.min(1000, maxDimension));
+      blob = await canvasBlob(canvas, 0.64);
+      if (!blob) throw new Error('No se pudo optimizar la fotografía.');
+    }
     return blob;
   } catch (error) {
-    if (file.size <= 12 * 1024 * 1024) return file;
+    if (file.size <= 5 * 1024 * 1024) return file;
     throw error;
   }
 }

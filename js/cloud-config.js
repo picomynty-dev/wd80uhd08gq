@@ -5,8 +5,9 @@ export const CLOUD_CONFIG = Object.freeze({
   stateTable: 'mfp_state',
   profileTable: 'mfp_profiles',
   entitlementTable: 'mfp_entitlements',
+  photoBucket: 'mfp-progress-photos',
   schemaVersion: 410,
-  appVersion: '4.0.1 Cloud Sync UX'
+  appVersion: '4.0.2 Cloud Photos'
 });
 
 export function cloudRedirectUrl() {

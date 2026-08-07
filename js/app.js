@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=401';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=401';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=401';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=402';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=402';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=402';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=401';
+} from './stats.js?v=402';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=401';
+} from './coach.js?v=402';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=401';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=401';
+} from './adaptive.js?v=402';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=402';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=401';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=401';
+} from './calendar-planner.js?v=402';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=402';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=401';
+} from './progression-engine.js?v=402';
 import {
   clamp,
   clone,
@@ -67,37 +67,42 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=401';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=401';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=401';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=401';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=401';
+} from './utils.js?v=402';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=402';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=402';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=402';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=402';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
   deleteProgressPhotos,
   downloadProgressPhoto,
+  getProgressPhotoBlob,
   getProgressPhotoUrl,
   hashPrivatePin,
   hydrateProgressImages,
+  listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=401';
+} from './photo-progress.js?v=402';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
+  cloudDeleteProgressPhotos,
   cloudDownloadNow,
+  cloudProgressPhotoSummary,
   cloudResolveConflict,
   cloudSendPasswordReset,
   cloudSignIn,
   cloudSignOut,
   cloudSignUp,
+  cloudSyncProgressPhotos,
   cloudUploadNow,
   cloudSyncNow,
   cloudUpdatePassword,
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=401';
+} from './cloud.js?v=402';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -162,6 +167,42 @@ function init() {
   queueMicrotask(bootCloudFoundation);
 }
 
+function bodyProgressPhotoIds(sourceState = state) {
+  return [...new Set((sourceState?.bodyProgress || [])
+    .flatMap((entry) => Object.values(entry?.photos || {}))
+    .filter(Boolean)
+    .map(String))];
+}
+
+let photoCloudSyncPromise = null;
+
+async function syncCloudPhotosForState({ quiet = true } = {}) {
+  if (photoCloudSyncPromise) return photoCloudSyncPromise;
+  if (!cloudAccountSummary().signedIn) return { status: 'guest' };
+
+  const photoIds = bodyProgressPhotoIds();
+  photoCloudSyncPromise = cloudSyncProgressPhotos(photoIds, {
+    getLocalBlob: getProgressPhotoBlob,
+    saveLocalBlob: saveProgressPhoto
+  });
+
+  try {
+    const result = await photoCloudSyncPromise;
+    if (!quiet && result.status === 'partial') {
+      const pending = result.pending || result.failed || 0;
+      showToast(`${pending} fotografía${pending === 1 ? '' : 's'} pendiente${pending === 1 ? '' : 's'} de sincronizar.`, 'warning');
+    }
+    refreshCloudAccountDom();
+    return result;
+  } catch (error) {
+    reportRuntimeIssue(error, 'Sincronización cloud de fotografías');
+    if (!quiet) showToast('Los datos están sincronizados, pero alguna fotografía sigue pendiente.', 'warning');
+    return { status: 'error', error };
+  } finally {
+    photoCloudSyncPromise = null;
+  }
+}
+
 async function bootCloudFoundation() {
   await initCloud({
     getState: () => state,
@@ -172,6 +213,7 @@ async function bootCloudFoundation() {
   });
   cloudUiStatus = cloudAccountSummary();
   refreshCloudAccountDom();
+  await syncCloudPhotosForState({ quiet: true });
 }
 
 function replaceStateFromCloud(payload) {
@@ -185,6 +227,7 @@ function replaceStateFromCloud(payload) {
     else if (!state.onboardingCompleted) renderOnboardingUpgrade();
     else setView(currentView === 'profile' ? 'profile' : requestedInitialView());
     if (currentView === 'profile') showProfileTab('account');
+    window.setTimeout(() => syncCloudPhotosForState({ quiet: true }), 0);
   } catch (error) {
     reportRuntimeIssue(error, 'Restauración desde la nube');
     showToast('No se pudieron aplicar los datos de la nube.', 'danger');
@@ -235,7 +278,11 @@ function bindGlobalEvents() {
 
   window.addEventListener('online', updateHud);
   window.addEventListener('offline', updateHud);
-  window.addEventListener('online', () => cloudSyncNow({ silent: true }).catch(() => {}));
+  window.addEventListener('online', () => {
+    cloudSyncNow({ silent: true })
+      .then(() => syncCloudPhotosForState({ quiet: true }))
+      .catch(() => {});
+  });
   window.addEventListener('pagehide', persistPendingInputs);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') persistPendingInputs();
@@ -2788,6 +2835,9 @@ function bodyMeasurementChartHtml(entries, key, label) {
 async function refreshBodyProgressImages(rootNode = document.querySelector('#profileTabContent')) {
   if (!rootNode) return;
   try {
+    if (cloudAccountSummary().signedIn && navigator.onLine) {
+      await syncCloudPhotosForState({ quiet: true });
+    }
     await hydrateProgressImages(rootNode);
   } catch (error) {
     rootNode.querySelectorAll('[data-photo-frame]').forEach((frame) => frame.classList.add('missing-photo'));
@@ -2818,7 +2868,7 @@ function openBodyProgressForm() {
         </div>
       </fieldset>
       <label class="field"><span>Notas</span><textarea name="notes" maxlength="500" placeholder="Sensaciones, fase del plan, condiciones de las fotografías…"></textarea></label>
-      <p class="privacy-note">Las imágenes se comprimen y se guardan únicamente en este navegador. Si borras los datos de Safari o cambias de dispositivo sin exportarlas, podrías perderlas.</p>
+      <p class="privacy-note">Las imágenes se comprimen y se guardan en este dispositivo. Con una cuenta iniciada también se sincronizan con tu almacenamiento privado de My Fit Plan Cloud para recuperarlas en otros dispositivos.</p>
       <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Guardar revisión</button></div>
     </form>`, { wide: true });
 
@@ -2877,6 +2927,9 @@ function openBodyProgressForm() {
         if (entry.date === isoDay()) state.profile.weight = entry.weight;
       }
       save();
+      if (savedPhotoIds.length && cloudAccountSummary().signedIn) {
+        syncCloudPhotosForState({ quiet: false });
+      }
       previewUrls.forEach((url) => URL.revokeObjectURL(url));
       wrapper._closeModal();
       renderProfile();
@@ -2950,7 +3003,12 @@ async function openBodyProgressEntry(id) {
       confirmLabel: 'Eliminar',
       danger: true,
       onConfirm: async () => {
-        try { await deleteProgressPhotos(Object.values(entry.photos || {})); }
+        const photoIds = Object.values(entry.photos || {}).filter(Boolean);
+        if (cloudAccountSummary().signedIn && photoIds.length) {
+          try { await cloudDeleteProgressPhotos(photoIds); }
+          catch (error) { reportRuntimeIssue(error, 'Borrado cloud de fotografías de revisión'); }
+        }
+        try { await deleteProgressPhotos(photoIds); }
         catch (error) { reportRuntimeIssue(error, 'Borrado de fotografías de revisión'); }
         state.bodyProgress = state.bodyProgress.filter((item) => item.id !== entry.id);
         save();
@@ -3396,7 +3454,13 @@ function profileAccountHtml() {
         <button class="button button-secondary" type="button" data-action="cloud-upload">Subir este dispositivo</button>
       </div>
     </article>
-    <article class="card cloud-photo-note"><strong>Fotografías de progreso</strong><p class="muted small">En esta primera fase Cloud sincronizamos los datos y medidas. Las fotografías siguen privadas en este dispositivo; su sincronización cifrada llegará en la fase específica de fotos cloud.</p></article>
+    ${(() => {
+      const photos = cloudProgressPhotoSummary(bodyProgressPhotoIds());
+      return `<article class="card cloud-photo-note cloud-photo-live">
+        <div><p class="eyebrow">Fotografías privadas</p><h2>Cloud Photos activo</h2><p class="muted small">Las fotos permanecen en este dispositivo para funcionar offline y se copian al bucket privado de tu cuenta. Las políticas RLS impiden que otra cuenta acceda a tu carpeta.</p></div>
+        <div class="cloud-photo-stats"><span><strong>${photos.synced}</strong><small>cloud</small></span><span><strong>${photos.pending}</strong><small>pendientes</small></span><span><strong>${photos.total}</strong><small>referencias</small></span></div>
+      </article>`;
+    })()}
     <article class="card cloud-account-security">
       <p class="eyebrow">Seguridad de cuenta</p><h2>Acceso</h2>
       <div class="cloud-account-buttons"><button class="button button-secondary" type="button" data-action="cloud-forgot">Cambiar contraseña por correo</button><button class="button button-secondary" type="button" data-action="cloud-signout">Cerrar sesión</button></div>
@@ -3435,7 +3499,7 @@ function openCloudSignupModal() {
       <label class="field field-full"><span>Nombre o apodo</span><input name="displayName" maxlength="40" autocomplete="name" value="${esc(state.profile?.name || '')}"></label>
       <label class="field field-full"><span>Correo electrónico</span><input name="email" type="email" autocomplete="email" required></label>
       <label class="field field-full"><span>Contraseña</span><input name="password" type="password" minlength="8" autocomplete="new-password" required><small>Mínimo 8 caracteres.</small></label>
-      <label class="setting-switch cloud-consent"><span><strong>Entiendo dónde se guardan mis datos</strong><small>La cuenta sincroniza rutinas, historial, calendario, medidas y ajustes. Las fotos todavía permanecen solo en este dispositivo.</small></span><input name="cloudConsent" type="checkbox" required><i></i></label>
+      <label class="setting-switch cloud-consent"><span><strong>Entiendo dónde se guardan mis datos</strong><small>La cuenta sincroniza rutinas, historial, calendario, medidas, ajustes y fotografías de progreso. Las fotos se guardan también en un bucket privado asociado a tu cuenta.</small></span><input name="cloudConsent" type="checkbox" required><i></i></label>
       <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Crear cuenta</button></div>
     </form>`);
   wrapper.querySelector('#cloudSignupForm')?.addEventListener('submit', (event) => { event.preventDefault(); submitCloudSignup(event.currentTarget); });
@@ -3474,7 +3538,7 @@ function conflictSummaryHtml(title, summary, tone) {
 function openCloudConflictModal(info = pendingCloudConflict) {
   if (!info) { cloudSyncNow().catch((error) => showToast(cloudAuthError(error), 'danger')); return; }
   pendingCloudConflict = info;
-  openModal(`<div class="modal-header"><div><p class="eyebrow">Protección de datos</p><h2>¿Qué versión quieres conservar?</h2><p class="muted small">Hemos detectado cambios distintos. No sobrescribiremos nada hasta que elijas.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="cloud-conflict-grid">${conflictSummaryHtml('Este dispositivo', info.localSummary, 'local')}${conflictSummaryHtml('My Fit Plan Cloud', info.remoteSummary, 'remote')}</div><div class="cloud-conflict-warning">Las fotografías siguen siendo locales y no se eliminan al elegir la versión cloud de los datos.</div><div class="modal-actions"><button class="button button-secondary" type="button" data-action="cloud-conflict-cloud">Usar la nube</button><button class="button button-primary" type="button" data-action="cloud-conflict-local">Conservar este dispositivo</button></div>`, { wide: true });
+  openModal(`<div class="modal-header"><div><p class="eyebrow">Protección de datos</p><h2>¿Qué versión quieres conservar?</h2><p class="muted small">Hemos detectado cambios distintos. No sobrescribiremos nada hasta que elijas.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="cloud-conflict-grid">${conflictSummaryHtml('Este dispositivo', info.localSummary, 'local')}${conflictSummaryHtml('My Fit Plan Cloud', info.remoteSummary, 'remote')}</div><div class="cloud-conflict-warning">Las fotografías privadas se reconciliarán automáticamente después de aplicar la versión de datos elegida.</div><div class="modal-actions"><button class="button button-secondary" type="button" data-action="cloud-conflict-cloud">Usar la nube</button><button class="button button-primary" type="button" data-action="cloud-conflict-local">Conservar este dispositivo</button></div>`, { wide: true });
 }
 
 async function submitCloudSignup(form) {
@@ -3484,9 +3548,10 @@ async function submitCloudSignup(form) {
   submit.disabled = true; submit.textContent = 'Creando…';
   try {
     const result = await cloudSignUp({ displayName: data.get('displayName'), email: data.get('email'), password: data.get('password') });
+    if (!result.needsConfirmation) await syncCloudPhotosForState({ quiet: true });
     closeModal();
     if (result.needsConfirmation) showToast('Cuenta creada. Abre el correo de confirmación para activar My Fit Plan Cloud.', 'success');
-    else showToast('Cuenta creada y progreso sincronizado.', 'success');
+    else showToast('Cuenta creada. Datos y fotografías sincronizados.', 'success');
     refreshCloudAccountDom();
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
@@ -3500,8 +3565,9 @@ async function submitCloudSignin(form) {
   submit.disabled = true; submit.textContent = 'Entrando…';
   try {
     await cloudSignIn({ email: data.get('email'), password: data.get('password') });
+    await syncCloudPhotosForState({ quiet: true });
     closeModal();
-    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Hay un conflicto real pendiente en Perfil → Cuenta.' : 'Sesión iniciada. La sincronización automática está activa.', cloudAccountSummary().conflict ? 'warning' : 'success');
+    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Hay un conflicto real pendiente en Perfil → Cuenta.' : 'Sesión iniciada. Datos y fotografías se sincronizan automáticamente.', cloudAccountSummary().conflict ? 'warning' : 'success');
     refreshCloudAccountDom();
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
@@ -3543,7 +3609,9 @@ async function runCloudSync() {
   try {
     const result = await cloudSyncNow();
     if (result.status === 'conflict') return openCloudConflictModal(result);
+    const photoResult = await syncCloudPhotosForState({ quiet: true });
     const messages = { uploaded: 'Cambios subidos a My Fit Plan Cloud.', downloaded: 'Datos de la nube restaurados.', synced: 'Todo está sincronizado.', offline: 'Sin internet: tus cambios siguen guardados en el dispositivo.' };
+    if (photoResult?.status === 'partial') messages.synced = 'Datos sincronizados; alguna fotografía sigue pendiente.';
     showToast(messages[result.status] || 'Sincronización revisada.', result.status === 'offline' ? 'warning' : 'success');
     refreshCloudAccountDom();
   } catch (error) { showToast(cloudAuthError(error), 'danger'); }
@@ -3557,6 +3625,7 @@ function downloadCloudManually() {
     onConfirm: async () => {
       try {
         const result = await cloudDownloadNow();
+        await syncCloudPhotosForState({ quiet: false });
         closeModal();
         showToast(result.status === 'offline' ? 'Necesitas conexión para descargar la nube.' : 'Datos de la nube restaurados.', result.status === 'offline' ? 'warning' : 'success');
         refreshCloudAccountDom();
@@ -3573,6 +3642,7 @@ function uploadDeviceManually() {
     onConfirm: async () => {
       try {
         const result = await cloudUploadNow();
+        await syncCloudPhotosForState({ quiet: false });
         closeModal();
         showToast(result.status === 'offline' ? 'Necesitas conexión para subir los datos.' : 'Este dispositivo ya es la versión principal de la nube.', result.status === 'offline' ? 'warning' : 'success');
         refreshCloudAccountDom();
@@ -3584,6 +3654,7 @@ function uploadDeviceManually() {
 async function resolveCloudConflict(strategy) {
   try {
     await cloudResolveConflict(strategy);
+    await syncCloudPhotosForState({ quiet: true });
     pendingCloudConflict = null;
     closeModal();
     showToast(strategy === 'local' ? 'Este dispositivo se ha guardado como versión principal.' : 'Se han restaurado los datos de My Fit Plan Cloud.', 'success');
@@ -5231,6 +5302,8 @@ function runHudHealthCheck() {
   add('plan-targets', invalidPlanTargets === 0, 'Objetivos de rutina', invalidPlanTargets ? `${invalidPlanTargets} objetivo${invalidPlanTargets === 1 ? '' : 's'} necesita${invalidPlanTargets === 1 ? '' : 'n'} normalización.` : 'Series, rangos y descansos válidos.');
   add('history-structure', invalidHistorySessions === 0, 'Estructura del historial', invalidHistorySessions ? `${invalidHistorySessions} sesión${invalidHistorySessions === 1 ? '' : 'es'} presenta${invalidHistorySessions === 1 ? '' : 'n'} datos incompletos.` : 'Historial estructuralmente correcto.', 'warning');
   const cloudHealth = getCloudStatus();
+  const cloudPhotos = cloudProgressPhotoSummary(bodyProgressPhotoIds());
+  add('cloud-photos', cloudPhotos.pending === 0 || !cloudPhotos.signedIn, 'Fotografías cloud', !cloudPhotos.signedIn ? 'Modo local: las fotografías permanecen en este dispositivo.' : cloudPhotos.pending ? `${cloudPhotos.pending} fotografía${cloudPhotos.pending === 1 ? '' : 's'} pendiente${cloudPhotos.pending === 1 ? '' : 's'} de sincronizar.` : `${cloudPhotos.synced}/${cloudPhotos.total} fotografías referenciadas sincronizadas.`, cloudPhotos.pending ? 'warning' : 'success');
   add('cloud-auth', cloudHealth.auth !== 'error', 'My Fit Plan Cloud', cloudHealth.auth === 'authenticated' ? `Cuenta conectada · ${cloudAccountSummary().email}` : cloudHealth.auth === 'error' ? cloudHealth.lastError || 'Error de autenticación.' : 'Modo local disponible sin cuenta.', cloudHealth.auth === 'error' ? 'warning' : 'success');
   add('cloud-sync', !['error','conflict'].includes(cloudHealth.sync), 'Sincronización cloud', cloudHealth.sync === 'synced' ? 'Datos sincronizados.' : cloudHealth.sync === 'conflict' ? 'Hay dos versiones pendientes de resolver.' : cloudHealth.sync === 'offline' ? 'Sin conexión: el guardado local continúa activo.' : cloudHealth.sync === 'error' ? cloudHealth.lastError || 'Error de sincronización.' : 'Sistema cloud preparado.', ['error','conflict'].includes(cloudHealth.sync) ? 'warning' : 'success');
   add('exercises', missingCriticalIds.length === 0, 'Referencias activas de ejercicios', missingCriticalIds.length ? `Faltan ${missingCriticalIds.length}: ${missingCriticalIds.slice(0,3).join(', ')}` : `${Object.keys(allExercises).length} ejercicios disponibles.`);
@@ -5316,7 +5389,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=401', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=402', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

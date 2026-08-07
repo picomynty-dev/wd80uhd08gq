@@ -1,6 +1,6 @@
 'use strict';
 
-import { clone, isoDay, numberValue, startOfWeek, uid } from './utils.js?v=401';
+import { clone, isoDay, numberValue, startOfWeek, uid } from './utils.js?v=402';
 
 export const WEEKDAY_LABELS = [
   { value: 1, short: 'L', label: 'Lunes' },
