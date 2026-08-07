@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=39';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=39';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=39';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=40';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=40';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=40';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=39';
+} from './stats.js?v=40';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=39';
+} from './coach.js?v=40';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=39';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=39';
+} from './adaptive.js?v=40';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=40';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=39';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=39';
+} from './calendar-planner.js?v=40';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=40';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=39';
+} from './progression-engine.js?v=40';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=39';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=39';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=39';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=39';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=39';
+} from './utils.js?v=40';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=40';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=40';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=40';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=40';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -81,7 +81,21 @@ import {
   hashPrivatePin,
   hydrateProgressImages,
   saveProgressPhoto
-} from './photo-progress.js?v=39';
+} from './photo-progress.js?v=40';
+import {
+  cloudAccountSummary,
+  cloudDeleteAccount,
+  cloudResolveConflict,
+  cloudSendPasswordReset,
+  cloudSignIn,
+  cloudSignOut,
+  cloudSignUp,
+  cloudSyncNow,
+  cloudUpdatePassword,
+  getCloudStatus,
+  initCloud,
+  notifyCloudStateChanged
+} from './cloud.js?v=40';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -122,6 +136,9 @@ let uiObserver = null;
 let cachedHudHealth = null;
 let cachedHudHealthAt = 0;
 const runtimeIssues = [];
+let cloudUiStatus = cloudAccountSummary();
+let pendingCloudConflict = null;
+let recoveryModalOpened = false;
 
 init();
 
@@ -140,6 +157,49 @@ function init() {
   if (!state.profile) renderWelcome();
   else if (!state.onboardingCompleted) renderOnboardingUpgrade();
   else setView(requestedInitialView());
+  queueMicrotask(bootCloudFoundation);
+}
+
+async function bootCloudFoundation() {
+  await initCloud({
+    getState: () => state,
+    replaceState: replaceStateFromCloud,
+    onStatusChange: handleCloudStatusChange,
+    onConflict: handleCloudConflict,
+    onRecovery: () => window.setTimeout(openCloudNewPasswordModal, 50)
+  });
+  cloudUiStatus = cloudAccountSummary();
+  refreshCloudAccountDom();
+}
+
+function replaceStateFromCloud(payload) {
+  try {
+    state = persistState(payload);
+    cachedHudHealthAt = 0;
+    applySettings();
+    updateProfileShortcut();
+    updateHud();
+    if (!state.profile) renderWelcome();
+    else if (!state.onboardingCompleted) renderOnboardingUpgrade();
+    else setView(currentView === 'profile' ? 'profile' : requestedInitialView());
+    if (currentView === 'profile') showProfileTab('account');
+  } catch (error) {
+    reportRuntimeIssue(error, 'Restauración desde la nube');
+    showToast('No se pudieron aplicar los datos de la nube.', 'danger');
+  }
+}
+
+function handleCloudStatusChange(nextStatus) {
+  cloudUiStatus = { ...cloudAccountSummary(), ...nextStatus };
+  document.body.dataset.cloudSync = nextStatus.sync || 'guest';
+  refreshCloudAccountDom();
+  if (nextStatus.recovery && !recoveryModalOpened) window.setTimeout(openCloudNewPasswordModal, 50);
+}
+
+function handleCloudConflict(info) {
+  pendingCloudConflict = info;
+  showToast('Hay cambios distintos en este dispositivo y en la nube.', 'warning');
+  if (!state.activeWorkout) window.setTimeout(() => openCloudConflictModal(info), 80);
 }
 
 function requestedInitialView() {
@@ -173,6 +233,7 @@ function bindGlobalEvents() {
 
   window.addEventListener('online', updateHud);
   window.addEventListener('offline', updateHud);
+  window.addEventListener('online', () => cloudSyncNow({ silent: true }).catch(() => {}));
   window.addEventListener('pagehide', persistPendingInputs);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') persistPendingInputs();
@@ -271,6 +332,7 @@ function save() {
   try {
     syncActiveRoutineFromPlan();
     state = persistState(state);
+    notifyCloudStateChanged(state);
     cachedHudHealthAt = 0;
     applySettings();
     updateProfileShortcut();
@@ -580,6 +642,12 @@ function renderWelcome() {
         </div>
         <button class="button button-primary onboarding-main-button" type="button" data-action="onboarding-start">Configurar My Fit Plan <b>→</b></button>
         <button class="button button-ghost" type="button" data-action="demo-plan">Explorar una demo</button>
+        <div class="cloud-welcome-divider"><span>o guarda tu progreso en la nube</span></div>
+        <div class="cloud-welcome-actions">
+          <button class="button button-secondary" type="button" data-action="cloud-signup">Crear cuenta</button>
+          <button class="button button-ghost" type="button" data-action="cloud-signin">Iniciar sesión</button>
+        </div>
+        <p class="muted small cloud-local-note">Puedes seguir sin cuenta. Tus datos permanecen en este dispositivo hasta que decidas sincronizarlos.</p>
       </div>
       <p class="onboarding-legal">Para mayores de 18 años. La aplicación ofrece orientación general y no sustituye a profesionales sanitarios o del entrenamiento.</p>
     </section>`;
@@ -2539,7 +2607,7 @@ function renderProfile() {
     <section class="page">
       <div class="profile-hero card card-accent">
         <div class="profile-avatar">${initials(state.profile.name || 'MF')}</div>
-        <div><p class="eyebrow">Mi perfil</p><h1>${esc(state.profile.name || 'Deportista')}</h1><p class="muted">${esc(objectiveLabel(state.profile.objective))} · ${state.profile.days} días/semana</p></div>
+        <div><p class="eyebrow">Mi perfil</p><h1>${esc(state.profile.name || 'Deportista')}</h1><p class="muted">${esc(objectiveLabel(state.profile.objective))} · ${state.profile.days} días/semana</p><button id="cloudProfileBadge" class="cloud-profile-badge ${cloudSyncTone()}" type="button" data-profile-tab="account">${cloudSyncLabel()}</button></div>
       </div>
 
       <section class="section grid grid-4">
@@ -2555,6 +2623,7 @@ function renderProfile() {
         <button type="button" data-profile-tab="history">Historial</button>
         <button type="button" data-profile-tab="data">Datos</button>
         <button type="button" data-profile-tab="settings">Ajustes</button>
+        <button type="button" data-profile-tab="account">Cuenta</button>
       </section>
 
       <div id="profileTabContent">${profileProgressHtml(summary, bmi, bmiData, records, calendar)}</div>
@@ -3245,6 +3314,258 @@ function profileSettingsHtml() {
   </section>`;
 }
 
+function cloudSyncLabel() {
+  const info = cloudAccountSummary();
+  if (!info.signedIn) return 'Solo en este dispositivo';
+  const labels = {
+    synced: 'Nube sincronizada',
+    syncing: 'Sincronizando…',
+    dirty: 'Cambios pendientes',
+    offline: 'Offline · guardado local',
+    conflict: 'Revisar sincronización',
+    error: 'Error de sincronización',
+    idle: 'Cuenta conectada'
+  };
+  return labels[info.sync] || 'Cuenta conectada';
+}
+
+function cloudSyncTone() {
+  const info = cloudAccountSummary();
+  if (!info.signedIn) return 'is-local';
+  if (info.sync === 'synced') return 'is-synced';
+  if (info.sync === 'conflict' || info.sync === 'error') return 'is-alert';
+  if (info.sync === 'offline' || info.sync === 'dirty') return 'is-pending';
+  return 'is-syncing';
+}
+
+function cloudDate(value) {
+  if (!value) return 'Todavía no';
+  try { return formatDateTime(value); } catch { return String(value); }
+}
+
+function profileAccountHtml() {
+  const info = cloudAccountSummary();
+  if (!info.signedIn) {
+    return `<section class="profile-tab-panel cloud-account-panel">
+      <article class="card cloud-account-hero">
+        <div class="cloud-account-icon">☁</div>
+        <div><p class="eyebrow">My Fit Plan Cloud</p><h2>Tu progreso puede acompañarte a cualquier dispositivo.</h2><p class="muted">Crear una cuenta es gratis. My Fit Plan seguirá guardando primero en este dispositivo y sincronizará cuando haya conexión.</p></div>
+      </article>
+      <section class="grid grid-2 cloud-benefit-grid">
+        <article class="card"><strong>Sin perder el modo offline</strong><p class="muted small">Puedes entrenar sin cobertura. Cuando vuelva internet, los cambios pendientes se sincronizan.</p></article>
+        <article class="card"><strong>Migración automática</strong><p class="muted small">Si ya tienes rutinas e historial en este móvil, se subirán al crear una cuenta nueva.</p></article>
+      </section>
+      <article class="card cloud-auth-actions">
+        <div><p class="eyebrow">Cuenta gratuita</p><h2>Empieza sin pagar</h2><p class="muted small">En esta fase usamos correo y contraseña para mantener el coste del proyecto en 0 €.</p></div>
+        <div class="grid grid-2"><button class="button button-primary" type="button" data-action="cloud-signup">Crear cuenta</button><button class="button button-secondary" type="button" data-action="cloud-signin">Iniciar sesión</button></div>
+        <button class="text-link" type="button" data-action="cloud-forgot">He olvidado mi contraseña</button>
+        ${info.lastError ? `<p class="notice notice-warning">${esc(info.lastError)}</p>` : ''}
+      </article>
+    </section>`;
+  }
+
+  const plan = info.plan === 'founder' ? 'Founder' : info.plan === 'premium' ? 'Premium' : 'Free';
+  return `<section class="profile-tab-panel cloud-account-panel">
+    <article class="card cloud-account-hero is-connected">
+      <div class="cloud-account-icon">✓</div>
+      <div><p class="eyebrow">Cuenta conectada</p><h2>${esc(info.email || 'My Fit Plan')}</h2><p class="muted">Plan ${esc(plan)} · ${esc(cloudSyncLabel())}</p></div>
+      <span class="cloud-plan-pill">${esc(plan)}</span>
+    </article>
+    <section class="grid grid-3 cloud-status-grid">
+      <article class="card metric-card"><div class="metric metric-name">${esc(cloudSyncLabel())}</div><div class="metric-label">Estado</div></article>
+      <article class="card metric-card"><div class="metric metric-name">${esc(cloudDate(info.lastSyncAt))}</div><div class="metric-label">Última sincronización</div></article>
+      <article class="card metric-card"><div class="metric metric-name">Local + Cloud</div><div class="metric-label">Modo de guardado</div></article>
+    </section>
+    ${info.conflict ? `<article class="card cloud-conflict-card"><p class="eyebrow">Requiere decisión</p><h2>Hay dos versiones distintas de tus datos</h2><p class="muted">No hemos sobrescrito ninguna. Revisa cuál quieres conservar.</p><button class="button button-primary" type="button" data-action="cloud-open-conflict">Resolver conflicto</button></article>` : ''}
+    ${info.lastError ? `<article class="notice notice-warning"><strong>Cloud:</strong> ${esc(info.lastError)}</article>` : ''}
+    <article class="card cloud-sync-card">
+      <div><p class="eyebrow">Sincronización</p><h2>Local primero, nube después</h2><p class="muted small">Los entrenamientos se guardan en el dispositivo inmediatamente. La nube se actualiza en segundo plano cuando hay internet.</p></div>
+      <button class="button button-primary" type="button" data-action="cloud-sync">Sincronizar ahora</button>
+    </article>
+    <article class="card cloud-photo-note"><strong>Fotografías de progreso</strong><p class="muted small">En esta primera fase Cloud sincronizamos los datos y medidas. Las fotografías siguen privadas en este dispositivo; su sincronización cifrada llegará en la fase específica de fotos cloud.</p></article>
+    <article class="card cloud-account-security">
+      <p class="eyebrow">Seguridad de cuenta</p><h2>Acceso</h2>
+      <div class="cloud-account-buttons"><button class="button button-secondary" type="button" data-action="cloud-forgot">Cambiar contraseña por correo</button><button class="button button-secondary" type="button" data-action="cloud-signout">Cerrar sesión</button></div>
+    </article>
+    <article class="card danger-zone"><p class="eyebrow">Eliminar cuenta</p><h2>Borrar cuenta y datos</h2><p class="muted small">Elimina la cuenta de My Fit Plan, sus datos cloud y los datos locales de este dispositivo. Esta acción no se puede deshacer.</p><button class="button button-danger" type="button" data-action="cloud-delete-account">Eliminar mi cuenta</button></article>
+  </section>`;
+}
+
+function refreshCloudAccountDom() {
+  const badge = document.querySelector('#cloudProfileBadge');
+  if (badge) {
+    badge.textContent = cloudSyncLabel();
+    badge.className = `cloud-profile-badge ${cloudSyncTone()}`;
+  }
+  const active = document.querySelector('[data-profile-tab="account"].active');
+  const content = document.querySelector('#profileTabContent');
+  if (active && content && !document.querySelector('.modal-backdrop')) content.innerHTML = profileAccountHtml();
+}
+
+function cloudAuthError(error) {
+  const raw = String(error?.message || error || 'No se pudo completar la operación.');
+  const replacements = [
+    ['Invalid login credentials', 'Correo o contraseña incorrectos.'],
+    ['Email not confirmed', 'Confirma primero el correo que te ha enviado My Fit Plan.'],
+    ['User already registered', 'Ya existe una cuenta con ese correo.'],
+    ['Password should be at least', 'La contraseña no cumple la longitud mínima.'],
+    ['rate limit', 'Se han hecho demasiados intentos. Espera un momento y vuelve a probar.']
+  ];
+  const found = replacements.find(([key]) => raw.toLowerCase().includes(key.toLowerCase()));
+  return found ? found[1] : raw;
+}
+
+function openCloudSignupModal() {
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">My Fit Plan Cloud</p><h2>Crear cuenta gratuita</h2><p class="muted small">Tus datos actuales se conservarán y se subirán automáticamente cuando confirmes la cuenta.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="cloudSignupForm" class="form-grid">
+      <label class="field field-full"><span>Nombre o apodo</span><input name="displayName" maxlength="40" autocomplete="name" value="${esc(state.profile?.name || '')}"></label>
+      <label class="field field-full"><span>Correo electrónico</span><input name="email" type="email" autocomplete="email" required></label>
+      <label class="field field-full"><span>Contraseña</span><input name="password" type="password" minlength="8" autocomplete="new-password" required><small>Mínimo 8 caracteres.</small></label>
+      <label class="setting-switch cloud-consent"><span><strong>Entiendo dónde se guardan mis datos</strong><small>La cuenta sincroniza rutinas, historial, calendario, medidas y ajustes. Las fotos todavía permanecen solo en este dispositivo.</small></span><input name="cloudConsent" type="checkbox" required><i></i></label>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Crear cuenta</button></div>
+    </form>`);
+  wrapper.querySelector('#cloudSignupForm')?.addEventListener('submit', (event) => { event.preventDefault(); submitCloudSignup(event.currentTarget); });
+}
+
+function openCloudSigninModal() {
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">My Fit Plan Cloud</p><h2>Iniciar sesión</h2></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="cloudSigninForm" class="form-grid">
+      <label class="field field-full"><span>Correo electrónico</span><input name="email" type="email" autocomplete="email" required></label>
+      <label class="field field-full"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="text-link cloud-forgot-inline" type="button" data-action="cloud-forgot">He olvidado mi contraseña</button>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Entrar</button></div>
+    </form>`);
+  wrapper.querySelector('#cloudSigninForm')?.addEventListener('submit', (event) => { event.preventDefault(); submitCloudSignin(event.currentTarget); });
+}
+
+function openCloudRecoveryModal() {
+  const email = cloudAccountSummary().email || cloudAccountSummary().pendingEmail || '';
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Recuperar acceso</p><h2>Restablecer contraseña</h2><p class="muted small">Te enviaremos un enlace seguro. No tiene ningún coste para ti.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="cloudRecoveryForm" class="form-grid"><label class="field field-full"><span>Correo electrónico</span><input name="email" type="email" required autocomplete="email" value="${esc(email)}"></label><div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Enviar enlace</button></div></form>`);
+  wrapper.querySelector('#cloudRecoveryForm')?.addEventListener('submit', (event) => { event.preventDefault(); submitCloudRecovery(event.currentTarget); });
+}
+
+function openCloudNewPasswordModal() {
+  const info = cloudAccountSummary();
+  if (!info.recovery || recoveryModalOpened) return;
+  recoveryModalOpened = true;
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Enlace verificado</p><h2>Elige una contraseña nueva</h2></div></div><form id="cloudNewPasswordForm" class="form-grid"><label class="field field-full"><span>Nueva contraseña</span><input name="password" type="password" minlength="8" autocomplete="new-password" required></label><label class="field field-full"><span>Repite la contraseña</span><input name="password2" type="password" minlength="8" autocomplete="new-password" required></label><div class="modal-actions"><button class="button button-primary" type="submit">Guardar contraseña</button></div></form>`);
+  wrapper.querySelector('#cloudNewPasswordForm')?.addEventListener('submit', (event) => { event.preventDefault(); submitCloudNewPassword(event.currentTarget); });
+}
+
+function conflictSummaryHtml(title, summary, tone) {
+  return `<article class="cloud-conflict-option ${tone}"><p class="eyebrow">${esc(title)}</p><h3>${esc(summary.profile || 'My Fit Plan')}</h3><div><span><b>${summary.sessions}</b> sesiones</span><span><b>${summary.routines}</b> rutinas</span><span><b>${summary.bodyEntries}</b> revisiones</span></div><small>Actualizado: ${esc(cloudDate(summary.updatedAt))}</small></article>`;
+}
+
+function openCloudConflictModal(info = pendingCloudConflict) {
+  if (!info) { cloudSyncNow().catch((error) => showToast(cloudAuthError(error), 'danger')); return; }
+  pendingCloudConflict = info;
+  openModal(`<div class="modal-header"><div><p class="eyebrow">Protección de datos</p><h2>¿Qué versión quieres conservar?</h2><p class="muted small">Hemos detectado cambios distintos. No sobrescribiremos nada hasta que elijas.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="cloud-conflict-grid">${conflictSummaryHtml('Este dispositivo', info.localSummary, 'local')}${conflictSummaryHtml('My Fit Plan Cloud', info.remoteSummary, 'remote')}</div><div class="cloud-conflict-warning">Las fotografías siguen siendo locales y no se eliminan al elegir la versión cloud de los datos.</div><div class="modal-actions"><button class="button button-secondary" type="button" data-action="cloud-conflict-cloud">Usar la nube</button><button class="button button-primary" type="button" data-action="cloud-conflict-local">Conservar este dispositivo</button></div>`, { wide: true });
+}
+
+async function submitCloudSignup(form) {
+  const data = new FormData(form);
+  if (!data.get('cloudConsent')) return showToast('Confirma cómo se sincronizarán los datos.', 'danger');
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true; submit.textContent = 'Creando…';
+  try {
+    const result = await cloudSignUp({ displayName: data.get('displayName'), email: data.get('email'), password: data.get('password') });
+    closeModal();
+    if (result.needsConfirmation) showToast('Cuenta creada. Abre el correo de confirmación para activar My Fit Plan Cloud.', 'success');
+    else showToast('Cuenta creada y progreso sincronizado.', 'success');
+    refreshCloudAccountDom();
+  } catch (error) {
+    showToast(cloudAuthError(error), 'danger');
+    submit.disabled = false; submit.textContent = 'Crear cuenta';
+  }
+}
+
+async function submitCloudSignin(form) {
+  const data = new FormData(form);
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true; submit.textContent = 'Entrando…';
+  try {
+    await cloudSignIn({ email: data.get('email'), password: data.get('password') });
+    closeModal();
+    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Revisa qué versión quieres conservar.' : 'Sesión iniciada y sincronización activada.', cloudAccountSummary().conflict ? 'warning' : 'success');
+    refreshCloudAccountDom();
+  } catch (error) {
+    showToast(cloudAuthError(error), 'danger');
+    submit.disabled = false; submit.textContent = 'Entrar';
+  }
+}
+
+async function submitCloudRecovery(form) {
+  const data = new FormData(form);
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true; submit.textContent = 'Enviando…';
+  try {
+    await cloudSendPasswordReset(data.get('email'));
+    closeModal();
+    showToast('Revisa tu correo. Te hemos enviado el enlace de recuperación.', 'success');
+  } catch (error) {
+    showToast(cloudAuthError(error), 'danger');
+    submit.disabled = false; submit.textContent = 'Enviar enlace';
+  }
+}
+
+async function submitCloudNewPassword(form) {
+  const data = new FormData(form);
+  if (String(data.get('password')) !== String(data.get('password2'))) return showToast('Las contraseñas no coinciden.', 'danger');
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true; submit.textContent = 'Guardando…';
+  try {
+    await cloudUpdatePassword(data.get('password'));
+    recoveryModalOpened = false;
+    closeModal();
+    showToast('Contraseña actualizada.', 'success');
+  } catch (error) {
+    showToast(cloudAuthError(error), 'danger');
+    submit.disabled = false; submit.textContent = 'Guardar contraseña';
+  }
+}
+
+async function runCloudSync() {
+  try {
+    const result = await cloudSyncNow();
+    if (result.status === 'conflict') return openCloudConflictModal(result);
+    const messages = { uploaded: 'Cambios subidos a My Fit Plan Cloud.', downloaded: 'Datos de la nube restaurados.', synced: 'Todo está sincronizado.', offline: 'Sin internet: tus cambios siguen guardados en el dispositivo.' };
+    showToast(messages[result.status] || 'Sincronización revisada.', result.status === 'offline' ? 'warning' : 'success');
+    refreshCloudAccountDom();
+  } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+}
+
+async function resolveCloudConflict(strategy) {
+  try {
+    await cloudResolveConflict(strategy);
+    pendingCloudConflict = null;
+    closeModal();
+    showToast(strategy === 'local' ? 'Este dispositivo se ha guardado como versión principal.' : 'Se han restaurado los datos de My Fit Plan Cloud.', 'success');
+    refreshCloudAccountDom();
+  } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+}
+
+async function signOutCloudAccount() {
+  await cloudSignOut();
+  showToast('Sesión cerrada. Los datos locales permanecen en este dispositivo.', 'success');
+  if (currentView === 'profile') { renderProfile(); showProfileTab('account'); }
+}
+
+function deleteCloudAccount() {
+  confirmAction({ title: 'Eliminar cuenta de My Fit Plan', message: 'Se borrarán la cuenta, los datos de la nube y el progreso guardado en este dispositivo, incluidas las fotografías locales. No se puede deshacer.', confirmLabel: 'Eliminar definitivamente', danger: true, onConfirm: async () => {
+    try {
+      await cloudDeleteAccount();
+      try { await clearProgressPhotoStore(); }
+      catch (photoError) { reportRuntimeIssue(photoError, 'Borrado local de fotografías al eliminar cuenta'); }
+      state = createEmptyState();
+      state = persistState(state);
+      closeModal();
+      showToast('Cuenta y datos eliminados.', 'success');
+      renderWelcome();
+    } catch (error) { showToast(cloudAuthError(error), 'danger'); }
+  }});
+}
+
 function appearanceOption(value, title, subtitle, icon, selected) {
   return `<label class="appearance-option"><input type="radio" name="appearance" value="${value}" ${selected === value ? 'checked' : ''}><span><b>${icon}</b><strong>${title}</strong><small>${subtitle}</small></span></label>`;
 }
@@ -3403,6 +3724,15 @@ async function handleAppClick(event) {
     'hud-export-diagnostics': exportHudDiagnostics,
     'hud-repair-data': repairApplicationState,
     'hud-force-update': forceApplicationUpdate,
+    'cloud-signup': openCloudSignupModal,
+    'cloud-signin': openCloudSigninModal,
+    'cloud-forgot': openCloudRecoveryModal,
+    'cloud-sync': runCloudSync,
+    'cloud-open-conflict': () => openCloudConflictModal(),
+    'cloud-conflict-local': () => resolveCloudConflict('local'),
+    'cloud-conflict-cloud': () => resolveCloudConflict('cloud'),
+    'cloud-signout': () => confirmAction({ title: 'Cerrar sesión', message: 'Tus datos seguirán guardados en este dispositivo. Podrás volver a conectar la cuenta cuando quieras.', confirmLabel: 'Cerrar sesión', onConfirm: signOutCloudAccount }),
+    'cloud-delete-account': deleteCloudAccount,
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
   try {
@@ -3460,6 +3790,7 @@ function persistPendingInputs() {
     if (state.activeWorkout) {
       syncActiveRoutineFromPlan();
       state = persistState(state);
+      notifyCloudStateChanged(state);
     }
   } catch (error) {
     console.warn('No se pudo completar el guardado de cierre:', error);
@@ -3507,6 +3838,10 @@ function handleAppSubmit(event) {
   if (event.target.id === 'profileForm') submitProfileForm(event.target);
   if (event.target.id === 'settingsForm') submitSettingsForm(event.target);
   if (event.target.id === 'photoUnlockForm') unlockPhotoVault(event.target);
+  if (event.target.id === 'cloudSignupForm') submitCloudSignup(event.target);
+  if (event.target.id === 'cloudSigninForm') submitCloudSignin(event.target);
+  if (event.target.id === 'cloudRecoveryForm') submitCloudRecovery(event.target);
+  if (event.target.id === 'cloudNewPasswordForm') submitCloudNewPassword(event.target);
 }
 
 function submitPlanForm(form) {
@@ -4523,6 +4858,7 @@ function showProfileTab(tab, filterExerciseId = null) {
     refreshBodyProgressImages(content);
   } else if (tab === 'data') content.innerHTML = profileDataHtml();
   else if (tab === 'settings') content.innerHTML = profileSettingsHtml();
+  else if (tab === 'account') content.innerHTML = profileAccountHtml();
   else {
     const bmi = calculateBMI();
     content.innerHTML = profileProgressHtml(weightSummary(state.weightHistory), bmi, bmi ? bmiInfo(bmi) : null, personalRecords(state.history, state.customExercises), buildCalendar(state.history));
@@ -4846,6 +5182,9 @@ function runHudHealthCheck() {
   add('workout-sets', workoutSetMismatch === 0, 'Series de sesión', workoutSetMismatch ? `${workoutSetMismatch} ejercicio${workoutSetMismatch === 1 ? '' : 's'} tiene${workoutSetMismatch === 1 ? '' : 'n'} un contador de series incoherente.` : 'Contadores de series coherentes.');
   add('plan-targets', invalidPlanTargets === 0, 'Objetivos de rutina', invalidPlanTargets ? `${invalidPlanTargets} objetivo${invalidPlanTargets === 1 ? '' : 's'} necesita${invalidPlanTargets === 1 ? '' : 'n'} normalización.` : 'Series, rangos y descansos válidos.');
   add('history-structure', invalidHistorySessions === 0, 'Estructura del historial', invalidHistorySessions ? `${invalidHistorySessions} sesión${invalidHistorySessions === 1 ? '' : 'es'} presenta${invalidHistorySessions === 1 ? '' : 'n'} datos incompletos.` : 'Historial estructuralmente correcto.', 'warning');
+  const cloudHealth = getCloudStatus();
+  add('cloud-auth', cloudHealth.auth !== 'error', 'My Fit Plan Cloud', cloudHealth.auth === 'authenticated' ? `Cuenta conectada · ${cloudAccountSummary().email}` : cloudHealth.auth === 'error' ? cloudHealth.lastError || 'Error de autenticación.' : 'Modo local disponible sin cuenta.', cloudHealth.auth === 'error' ? 'warning' : 'success');
+  add('cloud-sync', !['error','conflict'].includes(cloudHealth.sync), 'Sincronización cloud', cloudHealth.sync === 'synced' ? 'Datos sincronizados.' : cloudHealth.sync === 'conflict' ? 'Hay dos versiones pendientes de resolver.' : cloudHealth.sync === 'offline' ? 'Sin conexión: el guardado local continúa activo.' : cloudHealth.sync === 'error' ? cloudHealth.lastError || 'Error de sincronización.' : 'Sistema cloud preparado.', ['error','conflict'].includes(cloudHealth.sync) ? 'warning' : 'success');
   add('exercises', missingCriticalIds.length === 0, 'Referencias activas de ejercicios', missingCriticalIds.length ? `Faltan ${missingCriticalIds.length}: ${missingCriticalIds.slice(0,3).join(', ')}` : `${Object.keys(allExercises).length} ejercicios disponibles.`);
   add('history-exercises', missingHistoryIds.length === 0, 'Referencias históricas', missingHistoryIds.length ? `${missingHistoryIds.length} ejercicio${missingHistoryIds.length === 1 ? '' : 's'} eliminado${missingHistoryIds.length === 1 ? '' : 's'} conserva${missingHistoryIds.length === 1 ? '' : 'n'} registros sin ficha técnica.` : 'Todo el historial mantiene una ficha disponible.', 'warning');
   add('runtime', runtimeIssues.length === 0, 'Errores de ejecución', runtimeIssues.length ? `${runtimeIssues.length} incidencia${runtimeIssues.length === 1 ? '' : 's'} detectada${runtimeIssues.length === 1 ? '' : 's'}.` : 'Sin errores detectados durante esta apertura.', 'warning');
@@ -4929,7 +5268,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=39', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=40', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

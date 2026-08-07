@@ -1,7 +1,7 @@
 'use strict';
 
-import { getExercise } from './exercises.js?v=39';
-import { numberValue } from './utils.js?v=39';
+import { getExercise } from './exercises.js?v=40';
+import { numberValue } from './utils.js?v=40';
 
 const STATUS_META = {
   baseline: { tone: 'neutral', icon: '◎', label: 'Primera referencia', priority: 10 },

@@ -1,0 +1,699 @@
+'use strict';
+
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=40';
+
+const SESSION_KEY = 'mfpCloudSessionV40';
+const META_KEY = 'mfpCloudMetaV40';
+const DEVICE_KEY = 'mfpCloudDeviceV40';
+const SYNC_DELAY = 950;
+
+let hooks = {
+  getState: () => null,
+  replaceState: () => {},
+  onStatusChange: () => {},
+  onConflict: () => {},
+  onRecovery: () => {}
+};
+
+let session = readJson(SESSION_KEY, null);
+let meta = readJson(META_KEY, { users: {} });
+let syncTimer = null;
+let initialized = false;
+let refreshPromise = null;
+let conflictSnapshot = null;
+let status = {
+  enabled: CLOUD_CONFIG.enabled,
+  auth: session ? 'loading' : 'guest',
+  sync: session ? 'idle' : 'guest',
+  user: session?.user || null,
+  entitlement: null,
+  lastSyncAt: null,
+  lastError: '',
+  recovery: false,
+  pendingEmail: '',
+  conflict: false
+};
+
+function readJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeLocal(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+
+function randomId(prefix = 'device') {
+  if (crypto?.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function deviceId() {
+  try {
+    const current = localStorage.getItem(DEVICE_KEY);
+    if (current) return current;
+    const next = randomId();
+    localStorage.setItem(DEVICE_KEY, next);
+    return next;
+  } catch {
+    return randomId('ephemeral');
+  }
+}
+
+function userMeta(userId) {
+  meta.users ||= {};
+  meta.users[userId] ||= {
+    lastRevision: 0,
+    lastSyncedHash: '',
+    lastSyncAt: null
+  };
+  return meta.users[userId];
+}
+
+function saveMeta() {
+  writeJson(META_KEY, meta);
+}
+
+function emit(patch = {}) {
+  status = { ...status, ...patch };
+  try { hooks.onStatusChange({ ...status }); } catch (error) { console.warn('Cloud status hook:', error); }
+}
+
+function asErrorMessage(error) {
+  if (!error) return 'Error desconocido';
+  if (typeof error === 'string') return error;
+  return error.message || error.msg || error.error_description || error.error || 'Error desconocido';
+}
+
+async function parseResponse(response) {
+  const text = await response.text();
+  if (!text) return null;
+  try { return JSON.parse(text); }
+  catch { return { message: text }; }
+}
+
+async function rawRequest(path, { method = 'GET', body = null, token = null, headers = {}, retryAuth = true } = {}) {
+  const finalHeaders = {
+    apikey: CLOUD_CONFIG.publishableKey,
+    ...headers
+  };
+  if (body !== null && !finalHeaders['Content-Type']) finalHeaders['Content-Type'] = 'application/json';
+  if (token) finalHeaders.Authorization = `Bearer ${token}`;
+
+  let response;
+  try {
+    response = await fetch(`${CLOUD_CONFIG.url}${path}`, {
+      method,
+      headers: finalHeaders,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+  } catch (error) {
+    const networkError = new Error('No se pudo conectar con My Fit Plan Cloud.');
+    networkError.cause = error;
+    throw networkError;
+  }
+
+  if (response.status === 401 && token && retryAuth && session?.refresh_token) {
+    await refreshSession();
+    return rawRequest(path, { method, body, token: session?.access_token, headers, retryAuth: false });
+  }
+
+  const data = await parseResponse(response);
+  if (!response.ok) {
+    const error = new Error(asErrorMessage(data) || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+function saveSession(data) {
+  if (!data?.access_token) return null;
+  const expiresIn = Number(data.expires_in || 3600);
+  session = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || session?.refresh_token || '',
+    token_type: data.token_type || 'bearer',
+    expires_at: Date.now() + Math.max(60, expiresIn) * 1000,
+    user: data.user || session?.user || null
+  };
+  writeJson(SESSION_KEY, session);
+  return session;
+}
+
+function clearSession() {
+  session = null;
+  removeLocal(SESSION_KEY);
+  conflictSnapshot = null;
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  emit({ auth: 'guest', sync: 'guest', user: null, entitlement: null, conflict: false, recovery: false, lastError: '' });
+}
+
+function sessionExpiring() {
+  return !session?.access_token || Number(session.expires_at || 0) < Date.now() + 90_000;
+}
+
+async function refreshSession() {
+  if (!session?.refresh_token) throw new Error('La sesión ha caducado. Vuelve a iniciar sesión.');
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const data = await rawRequest('/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        body: { refresh_token: session.refresh_token },
+        retryAuth: false
+      });
+      saveSession(data);
+      emit({ auth: 'authenticated', user: session.user, lastError: '' });
+      return session;
+    } catch (error) {
+      clearSession();
+      throw error;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
+async function ensureSession() {
+  if (!session) return null;
+  if (sessionExpiring()) await refreshSession();
+  return session;
+}
+
+function stripAuthParams() {
+  try {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    ['code', 'error', 'error_code', 'error_description', 'type'].forEach((key) => url.searchParams.delete(key));
+    history.replaceState(history.state, '', `${url.pathname}${url.search}`);
+  } catch {}
+}
+
+function authCallbackParams() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(window.location.search);
+  const get = (key) => hash.get(key) || query.get(key);
+  return {
+    accessToken: get('access_token'),
+    refreshToken: get('refresh_token'),
+    expiresIn: get('expires_in'),
+    tokenType: get('token_type'),
+    type: get('type'),
+    error: get('error_description') || get('error')
+  };
+}
+
+async function consumeAuthCallback() {
+  const params = authCallbackParams();
+  if (params.error) {
+    stripAuthParams();
+    emit({ lastError: params.error });
+    return false;
+  }
+  if (!params.accessToken) return false;
+
+  saveSession({
+    access_token: params.accessToken,
+    refresh_token: params.refreshToken,
+    expires_in: Number(params.expiresIn || 3600),
+    token_type: params.tokenType || 'bearer'
+  });
+  stripAuthParams();
+  const user = await fetchCurrentUser();
+  if (params.type === 'recovery') {
+    emit({ recovery: true });
+    try { hooks.onRecovery(); } catch {}
+  }
+  return Boolean(user);
+}
+
+async function fetchCurrentUser() {
+  await ensureSession();
+  if (!session?.access_token) return null;
+  const user = await rawRequest('/auth/v1/user', { token: session.access_token });
+  session.user = user;
+  writeJson(SESSION_KEY, session);
+  emit({ auth: 'authenticated', user, lastError: '' });
+  return user;
+}
+
+function stateHash(value) {
+  const text = JSON.stringify(value ?? null);
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function meaningfulState(value) {
+  if (!value || typeof value !== 'object') return false;
+  return Boolean(
+    value.profile
+    || value.onboardingCompleted
+    || value.plan
+    || value.history?.length
+    || value.routineFolders?.length
+    || value.customExercises?.length
+    || value.weightHistory?.length
+    || value.bodyProgress?.length
+  );
+}
+
+function stateSummary(value) {
+  return {
+    profile: value?.profile?.name || '',
+    sessions: Array.isArray(value?.history) ? value.history.length : 0,
+    routines: Array.isArray(value?.routineFolders)
+      ? value.routineFolders.reduce((sum, folder) => sum + (folder.routines?.length || 0), 0)
+      : (value?.plan ? 1 : 0),
+    bodyEntries: Array.isArray(value?.bodyProgress) ? value.bodyProgress.length : 0,
+    updatedAt: value?.updatedAt || null
+  };
+}
+
+function cloudPayload(localState) {
+  const copy = JSON.parse(JSON.stringify(localState || {}));
+  copy.schemaVersion = CLOUD_CONFIG.schemaVersion;
+  copy.appVersion = CLOUD_CONFIG.appVersion;
+  return copy;
+}
+
+async function fetchRemoteState() {
+  await ensureSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const query = new URLSearchParams({
+    select: 'payload,schema_version,app_version,revision,device_id,client_updated_at,created_at,updated_at',
+    user_id: `eq.${userId}`,
+    limit: '1'
+  });
+  const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.stateTable}?${query.toString()}`, {
+    token: session.access_token,
+    headers: { Accept: 'application/json' }
+  });
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function createRemoteState(localState) {
+  const userId = session?.user?.id;
+  if (!userId) throw new Error('Debes iniciar sesión.');
+  const payload = cloudPayload(localState);
+  const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.stateTable}`, {
+    method: 'POST',
+    token: session.access_token,
+    headers: { Prefer: 'return=representation' },
+    body: {
+      user_id: userId,
+      payload,
+      schema_version: CLOUD_CONFIG.schemaVersion,
+      app_version: CLOUD_CONFIG.appVersion,
+      revision: 1,
+      device_id: deviceId(),
+      client_updated_at: payload.updatedAt || new Date().toISOString()
+    }
+  });
+  const remote = Array.isArray(rows) ? rows[0] : rows;
+  markSynced(payload, Number(remote?.revision || 1));
+  return remote;
+}
+
+async function updateRemoteState(localState, expectedRevision, { force = false } = {}) {
+  const userId = session?.user?.id;
+  if (!userId) throw new Error('Debes iniciar sesión.');
+  const payload = cloudPayload(localState);
+  const currentRevision = Math.max(0, Number(expectedRevision || 0));
+  const params = new URLSearchParams({
+    user_id: `eq.${userId}`,
+    select: 'payload,revision,updated_at'
+  });
+  if (!force) params.set('revision', `eq.${currentRevision}`);
+
+  const nextRevision = currentRevision + 1;
+  const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.stateTable}?${params.toString()}`, {
+    method: 'PATCH',
+    token: session.access_token,
+    headers: { Prefer: 'return=representation' },
+    body: {
+      payload,
+      schema_version: CLOUD_CONFIG.schemaVersion,
+      app_version: CLOUD_CONFIG.appVersion,
+      revision: nextRevision,
+      device_id: deviceId(),
+      client_updated_at: payload.updatedAt || new Date().toISOString()
+    }
+  });
+  if (!force && Array.isArray(rows) && rows.length === 0) return null;
+  const remote = Array.isArray(rows) ? rows[0] : rows;
+  markSynced(payload, Number(remote?.revision || nextRevision));
+  return remote;
+}
+
+function markSynced(payload, revision) {
+  const userId = session?.user?.id;
+  if (!userId) return;
+  const record = userMeta(userId);
+  record.lastRevision = Math.max(0, Number(revision || 0));
+  record.lastSyncedHash = stateHash(payload);
+  record.lastSyncAt = new Date().toISOString();
+  saveMeta();
+  conflictSnapshot = null;
+  emit({ sync: 'synced', lastSyncAt: record.lastSyncAt, conflict: false, lastError: '' });
+}
+
+async function pullRemote(remote) {
+  if (!remote?.payload) return null;
+  hooks.replaceState(remote.payload, { source: 'cloud', revision: remote.revision });
+  const normalizedLocal = cloudPayload(hooks.getState());
+  if (stateHash(normalizedLocal) !== stateHash(remote.payload)) {
+    const updated = await updateRemoteState(normalizedLocal, Number(remote.revision || 0));
+    if (updated) return hooks.getState();
+  }
+  markSynced(normalizedLocal, Number(remote.revision || 0));
+  return hooks.getState();
+}
+
+async function fetchEntitlement() {
+  await ensureSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const query = new URLSearchParams({
+    select: 'plan,source,premium_expires_at,updated_at',
+    user_id: `eq.${userId}`,
+    limit: '1'
+  });
+  const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.entitlementTable}?${query.toString()}`, {
+    token: session.access_token
+  });
+  const entitlement = Array.isArray(rows) ? rows[0] || { plan: 'free', source: 'system' } : { plan: 'free', source: 'system' };
+  emit({ entitlement });
+  return entitlement;
+}
+
+async function fetchProfile() {
+  await ensureSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const query = new URLSearchParams({
+    select: 'display_name,created_at,updated_at',
+    user_id: `eq.${userId}`,
+    limit: '1'
+  });
+  const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.profileTable}?${query.toString()}`, {
+    token: session.access_token
+  });
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function reconcile({ reason = 'manual', silent = false } = {}) {
+  if (!CLOUD_CONFIG.enabled) return { status: 'disabled' };
+  if (!navigator.onLine) {
+    emit({ sync: session ? 'offline' : 'guest' });
+    return { status: 'offline' };
+  }
+  await ensureSession();
+  if (!session?.user?.id) return { status: 'guest' };
+
+  if (!silent) emit({ sync: 'syncing', lastError: '' });
+  try {
+    const local = hooks.getState();
+    const localPayload = cloudPayload(local);
+    const localHash = stateHash(localPayload);
+    const localHasData = meaningfulState(localPayload);
+    const remote = await fetchRemoteState();
+    const record = userMeta(session.user.id);
+
+    if (!remote) {
+      await createRemoteState(localPayload);
+      return { status: 'uploaded', reason };
+    }
+
+    const remotePayload = remote.payload || {};
+    const remoteHash = stateHash(remotePayload);
+    const remoteHasData = meaningfulState(remotePayload);
+
+    if (!localHasData && remoteHasData) {
+      await pullRemote(remote);
+      return { status: 'downloaded', reason };
+    }
+
+    if (localHash === remoteHash) {
+      markSynced(localPayload, remote.revision);
+      return { status: 'synced', reason };
+    }
+
+    if (record.lastSyncedHash) {
+      const localChanged = localHash !== record.lastSyncedHash;
+      const remoteChanged = remoteHash !== record.lastSyncedHash || Number(remote.revision) !== Number(record.lastRevision || 0);
+
+      if (!localChanged && remoteChanged) {
+        await pullRemote(remote);
+        return { status: 'downloaded', reason };
+      }
+      if (localChanged && !remoteChanged) {
+        const updated = await updateRemoteState(localPayload, remote.revision);
+        if (updated) return { status: 'uploaded', reason };
+      }
+      if (!localChanged && !remoteChanged) {
+        markSynced(localPayload, remote.revision);
+        return { status: 'synced', reason };
+      }
+    }
+
+    conflictSnapshot = {
+      local: localPayload,
+      remote,
+      localSummary: stateSummary(localPayload),
+      remoteSummary: stateSummary(remotePayload)
+    };
+    emit({ sync: 'conflict', conflict: true, lastError: '' });
+    hooks.onConflict({ ...conflictSnapshot });
+    return { status: 'conflict', reason, ...conflictSnapshot };
+  } catch (error) {
+    emit({ sync: 'error', lastError: asErrorMessage(error) });
+    if (!silent) throw error;
+    return { status: 'error', error };
+  }
+}
+
+export function getCloudStatus() {
+  return { ...status };
+}
+
+export async function initCloud(nextHooks = {}) {
+  hooks = { ...hooks, ...nextHooks };
+  if (initialized) return getCloudStatus();
+  initialized = true;
+
+  if (!CLOUD_CONFIG.enabled) {
+    emit({ auth: 'guest', sync: 'disabled' });
+    return getCloudStatus();
+  }
+
+  try {
+    await consumeAuthCallback();
+    if (!session) {
+      emit({ auth: 'guest', sync: 'guest' });
+      return getCloudStatus();
+    }
+    const user = await fetchCurrentUser();
+    if (!user) return getCloudStatus();
+    await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
+    await reconcile({ reason: 'startup', silent: true });
+    return getCloudStatus();
+  } catch (error) {
+    emit({ auth: session ? 'error' : 'guest', sync: session ? 'error' : 'guest', lastError: asErrorMessage(error) });
+    return getCloudStatus();
+  }
+}
+
+export async function cloudSignUp({ displayName = '', email = '', password = '' }) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) throw new Error('Escribe tu correo electrónico.');
+  if (String(password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+
+  emit({ auth: 'loading', lastError: '', pendingEmail: cleanEmail });
+  try {
+    const redirect = encodeURIComponent(cloudRedirectUrl());
+    const data = await rawRequest(`/auth/v1/signup?redirect_to=${redirect}`, {
+      method: 'POST',
+      body: {
+        email: cleanEmail,
+        password,
+        data: { display_name: String(displayName || '').trim() }
+      }
+    });
+    if (data?.access_token) {
+      saveSession(data);
+      await fetchCurrentUser();
+      await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
+      await reconcile({ reason: 'signup' });
+      return { signedIn: true, needsConfirmation: false, user: session.user };
+    }
+    emit({ auth: 'guest', sync: 'guest', pendingEmail: cleanEmail });
+    return { signedIn: false, needsConfirmation: true, user: data?.user || null };
+  } catch (error) {
+    emit({ auth: session ? 'authenticated' : 'guest', lastError: asErrorMessage(error) });
+    throw error;
+  }
+}
+
+export async function cloudSignIn({ email = '', password = '' }) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail || !password) throw new Error('Escribe correo y contraseña.');
+  emit({ auth: 'loading', sync: 'idle', lastError: '' });
+  try {
+    const data = await rawRequest('/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      body: { email: cleanEmail, password }
+    });
+    saveSession(data);
+    await fetchCurrentUser();
+    await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
+    await reconcile({ reason: 'signin' });
+    return session.user;
+  } catch (error) {
+    clearSession();
+    emit({ lastError: asErrorMessage(error) });
+    throw error;
+  }
+}
+
+export async function cloudSignOut() {
+  if (session?.access_token) {
+    try {
+      await rawRequest('/auth/v1/logout?scope=local', {
+        method: 'POST',
+        token: session.access_token
+      });
+    } catch {}
+  }
+  clearSession();
+  return true;
+}
+
+export async function cloudSendPasswordReset(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) throw new Error('Escribe tu correo electrónico.');
+  const redirect = encodeURIComponent(cloudRedirectUrl());
+  await rawRequest(`/auth/v1/recover?redirect_to=${redirect}`, {
+    method: 'POST',
+    body: { email: cleanEmail }
+  });
+  return true;
+}
+
+export async function cloudUpdatePassword(password) {
+  if (String(password || '').length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  await ensureSession();
+  if (!session?.access_token) throw new Error('El enlace de recuperación ya no es válido.');
+  await rawRequest('/auth/v1/user', {
+    method: 'PUT',
+    token: session.access_token,
+    body: { password }
+  });
+  emit({ recovery: false, lastError: '' });
+  return true;
+}
+
+export async function cloudDeleteAccount() {
+  await ensureSession();
+  if (!session?.access_token) throw new Error('Debes iniciar sesión.');
+  await rawRequest('/rest/v1/rpc/delete_my_account', {
+    method: 'POST',
+    token: session.access_token,
+    body: {}
+  });
+  const userId = session?.user?.id;
+  if (userId && meta.users) delete meta.users[userId];
+  saveMeta();
+  clearSession();
+  return true;
+}
+
+export function notifyCloudStateChanged(localState) {
+  if (!session?.user?.id) return;
+  const payload = cloudPayload(localState);
+  const record = userMeta(session.user.id);
+  if (stateHash(payload) === record.lastSyncedHash) return;
+  emit({ sync: navigator.onLine ? 'dirty' : 'offline' });
+  clearTimeout(syncTimer);
+  if (!navigator.onLine) return;
+  syncTimer = setTimeout(() => {
+    reconcile({ reason: 'local-change', silent: true }).catch(() => {});
+  }, SYNC_DELAY);
+}
+
+export async function cloudSyncNow(options = {}) {
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  return reconcile({ reason: 'manual', ...options });
+}
+
+export async function cloudResolveConflict(strategy) {
+  if (!conflictSnapshot) {
+    const result = await reconcile({ reason: 'resolve' });
+    if (result.status !== 'conflict') return result;
+  }
+  const snapshot = conflictSnapshot;
+  if (!snapshot) return { status: 'synced' };
+
+  if (strategy === 'cloud') {
+    await pullRemote(snapshot.remote);
+    return { status: 'downloaded' };
+  }
+
+  if (strategy === 'local') {
+    const latest = await fetchRemoteState();
+    if (!latest) {
+      await createRemoteState(snapshot.local);
+      return { status: 'uploaded' };
+    }
+    await updateRemoteState(snapshot.local, latest.revision, { force: true });
+    return { status: 'uploaded' };
+  }
+
+  throw new Error('Estrategia de conflicto no reconocida.');
+}
+
+export async function cloudRefreshAccount() {
+  if (!session) return getCloudStatus();
+  await fetchCurrentUser();
+  await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
+  return getCloudStatus();
+}
+
+export function cloudAccountSummary() {
+  const user = status.user;
+  return {
+    signedIn: status.auth === 'authenticated',
+    email: user?.email || '',
+    userId: user?.id || '',
+    plan: status.entitlement?.plan || 'free',
+    sync: status.sync,
+    lastSyncAt: status.lastSyncAt,
+    lastError: status.lastError,
+    recovery: status.recovery,
+    pendingEmail: status.pendingEmail,
+    conflict: status.conflict
+  };
+}
