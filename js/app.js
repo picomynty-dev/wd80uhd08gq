@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=402';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=402';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=402';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=41';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=41';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=41';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=402';
+} from './stats.js?v=41';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=402';
+} from './coach.js?v=41';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=402';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=402';
+} from './adaptive.js?v=41';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=41';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=402';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=402';
+} from './calendar-planner.js?v=41';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=41';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=402';
+} from './progression-engine.js?v=41';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=402';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=402';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=402';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=402';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=402';
+} from './utils.js?v=41';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=41';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=41';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=41';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=41';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,13 +83,14 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=402';
+} from './photo-progress.js?v=41';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
   cloudDeleteProgressPhotos,
   cloudDownloadNow,
   cloudProgressPhotoSummary,
+  cloudRefreshAccount,
   cloudResolveConflict,
   cloudSendPasswordReset,
   cloudSignIn,
@@ -102,7 +103,8 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=402';
+} from './cloud.js?v=41';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=41';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -492,6 +494,79 @@ function bmiInfo(value) {
   return { label: 'Rango elevado según el IMC', tone: 'danger', text: 'Es una medida orientativa. Un profesional puede valorar el conjunto de datos si te preocupa.' };
 }
 
+function currentPlan() {
+  return cloudAccountSummary().plan || 'free';
+}
+
+function premiumUnlocked() {
+  return hasPremiumAccess(currentPlan());
+}
+
+function premiumPlanBadge(extraClass = '') {
+  const plan = currentPlan();
+  if (!hasPremiumAccess(plan)) return '';
+  return `<span class="premium-plan-badge ${plan === 'founder' ? 'is-founder' : ''} ${extraClass}">${plan === 'founder' ? '★ Founder' : '★ Premium'}</span>`;
+}
+
+function premiumLockedBadge() {
+  return '<span class="premium-lock-badge">★ Premium</span>';
+}
+
+function premiumPreviewCard(featureId, { compact = false } = {}) {
+  const feature = premiumFeature(featureId);
+  return `<section class="premium-preview-card ${compact ? 'is-compact' : ''}" data-premium-preview="${esc(featureId)}">
+    <div class="premium-preview-icon">${esc(feature.icon)}</div>
+    <div class="premium-preview-copy"><p class="eyebrow">${esc(feature.eyebrow)}</p><h2>${esc(feature.title)}</h2><p>${esc(feature.description)}</p></div>
+    <button class="button button-premium" type="button" data-action="premium-open" data-premium-feature="${esc(featureId)}">Ver Premium</button>
+  </section>`;
+}
+
+function openPremiumPaywall(featureId = '') {
+  const info = cloudAccountSummary();
+  const feature = premiumFeature(featureId);
+  const unlocked = hasPremiumAccess(info.plan);
+  const plan = planLabel(info.plan);
+  const expiration = info.plan === 'premium' && info.premiumExpiresAt ? cloudDate(info.premiumExpiresAt) : '';
+  const wrapper = openModal(`<div class="premium-paywall">
+    <div class="premium-paywall-glow" aria-hidden="true"></div>
+    <div class="modal-header premium-paywall-header"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>${unlocked ? `${esc(plan)} activo` : esc(feature.title)}</h2><p class="muted">${unlocked ? 'Tu cuenta ya tiene acceso a todas las funciones Premium.' : esc(feature.description)}</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <div class="premium-paywall-plan ${unlocked ? 'is-active' : ''}">
+      <div><span class="premium-paywall-mark">MFP+</span><div><small>${unlocked ? 'TU PLAN' : 'PLAN PREMIUM'}</small><strong>${unlocked ? esc(plan) : 'My Fit Plan Premium'}</strong></div></div>
+      <span>${unlocked ? (info.plan === 'founder' ? 'Acceso permanente' : expiration ? `Hasta ${esc(expiration)}` : 'Activo') : 'Próximamente'}</span>
+    </div>
+    <div class="premium-paywall-features">
+      <article><span>◎</span><div><strong>Entrenamiento adaptativo</strong><small>Energía, sueño, tiempo y molestias.</small></div></article>
+      <article><span>↗</span><div><strong>Progresión automática</strong><small>Cargas, repeticiones y deload.</small></div></article>
+      <article><span>◷</span><div><strong>Calendario inteligente</strong><small>Reprogramación automática de sesiones.</small></div></article>
+      <article><span>◫</span><div><strong>Análisis avanzado</strong><small>Coach y comparaciones físicas guardadas.</small></div></article>
+    </div>
+    <div class="premium-paywall-compare">
+      <div><strong>Free</strong><span>Rutinas manuales</span><span>Entrenamiento personalizado</span><span>Biblioteca</span><span>Historial básico</span><span>Cloud y fotos privadas</span></div>
+      <div class="is-premium"><strong>Premium</strong><span>Todo lo Free</span><span>My Fit Plan inteligente</span><span>Progresión y deload</span><span>Smart replan</span><span>Análisis avanzado</span></div>
+    </div>
+    ${!info.signedIn ? '<p class="notice notice-info">Para tener Premium necesitaremos una cuenta My Fit Plan. Crear la cuenta seguirá siendo gratis.</p>' : ''}
+    ${info.planExpired ? '<p class="notice notice-warning">Tu acceso Premium anterior ha caducado. La cuenta sigue activa en Free y tus datos no se han perdido.</p>' : ''}
+    <div class="premium-paywall-note"><strong>Beta comercial</strong><p>Los pagos todavía no están activados. Esta versión valida los bloqueos y entitlements antes de conectar el sistema de cobro.</p></div>
+    <div class="modal-actions">
+      <button class="button button-secondary" type="button" data-close-modal>Cerrar</button>
+      ${!info.signedIn ? '<button class="button button-primary" type="button" data-action="premium-create-account">Crear cuenta gratis</button>' : `<button class="button button-primary" type="button" data-action="premium-refresh-plan">${unlocked ? 'Actualizar estado' : 'Comprobar mi plan'}</button>`}
+    </div>
+  </div>`);
+  return wrapper;
+}
+
+async function refreshPremiumPlan() {
+  try {
+    await cloudRefreshAccount();
+    closeModal();
+    refreshCloudAccountDom();
+    if (currentView === 'home') renderHome();
+    showToast(hasPremiumAccess(currentPlan()) ? `${planLabel(currentPlan())} activo.` : 'Tu cuenta continúa en el plan Free.', 'success');
+  } catch (error) {
+    showToast(cloudAuthError(error), 'danger');
+  }
+}
+
 function renderHome() {
   if (!state.profile) return renderWelcome();
   const days = state.plan?.days || [];
@@ -509,6 +584,7 @@ function renderHome() {
   const estimatedMinutes = Number(state.profile.minutes || 45);
   const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
   const progressionDashboard = buildProgressionDashboard(state.history, state.plan, state.customExercises);
+  const hasPremium = premiumUnlocked();
   ensurePlanner();
   const plannerSummary = buildPlannerSummary(state.planner, state.plan, state.history);
 
@@ -533,7 +609,7 @@ function renderHome() {
             <span><b>${estimatedMinutes}</b> min</span>
             <span><b>${percentage}%</b> semana</span>
           </div>
-          <p>${state.activeWorkout ? 'Tu progreso está guardado. Continúa exactamente donde lo dejaste.' : nextDay ? 'Sesión preparada según tu plan. Registra cada serie y deja que My Fit Plan controle el progreso.' : 'Añade un día y tus ejercicios para empezar.'}</p>
+          <p>${state.activeWorkout ? 'Tu progreso está guardado. Continúa exactamente donde lo dejaste.' : nextDay ? (hasPremium ? 'Sesión preparada según tu plan. Registra cada serie y deja que My Fit Plan controle el progreso.' : 'Sesión preparada según tu plan. Registra cada serie para construir tu historial y tus marcas.') : 'Añade un día y tus ejercicios para empezar.'}</p>
           <div class="today-command-actions">
             <button class="button button-primary command-primary" type="button" data-action="home-workout"><span>${state.activeWorkout ? 'Continuar sesión' : 'Empezar entrenamiento'}</span><b>→</b></button>
             <button class="command-icon-button" type="button" data-nav-local="plan" aria-label="Editar plan">✎</button>
@@ -544,7 +620,7 @@ function renderHome() {
         </div>
       </section>
 
-      <section class="coach-command-card coach-tone-${coach.tone}">
+      ${hasPremium ? `<section class="coach-command-card coach-tone-${coach.tone}">
         <div class="coach-command-header">
           <div class="coach-identity"><span class="coach-mark">MFP</span><span><small>ENTRENADOR</small><strong>Análisis local</strong></span></div>
           <span class="coach-confidence"><i></i> Confianza ${coach.confidenceLabel.toLowerCase()}</span>
@@ -567,9 +643,9 @@ function renderHome() {
           <span><strong>${coach.weekly.adherence}%</strong><small>objetivo semanal</small></span>
         </div>
         <button class="coach-open-button" type="button" data-action="coach-details"><span>Ver análisis completo</span><b>→</b></button>
-      </section>
+      </section>` : premiumPreviewCard('coach-analysis')}
 
-      <section class="progression-home-card">
+      ${hasPremium ? `<section class="progression-home-card">
         <div class="progression-home-header">
           <div class="progression-home-brand"><span class="progression-home-icon">↗</span><div><p class="eyebrow">Progresión automática</p><h2>${progressionDashboard.ready ? `${progressionDashboard.ready} ejercicio${progressionDashboard.ready === 1 ? '' : 's'} listo${progressionDashboard.ready === 1 ? '' : 's'} para subir` : 'Objetivos de carga actualizados'}</h2></div></div>
           <button class="button button-secondary button-small" type="button" data-action="progression-dashboard">Ver análisis</button>
@@ -581,7 +657,7 @@ function renderHome() {
           <span><strong>${progressionDashboard.baseline}</strong><small>sin referencia</small></span>
         </div>
         ${progressionDashboard.top[0] ? `<div class="progression-home-focus"><span class="coach-status-icon coach-status-${progressionDashboard.top[0].tone}">${progressionDashboard.top[0].icon}</span><div><small>PRÓXIMA ACCIÓN</small><strong>${esc(progressionDashboard.top[0].exerciseName)} · ${esc(progressionDashboard.top[0].title)}</strong><p>${esc(progressionDashboard.top[0].nextGoal)}</p></div></div>` : ''}
-      </section>
+      </section>` : premiumPreviewCard('progression')}
 
       <section class="planner-home-card">
         <div class="planner-home-header">
@@ -1279,7 +1355,7 @@ function renderCalendarPlanner() {
     ${missed.length ? `<section class="planner-recovery-panel">
       <div class="planner-recovery-heading">
         <div><p class="eyebrow">Sesiones pendientes</p><h2>Recupera la semana sin desordenar tu rutina</h2><p>My Fit Plan puede buscar huecos libres con descanso suficiente.</p></div>
-        <button class="button button-primary" type="button" data-action="planner-smart-replan">Reorganizar automáticamente</button>
+        <button class="button button-primary" type="button" data-action="planner-smart-replan">${premiumUnlocked() ? 'Reorganizar automáticamente' : '★ Reorganizar con Premium'}</button>
       </div>
       <div class="planner-missed-list">${missed.slice(0, 6).map(plannerMissedHtml).join('')}</div>
     </section>` : `<section class="planner-clear-panel"><span>✓</span><div><strong>Calendario al día</strong><p>No hay sesiones perdidas pendientes de recolocar.</p></div></section>`}
@@ -1769,7 +1845,7 @@ function renderWorkoutSelector() {
         </div>` : ''}
 
         <div class="coach-choice-actions">
-          <button class="button button-primary button-block" type="button" data-action="training-mfp" ${mfpDay ? '' : 'disabled'}>Crear entrenamiento My Fit Plan</button>
+          <button class="button button-primary button-block" type="button" data-action="training-mfp" ${mfpDay ? '' : 'disabled'}>${premiumUnlocked() ? 'Crear entrenamiento My Fit Plan' : 'Desbloquear My Fit Plan'}</button>
           <button class="button button-ghost button-block" type="button" data-action="training-refresh-recommended" ${alternative?.day ? '' : 'disabled'}>↻ Cambiar propuesta base</button>
         </div>
       </article>
@@ -2355,7 +2431,9 @@ function renderWorkout() {
         </div>
       </section>` : ''}
 
-      ${deload.recommended ? `<section class="deload-workout-banner ${workout.deload?.applied ? 'is-applied' : ''}">
+      ${!premiumUnlocked() ? premiumPreviewCard('progression', { compact: true }) : ''}
+
+      ${premiumUnlocked() && deload.recommended ? `<section class="deload-workout-banner ${workout.deload?.applied ? 'is-applied' : ''}">
         <div class="deload-workout-copy">
           <span class="deload-workout-icon">${workout.deload?.applied ? '✓' : '↘'}</span>
           <div><small>${workout.deload?.applied ? 'DESCARGA APLICADA' : 'SEÑAL DE RECUPERACIÓN'}</small><strong>${workout.deload?.applied ? 'Carga y volumen reducidos para esta sesión' : esc(deload.title)}</strong><p>${workout.deload?.applied ? 'Puedes continuar con los objetivos ajustados.' : esc(deload.text)}</p></div>
@@ -2397,6 +2475,7 @@ function renderWorkout() {
 
 
 function progressionWorkoutCardHtml(recommendation, exerciseIndex) {
+  if (!premiumUnlocked()) return '';
   if (!recommendation) return '';
   const canApply = recommendation.suggestedWeight !== null
     || recommendation.suggestedRepMin !== recommendation.repMin
@@ -2739,11 +2818,11 @@ function profileBodyHtml() {
       <div>
         <p class="eyebrow">Progreso físico privado</p>
         <h2>Compara cambios más allá de la báscula</h2>
-        <p>Guarda fotografías con una postura similar, registra medidas y compara dos fechas sin subir las imágenes a un servidor.</p>
+        <p>Guarda fotografías con una postura similar, registra medidas y compara fechas. Con una cuenta, las imágenes también se sincronizan de forma privada para poder recuperarlas en otros dispositivos.</p>
       </div>
       <div class="body-progress-actions">
         <button class="button button-primary" type="button" data-action="body-progress-new">＋ Nueva revisión</button>
-        <button class="button button-secondary" type="button" data-action="body-progress-compare" ${entries.length >= 2 ? '' : 'disabled'}>Comparar revisiones</button>
+        <button class="button button-secondary" type="button" data-action="body-progress-compare" ${entries.length >= 2 ? '' : 'disabled'}>${premiumUnlocked() ? 'Comparar revisiones' : '★ Comparar revisiones'}</button>
         <button class="button button-secondary body-free-compare-button" type="button" data-action="body-progress-free-compare">Comparación libre</button>
       </div>
     </section>
@@ -2759,7 +2838,7 @@ function profileBodyHtml() {
 
     ${latest ? `<section class="section body-summary-grid">
       <article class="card body-summary-card"><small>Última revisión</small><strong>${formatDate(latest.date)}</strong><span>${latest.weight ? `${formatWeight(latest.weight)} kg` : 'Sin peso'}</span></article>
-      <article class="card body-summary-card"><small>Revisiones</small><strong>${entries.length}</strong><span>guardadas localmente</span></article>
+      <article class="card body-summary-card"><small>Revisiones</small><strong>${entries.length}</strong><span>revisiones privadas</span></article>
       <article class="card body-summary-card"><small>Cambio de peso</small><strong>${first?.weight && latest.weight ? `${signedNumber(numberValue(latest.weight) - numberValue(first.weight))} kg` : '—'}</strong><span>entre primera y última</span></article>
     </section>` : ''}
 
@@ -3415,6 +3494,7 @@ function profileAccountHtml() {
         <article class="card"><strong>Sin perder el modo offline</strong><p class="muted small">Puedes entrenar sin cobertura. Cuando vuelva internet, los cambios pendientes se sincronizan.</p></article>
         <article class="card"><strong>Migración automática</strong><p class="muted small">Si ya tienes rutinas e historial en este móvil, se subirán al crear una cuenta nueva.</p></article>
       </section>
+      <article class="card premium-account-card is-guest"><div class="premium-account-head"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>La capa inteligente de la app</h2><p class="muted small">La cuenta es gratuita. Premium será una ampliación opcional cuando activemos la monetización.</p></div><span class="premium-account-lock">★</span></div><button class="button button-premium" type="button" data-action="premium-open">Conocer Premium</button></article>
       <article class="card cloud-auth-actions">
         <div><p class="eyebrow">Cuenta gratuita</p><h2>Empieza sin pagar</h2><p class="muted small">En esta fase usamos correo y contraseña para mantener el coste del proyecto en 0 €.</p></div>
         <div class="grid grid-2"><button class="button button-primary" type="button" data-action="cloud-signup">Crear cuenta</button><button class="button button-secondary" type="button" data-action="cloud-signin">Iniciar sesión</button></div>
@@ -3429,8 +3509,14 @@ function profileAccountHtml() {
     <article class="card cloud-account-hero is-connected">
       <div class="cloud-account-icon">✓</div>
       <div><p class="eyebrow">Cuenta conectada</p><h2>${esc(info.email || 'My Fit Plan')}</h2><p class="muted">Plan ${esc(plan)} · ${esc(cloudSyncLabel())}</p></div>
-      <span class="cloud-plan-pill">${esc(plan)}</span>
+      <span class="cloud-plan-pill ${info.plan === 'founder' ? 'is-founder' : info.plan === 'premium' ? 'is-premium' : ''}">${esc(plan)}</span>
     </article>
+    <article class="card premium-account-card ${hasPremiumAccess(info.plan) ? 'is-unlocked' : ''}">
+      <div class="premium-account-head"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>${hasPremiumAccess(info.plan) ? `${esc(plan)} desbloqueado` : 'Funciones inteligentes'}</h2><p class="muted small">${info.plan === 'founder' ? 'Acceso Founder permanente para esta cuenta.' : info.plan === 'premium' ? (info.premiumExpiresAt ? `Premium activo hasta ${esc(cloudDate(info.premiumExpiresAt))}.` : 'Premium activo en esta cuenta.') : 'Tu cuenta Free mantiene rutinas, biblioteca, historial, Cloud y fotos privadas.'}</p></div>${hasPremiumAccess(info.plan) ? '<span class="premium-account-check">✓</span>' : '<span class="premium-account-lock">★</span>'}</div>
+      <div class="premium-account-mini-features"><span>My Fit Plan IA</span><span>Progresión</span><span>Smart replan</span><span>Análisis</span></div>
+      <div class="premium-account-actions"><button class="button ${hasPremiumAccess(info.plan) ? 'button-secondary' : 'button-premium'}" type="button" data-action="premium-open">${hasPremiumAccess(info.plan) ? 'Ver mi Premium' : 'Ver Premium'}</button><button class="text-link" type="button" data-action="premium-refresh-plan">Actualizar plan</button></div>
+    </article>
+    ${info.planExpired ? '<article class="notice notice-warning"><strong>Premium caducado:</strong> tu cuenta continúa en Free y todos tus datos permanecen intactos.</article>' : ''}
     <section class="grid grid-3 cloud-status-grid">
       <article class="card metric-card"><div class="metric metric-name">${esc(cloudSyncLabel())}</div><div class="metric-label">Estado</div></article>
       <article class="card metric-card"><div class="metric metric-name">${esc(cloudDate(info.lastSyncAt))}</div><div class="metric-label">Última sincronización</div></article>
@@ -3743,6 +3829,11 @@ async function handleAppClick(event) {
   const target = event.target.closest('[data-action]');
   if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
   const action = target.dataset.action;
+  const requiredPremiumFeature = premiumFeatureForAction(action);
+  if (requiredPremiumFeature && !premiumUnlocked()) {
+    openPremiumPaywall(requiredPremiumFeature);
+    return;
+  }
 
   const actions = {
     'start-questionnaire': startOnboarding,
@@ -3852,6 +3943,9 @@ async function handleAppClick(event) {
     'cloud-conflict-cloud': () => resolveCloudConflict('cloud'),
     'cloud-signout': () => confirmAction({ title: 'Cerrar sesión', message: 'Tus datos seguirán guardados en este dispositivo. Podrás volver a conectar la cuenta cuando quieras.', confirmLabel: 'Cerrar sesión', onConfirm: signOutCloudAccount }),
     'cloud-delete-account': deleteCloudAccount,
+    'premium-open': () => openPremiumPaywall(target.dataset.premiumFeature || ''),
+    'premium-refresh-plan': refreshPremiumPlan,
+    'premium-create-account': () => { closeModal(); openCloudSignupModal(); },
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
   try {
@@ -4968,6 +5062,7 @@ function openCustomExerciseForm(id = null) {
 }
 
 function showProfileTab(tab, filterExerciseId = null) {
+  if (tab === 'account' && cloudAccountSummary().signedIn && navigator.onLine) cloudRefreshAccount().then(() => refreshCloudAccountDom()).catch(() => {});
   document.querySelectorAll('[data-profile-tab]').forEach((button) => button.classList.toggle('active', button.dataset.profileTab === tab));
   const content = document.querySelector('#profileTabContent');
   if (!content) return;
@@ -5302,7 +5397,9 @@ function runHudHealthCheck() {
   add('plan-targets', invalidPlanTargets === 0, 'Objetivos de rutina', invalidPlanTargets ? `${invalidPlanTargets} objetivo${invalidPlanTargets === 1 ? '' : 's'} necesita${invalidPlanTargets === 1 ? '' : 'n'} normalización.` : 'Series, rangos y descansos válidos.');
   add('history-structure', invalidHistorySessions === 0, 'Estructura del historial', invalidHistorySessions ? `${invalidHistorySessions} sesión${invalidHistorySessions === 1 ? '' : 'es'} presenta${invalidHistorySessions === 1 ? '' : 'n'} datos incompletos.` : 'Historial estructuralmente correcto.', 'warning');
   const cloudHealth = getCloudStatus();
+  const cloudPlan = cloudAccountSummary();
   const cloudPhotos = cloudProgressPhotoSummary(bodyProgressPhotoIds());
+  add('premium-entitlement', ['free','premium','founder'].includes(cloudPlan.plan), 'Plan de cuenta', `${planLabel(cloudPlan.plan)} · ${cloudPlan.planSource || 'system'}${cloudPlan.planExpired ? ' · Premium caducado' : ''}`);
   add('cloud-photos', cloudPhotos.pending === 0 || !cloudPhotos.signedIn, 'Fotografías cloud', !cloudPhotos.signedIn ? 'Modo local: las fotografías permanecen en este dispositivo.' : cloudPhotos.pending ? `${cloudPhotos.pending} fotografía${cloudPhotos.pending === 1 ? '' : 's'} pendiente${cloudPhotos.pending === 1 ? '' : 's'} de sincronizar.` : `${cloudPhotos.synced}/${cloudPhotos.total} fotografías referenciadas sincronizadas.`, cloudPhotos.pending ? 'warning' : 'success');
   add('cloud-auth', cloudHealth.auth !== 'error', 'My Fit Plan Cloud', cloudHealth.auth === 'authenticated' ? `Cuenta conectada · ${cloudAccountSummary().email}` : cloudHealth.auth === 'error' ? cloudHealth.lastError || 'Error de autenticación.' : 'Modo local disponible sin cuenta.', cloudHealth.auth === 'error' ? 'warning' : 'success');
   add('cloud-sync', !['error','conflict'].includes(cloudHealth.sync), 'Sincronización cloud', cloudHealth.sync === 'synced' ? 'Datos sincronizados.' : cloudHealth.sync === 'conflict' ? 'Hay dos versiones pendientes de resolver.' : cloudHealth.sync === 'offline' ? 'Sin conexión: el guardado local continúa activo.' : cloudHealth.sync === 'error' ? cloudHealth.lastError || 'Error de sincronización.' : 'Sistema cloud preparado.', ['error','conflict'].includes(cloudHealth.sync) ? 'warning' : 'success');
@@ -5389,7 +5486,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=402', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=41', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

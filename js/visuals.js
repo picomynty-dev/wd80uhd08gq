@@ -1,6 +1,6 @@
 'use strict';
 
-import { esc, normalizeText } from './utils.js?v=402';
+import { esc, normalizeText } from './utils.js?v=41';
 
 const PRIMARY = '#ef4444';
 const SECONDARY = '#fb923c';

@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=402';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=41';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
@@ -27,7 +27,7 @@ let status = {
   auth: session ? 'loading' : 'guest',
   sync: session ? 'idle' : 'guest',
   user: session?.user || null,
-  entitlement: null,
+  entitlement: session?.user?.id ? (meta.users?.[session.user.id]?.entitlement || null) : null,
   lastSyncAt: null,
   lastError: '',
   recovery: false,
@@ -541,6 +541,41 @@ async function pullRemote(remote) {
   return hooks.getState();
 }
 
+function normalizeEntitlement(row = null) {
+  const source = row && typeof row === 'object' ? row : { plan: 'free', source: 'system' };
+  const rawCandidate = source.raw_plan || source.plan;
+  const rawPlan = ['free', 'premium', 'founder'].includes(String(rawCandidate || '').toLowerCase())
+    ? String(rawCandidate).toLowerCase()
+    : 'free';
+  const expiresAt = source.premium_expires_at || null;
+  const expired = rawPlan === 'premium'
+    && Boolean(expiresAt)
+    && Number.isFinite(Date.parse(expiresAt))
+    && Date.parse(expiresAt) <= Date.now();
+  return {
+    ...source,
+    raw_plan: rawPlan,
+    plan: expired ? 'free' : rawPlan,
+    expired,
+    premium_expires_at: expiresAt
+  };
+}
+
+function cachedEntitlement() {
+  const userId = session?.user?.id;
+  if (!userId) return normalizeEntitlement();
+  return normalizeEntitlement(meta.users?.[userId]?.entitlement || null);
+}
+
+function cacheEntitlement(value) {
+  const userId = session?.user?.id;
+  if (!userId) return;
+  const record = userMeta(userId);
+  record.entitlement = normalizeEntitlement(value);
+  record.entitlementFetchedAt = new Date().toISOString();
+  saveMeta();
+}
+
 async function fetchEntitlement() {
   await ensureSession();
   const userId = session?.user?.id;
@@ -553,7 +588,8 @@ async function fetchEntitlement() {
   const rows = await rawRequest(`/rest/v1/${CLOUD_CONFIG.entitlementTable}?${query.toString()}`, {
     token: session.access_token
   });
-  const entitlement = Array.isArray(rows) ? rows[0] || { plan: 'free', source: 'system' } : { plan: 'free', source: 'system' };
+  const entitlement = normalizeEntitlement(Array.isArray(rows) ? rows[0] : null);
+  cacheEntitlement(entitlement);
   emit({ entitlement });
   return entitlement;
 }
@@ -707,6 +743,16 @@ export async function initCloud(nextHooks = {}) {
     await consumeAuthCallback();
     if (!session) {
       emit({ auth: 'guest', sync: 'guest' });
+      return getCloudStatus();
+    }
+    if (!navigator.onLine) {
+      emit({
+        auth: 'authenticated',
+        sync: 'offline',
+        user: session.user || status.user,
+        entitlement: cachedEntitlement(),
+        lastError: ''
+      });
       return getCloudStatus();
     }
     const user = await fetchCurrentUser();
@@ -1004,6 +1050,7 @@ export function notifyCloudStateChanged(localState) {
 export async function cloudSyncNow(options = {}) {
   clearTimeout(syncTimer);
   syncTimer = null;
+  if (session?.user?.id && navigator.onLine) await Promise.allSettled([fetchEntitlement()]);
   return reconcile({ reason: 'manual', ...options });
 }
 
@@ -1086,7 +1133,11 @@ export function cloudAccountSummary() {
     signedIn: status.auth === 'authenticated',
     email: user?.email || '',
     userId: user?.id || '',
-    plan: status.entitlement?.plan || 'free',
+    plan: normalizeEntitlement(status.entitlement || cachedEntitlement()).plan,
+    rawPlan: normalizeEntitlement(status.entitlement || cachedEntitlement()).raw_plan,
+    planExpired: Boolean(normalizeEntitlement(status.entitlement || cachedEntitlement()).expired),
+    premiumExpiresAt: normalizeEntitlement(status.entitlement || cachedEntitlement()).premium_expires_at || null,
+    planSource: normalizeEntitlement(status.entitlement || cachedEntitlement()).source || 'system',
     sync: status.sync,
     lastSyncAt: status.lastSyncAt,
     lastError: status.lastError,
