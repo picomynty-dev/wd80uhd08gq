@@ -1,10 +1,10 @@
-import { clone, isoDay, numberValue, uid } from './utils.js?v=421';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=421';
-import { normalizePlanner } from './calendar-planner.js?v=421';
+import { clone, isoDay, numberValue, uid } from './utils.js?v=43';
+import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=43';
+import { normalizePlanner } from './calendar-planner.js?v=43';
 
-export const STORAGE_KEY = 'myFitPlanStateV421';
-export const LEGACY_KEYS = ['myFitPlanStateV421', 'myFitPlanStateV42', 'myFitPlanStateV41', 'myFitPlanStateV402', 'myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '4.2.1 Monetization Sandbox Hotfix';
+export const STORAGE_KEY = 'myFitPlanStateV43';
+export const LEGACY_KEYS = ['myFitPlanStateV43', 'myFitPlanStateV421', 'myFitPlanStateV42', 'myFitPlanStateV41', 'myFitPlanStateV402', 'myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '4.3 Subscription Management Sandbox';
 
 export const defaultSettings = {
   accent: 'custom',

@@ -1,7 +1,7 @@
 'use strict';
 
-import { getPremiumMotionAsset } from './media-bundle-pro-v3222.js?v=421';
-import { getRealMotionAsset, realMotionAssetIds } from './real-motion-bundle-v323a.js?v=421';
+import { getPremiumMotionAsset } from './media-bundle-pro-v3222.js?v=43';
+import { getRealMotionAsset, realMotionAssetIds } from './real-motion-bundle-v323a.js?v=43';
 
 const media = (id) => getRealMotionAsset(id) || getPremiumMotionAsset(id) || ({
   video: new URL(`../assets/motion-pro/${id}.mp4`, import.meta.url).href,

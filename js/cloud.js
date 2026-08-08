@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=421';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=43';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
@@ -1118,6 +1118,42 @@ export async function cloudResolveConflict(strategy) {
   }
 
   throw new Error('Estrategia de conflicto no reconocida.');
+}
+
+export async function cloudInvokeUserFunction(functionName, body = {}, { retryAuth = true } = {}) {
+  await ensureSession();
+  if (!session?.access_token) throw new Error('Debes iniciar sesión.');
+
+  const safeName = String(functionName || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safeName) throw new Error('Función cloud no válida.');
+
+  let response;
+  try {
+    response = await fetch(`${CLOUD_CONFIG.url}/functions/v1/${safeName}`, {
+      method: 'POST',
+      headers: {
+        apikey: CLOUD_CONFIG.publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body || {})
+    });
+  } catch (error) {
+    const networkError = new Error('No se pudo conectar con My Fit Plan Cloud.');
+    networkError.cause = error;
+    throw networkError;
+  }
+
+  if (response.status === 401 && retryAuth && session?.refresh_token) {
+    await refreshSession();
+    return cloudInvokeUserFunction(functionName, body, { retryAuth: false });
+  }
+
+  const data = await parseResponse(response);
+  if (!response.ok) {
+    throw new Error(asErrorMessage(data) || `La función cloud devolvió ${response.status}.`);
+  }
+  return data;
 }
 
 export async function cloudRefreshAccount() {

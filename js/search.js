@@ -1,6 +1,6 @@
 'use strict';
 
-import { normalizeText } from './utils.js?v=421';
+import { normalizeText } from './utils.js?v=43';
 
 function tokens(value) {
   return normalizeText(value).split(/[^a-z0-9]+/).filter(Boolean);

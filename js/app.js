@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=421';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=421';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=421';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=43';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=43';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=43';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=421';
+} from './stats.js?v=43';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=421';
+} from './coach.js?v=43';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=421';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=421';
+} from './adaptive.js?v=43';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=43';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=421';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=421';
+} from './calendar-planner.js?v=43';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=43';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=421';
+} from './progression-engine.js?v=43';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=421';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=421';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=421';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=421';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=421';
+} from './utils.js?v=43';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=43';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=43';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=43';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=43';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=421';
+} from './photo-progress.js?v=43';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,9 +103,10 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=421';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=421';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=421';
+} from './cloud.js?v=43';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=43';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=43';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=43';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -151,6 +152,8 @@ let pendingCloudConflict = null;
 let recoveryModalOpened = false;
 let billingPricePreview = null;
 let billingActivationPoll = null;
+let billingAccountSummary = billingManagementCachedSummary();
+let billingAccountLoading = false;
 
 
 init();
@@ -622,6 +625,8 @@ async function pollPremiumActivation({ attempts = 12, intervalMs = 1500 } = {}) 
 
       if (hasPremiumAccess(currentPlan())) {
         stopBillingActivationPoll();
+        clearBillingManagementCache();
+        await refreshBillingAccount({ quiet: true });
         closeModal();
         if (currentView === 'home') renderHome();
         showToast('Premium activado correctamente.', 'success');
@@ -717,6 +722,8 @@ function openPremiumPaywall(featureId = '') {
 async function refreshPremiumPlan() {
   try {
     await cloudRefreshAccount();
+    clearBillingManagementCache();
+    await refreshBillingAccount({ quiet: true });
     closeModal();
     refreshCloudAccountDom();
     if (currentView === 'home') renderHome();
@@ -3641,6 +3648,109 @@ function cloudDate(value) {
   try { return formatDateTime(value); } catch { return String(value); }
 }
 
+function billingCadenceLabel(value) {
+  if (value === 'monthly') return 'Mensual';
+  if (value === 'annual') return 'Anual';
+  return 'Suscripción';
+}
+
+function billingStatusLabel(value) {
+  const labels = {
+    active: 'Activa',
+    trialing: 'Prueba',
+    past_due: 'Pago pendiente',
+    paused: 'Pausada',
+    canceled: 'Cancelada',
+    none: 'Sin suscripción'
+  };
+  return labels[value] || 'Sincronizando';
+}
+
+function billingSubscriptionCardHtml(info) {
+  if (info.plan === 'founder') {
+    return `<article class="card subscription-management-card is-founder">
+      <div><p class="eyebrow">Suscripción</p><h2>Founder permanente</h2><p class="muted small">Esta cuenta no depende de una suscripción Paddle. Founder permanece activo de forma permanente.</p></div>
+      <span class="subscription-status-pill is-founder">FOUNDER</span>
+    </article>`;
+  }
+
+  if (!hasPremiumAccess(info.plan)) return '';
+
+  const billing = billingAccountSummary;
+  if (!billing) {
+    return `<article class="card subscription-management-card">
+      <div><p class="eyebrow">Suscripción Premium</p><h2>Cargando facturación…</h2><p class="muted small">Premium está activo. Estamos consultando el estado de Paddle mediante My Fit Plan Cloud.</p></div>
+      <span class="subscription-status-pill">…</span>
+    </article>`;
+  }
+
+  const scheduledCancel = billing.scheduledChangeAction === 'cancel' && billing.scheduledChangeAt;
+  const cadence = billingCadenceLabel(billing.cadence);
+  const status = billingStatusLabel(billing.status);
+  const dateValue = scheduledCancel ? billing.scheduledChangeAt : billing.currentPeriodEnd;
+  const mainText = scheduledCancel
+    ? `Tu plan ${cadence.toLowerCase()} seguirá activo hasta ${esc(cloudDate(billing.scheduledChangeAt))}. Después volverás a Free sin perder tus datos.`
+    : billing.currentPeriodEnd
+      ? `Plan ${cadence.toLowerCase()} · período actual hasta ${esc(cloudDate(billing.currentPeriodEnd))}.`
+      : `Plan ${cadence.toLowerCase()} conectado a Paddle.`;
+
+  return `<article class="card subscription-management-card ${scheduledCancel ? 'is-canceling' : ''}">
+    <div class="subscription-management-head">
+      <div><p class="eyebrow">Suscripción Premium</p><h2>${esc(cadence)} · ${esc(status)}</h2><p class="muted small">${mainText}</p></div>
+      <span class="subscription-status-pill ${scheduledCancel ? 'is-canceling' : 'is-active'}">${scheduledCancel ? 'FINALIZA' : esc(status.toUpperCase())}</span>
+    </div>
+    <div class="subscription-management-metrics">
+      <span><small>Plan</small><strong>${esc(cadence)}</strong></span>
+      <span><small>Estado</small><strong>${esc(status)}</strong></span>
+      <span><small>${scheduledCancel ? 'Termina' : 'Renovación'}</small><strong>${esc(cloudDate(dateValue))}</strong></span>
+    </div>
+    <div class="subscription-management-actions">
+      ${billing.hasPortal ? '<button class="button button-primary" type="button" data-action="billing-manage">Gestionar suscripción</button><button class="button button-secondary" type="button" data-action="billing-payment-method">Método de pago</button>' : ''}
+      <button class="text-link" type="button" data-action="billing-refresh">Actualizar facturación</button>
+    </div>
+    <p class="muted tiny">La gestión se abre en el portal seguro de Paddle. My Fit Plan no almacena datos de tarjeta.</p>
+  </article>`;
+}
+
+async function refreshBillingAccount({ quiet = true } = {}) {
+  const info = cloudAccountSummary();
+  if (!info.signedIn || info.plan === 'founder') {
+    billingAccountSummary = null;
+    return null;
+  }
+
+  if (!navigator.onLine) return billingAccountSummary;
+
+  billingAccountLoading = true;
+  try {
+    billingAccountSummary = await fetchBillingSummary({ force: true });
+    if (currentView === 'profile') refreshCloudAccountDom();
+    if (!quiet) showToast('Facturación actualizada.', 'success');
+    return billingAccountSummary;
+  } catch (error) {
+    reportRuntimeIssue(error, 'Estado de facturación');
+    if (!quiet) showToast('No se pudo actualizar la facturación.', 'warning');
+    return billingAccountSummary;
+  } finally {
+    billingAccountLoading = false;
+  }
+}
+
+async function openSubscriptionPortal(target = 'overview') {
+  if (!navigator.onLine) {
+    showToast('Necesitas conexión para abrir el portal de Paddle.', 'warning');
+    return;
+  }
+
+  try {
+    showToast('Abriendo el portal seguro de Paddle…');
+    await openBillingPortal(target);
+  } catch (error) {
+    reportRuntimeIssue(error, 'Portal Paddle');
+    showToast(error?.message || 'No se pudo abrir la gestión de suscripción.', 'danger');
+  }
+}
+
 function profileAccountHtml() {
   const info = cloudAccountSummary();
   if (!info.signedIn) {
@@ -3675,6 +3785,7 @@ function profileAccountHtml() {
       <div class="premium-account-mini-features"><span>My Fit Plan IA</span><span>Progresión</span><span>Smart replan</span><span>Análisis</span></div>
       <div class="premium-account-actions"><button class="button ${hasPremiumAccess(info.plan) ? 'button-secondary' : 'button-premium'}" type="button" data-action="premium-open">${hasPremiumAccess(info.plan) ? 'Ver mi Premium' : 'Ver Premium'}</button><button class="text-link" type="button" data-action="premium-refresh-plan">Actualizar plan</button></div>
     </article>
+    ${billingSubscriptionCardHtml(info)}
     ${info.planExpired ? '<article class="notice notice-warning"><strong>Premium caducado:</strong> tu cuenta continúa en Free y todos tus datos permanecen intactos.</article>' : ''}
     <section class="grid grid-3 cloud-status-grid">
       <article class="card metric-card"><div class="metric metric-name">${esc(cloudSyncLabel())}</div><div class="metric-label">Estado</div></article>
@@ -4107,6 +4218,9 @@ async function handleAppClick(event) {
     'premium-buy-annual': () => buyPremium('annual'),
     'premium-refresh-plan': refreshPremiumPlan,
     'premium-create-account': () => { closeModal(); openCloudSignupModal(); },
+    'billing-manage': () => openSubscriptionPortal('overview'),
+    'billing-payment-method': () => openSubscriptionPortal('payment'),
+    'billing-refresh': () => refreshBillingAccount({ quiet: false }),
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
   try {
@@ -5223,7 +5337,12 @@ function openCustomExerciseForm(id = null) {
 }
 
 function showProfileTab(tab, filterExerciseId = null) {
-  if (tab === 'account' && cloudAccountSummary().signedIn && navigator.onLine) cloudRefreshAccount().then(() => refreshCloudAccountDom()).catch(() => {});
+  if (tab === 'account' && cloudAccountSummary().signedIn && navigator.onLine) {
+    cloudRefreshAccount()
+      .then(() => refreshBillingAccount({ quiet: true }))
+      .then(() => refreshCloudAccountDom())
+      .catch(() => {});
+  }
   document.querySelectorAll('[data-profile-tab]').forEach((button) => button.classList.toggle('active', button.dataset.profileTab === tab));
   const content = document.querySelector('#profileTabContent');
   if (!content) return;
@@ -5649,7 +5768,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=421', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=43', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
