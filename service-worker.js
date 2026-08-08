@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-fit-plan-';
-const CACHE_NAME = 'my-fit-plan-v42-monetization-sandbox-20260808-1';
+const CACHE_NAME = 'my-fit-plan-v421-paddle-price-hotfix-20260808-1';
 
 const CORE_SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',

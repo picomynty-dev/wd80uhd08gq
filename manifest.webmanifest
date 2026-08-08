@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.2: entrenamiento inteligente con Premium, Paddle Sandbox, sincronización cloud y fotos privadas.",
+  "description": "My Fit Plan 4.2.1: monetización Paddle Sandbox con precios mensual/anual corregidos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
