@@ -1,19 +1,21 @@
-# My Fit Plan v4.1 · Premium Foundation
+# My Fit Plan v4.2 · Monetization Sandbox
 
-## Objetivo
-Preparar la monetización sin activar cobros todavía y sin añadir costes.
+v4.2 conecta el Premium de My Fit Plan con Paddle Sandbox manteniendo el cliente
+sin permisos para concederse Premium.
 
-## Planes
-- Free: rutinas manuales, personalizados, biblioteca, historial básico, cuenta/cloud y fotos privadas.
-- Premium: My Fit Plan adaptativo, coach avanzado, progresión automática, deload, smart replan y comparación avanzada.
-- Founder: mismo acceso Premium, pensado para primeros usuarios/beta con acceso permanente.
+## Incluye
+- Checkout mensual/anual Paddle Sandbox.
+- PricePreview localizado.
+- Validación automática de que cada price ID tenga la periodicidad esperada.
+- `customData.mfp_user_id` para vincular pago y cuenta.
+- Edge Function `paddle-webhook`.
+- Billing mirror en `mfp_billing`.
+- Entitlement Premium actualizado únicamente desde servidor.
+- Deduplicación y protección frente a eventos fuera de orden.
+- Premium/Founder offline heredado de v4.1.
+- Cloud y Cloud Photos conservados.
+- Barra Perfil móvil 6/6 conservada.
 
-## Seguridad del entitlement
-El cliente solo puede LEER `mfp_entitlements`. No puede ponerse Premium a sí mismo.
-La v4.1 respeta `premium_expires_at` y cachea el entitlement para uso offline.
-
-## Pagos
-No hay Stripe, RevenueCat ni cuotas todavía. Esta versión valida producto, paywall y bloqueos antes de conectar cobros.
-
-## Perfil móvil
-Las seis pestañas de Perfil permanecen visibles simultáneamente, sin desplazamiento horizontal.
+## Importante
+Esta build es SANDBOX. Solo admite pagos de prueba y no debe cambiarse a Live
+hasta completar el ciclo de compra, renovación, cancelación y recuperación.

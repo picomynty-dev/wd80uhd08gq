@@ -1,0 +1,50 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.2 Monetization Sandbox",
+  "generatedAt": "2026-08-08T15:29:46",
+  "catalog": {
+    "product": "pro_01kzgz375ynjkcf33d50v5xe2r",
+    "monthly": "pri_01kzgz6wr16d5bg6zz2ndc3txz",
+    "annual": "pri_01kzgz5v4f27r5pvhyvc5b1y59",
+    "environment": "sandbox"
+  },
+  "staticAudit": {
+    "javascriptModules": 26,
+    "uiActions": 113,
+    "uiActionsHandled": 113,
+    "missingImports": [],
+    "pwaResources": 36,
+    "clientSecretHits": [],
+    "clientEntitlementWrite": false
+  },
+  "tests": {
+    "paywallMobile320": "passed",
+    "paywallMobile390": "passed",
+    "paywallDesktop1536": "passed",
+    "profileTabs6of6": "passed",
+    "monthlyCheckoutId": "passed",
+    "annualCheckoutId": "passed",
+    "checkoutCustomDataUserId": "passed",
+    "clientDoesNotGrantPremium": "passed",
+    "entitlementPollingAfterCheckout": "passed",
+    "priceCadenceValidation": "passed",
+    "reversedCadenceBlocked": "passed",
+    "cloudPhotosRegression": "passed",
+    "webhookTypeScriptSyntax": "passed",
+    "webhookValidSignature": "passed",
+    "webhookTamperedSignatureRejected": "passed",
+    "activePremium": "passed",
+    "pastDuePremium": "passed",
+    "canceledFree": "passed",
+    "scheduledCancellationExpiry": "passed",
+    "webhookRealDelivery": "pending user deployment"
+  },
+  "security": {
+    "billingTablesClientAccess": "none",
+    "entitlementClientAccess": "read-only",
+    "webhookAuth": "Paddle-Signature",
+    "founderProtection": true,
+    "allowedPriceIds": true,
+    "idempotentRetries": true
+  }
+}

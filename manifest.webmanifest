@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.1: entrenamiento con cuenta cloud, modo Free y Premium Foundation preparado para monetización.",
+  "description": "My Fit Plan 4.2: entrenamiento inteligente con Premium, Paddle Sandbox, sincronización cloud y fotos privadas.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

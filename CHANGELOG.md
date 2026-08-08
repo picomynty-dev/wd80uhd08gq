@@ -1,3 +1,17 @@
+# My Fit Plan v4.2 — Monetization Sandbox
+
+- Paddle Sandbox conectado al paywall Premium.
+- Producto y precios mensual/anual configurados.
+- PricePreview muestra precios localizados y valida la periodicidad.
+- Checkout envía el user_id de Supabase como customData.
+- checkout.completed nunca concede Premium desde el navegador.
+- Edge Function segura para subscription.created/subscription.updated.
+- Firma Paddle-Signature verificada.
+- Reintentos idempotentes y eventos fuera de orden protegidos.
+- Founder permanece permanente aunque exista billing Paddle.
+- Se mantiene Cloud, Cloud Photos, offline y la barra Perfil 6/6.
+- Sin pagos reales en esta versión.
+
 # My Fit Plan v4.1 — Premium Foundation
 
 - Añade planes Free, Premium y Founder usando el entitlement read-only de Supabase.
