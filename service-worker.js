@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-fit-plan-';
-const CACHE_NAME = 'my-fit-plan-v43-subscription-management-20260808-1';
+const CACHE_NAME = 'my-fit-plan-v43-subscription-management-20260808-2';
 
 const CORE_SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',

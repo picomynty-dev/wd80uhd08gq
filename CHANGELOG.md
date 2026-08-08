@@ -1,3 +1,13 @@
+# My Fit Plan v4.3 — Packaging Hotfix
+
+- Corrige la etiqueta superior que seguía mostrando v4.2.
+- Corrige `styles.css?v=42` → `?v=43`.
+- Corrige `app.js?v=42` → `?v=43`.
+- Corrige el marcador de limpieza de runtime 42 → 43.
+- Corrige la recarga automática `?v=42` → `?v=43`.
+- Fuerza un nuevo Service Worker cache para evitar reutilizar recursos antiguos.
+- No cambia Premium, Paddle, Supabase ni billing-portal.
+
 # My Fit Plan v4.3 — Subscription Management Sandbox
 
 - Perfil > Cuenta incorpora gestión de suscripción.
