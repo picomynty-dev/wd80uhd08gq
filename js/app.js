@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=42';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=42';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=42';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=421';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=421';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=421';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=42';
+} from './stats.js?v=421';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=42';
+} from './coach.js?v=421';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=42';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=42';
+} from './adaptive.js?v=421';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=421';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=42';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=42';
+} from './calendar-planner.js?v=421';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=421';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=42';
+} from './progression-engine.js?v=421';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=42';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=42';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=42';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=42';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=42';
+} from './utils.js?v=421';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=421';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=421';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=421';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=421';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=42';
+} from './photo-progress.js?v=421';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,9 +103,9 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=42';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=42';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=42';
+} from './cloud.js?v=421';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=421';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=421';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -528,6 +528,7 @@ function premiumPreviewCard(featureId, { compact = false } = {}) {
 
 function billingPriceText(cadence) {
   const item = billingPricePreview?.[cadence];
+  if (item?.formattedTotal) return item.formattedTotal;
   if (item?.formattedSubtotal) return item.formattedSubtotal;
   return cadence === 'monthly' ? '4,99 €' : '39,99 €';
 }
@@ -5648,7 +5649,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=42', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=421', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

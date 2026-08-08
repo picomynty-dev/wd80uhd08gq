@@ -4,11 +4,11 @@ export const BILLING_CONFIG = Object.freeze({
   provider: 'paddle',
   clientToken: 'test_314d34ddd4656a8ec5e9b094f98',
   prices: Object.freeze({
-    monthly: 'pri_01kzgz6wr16d5bg6zz2ndc3txz',
-    annual: 'pri_01kzgz5v4f27r5pvhyvc5b1y59'
+    monthly: 'pri_01kzgz5v4f27r5pvhyvc5b1y59',
+    annual: 'pri_01kzgz6wr16d5bg6zz2ndc3txz'
   }),
   productId: 'pro_01kzgz375ynjkcf33d50v5xe2r',
-  appVersion: '4.2 Monetization Sandbox'
+  appVersion: '4.2.1 Monetization Sandbox Hotfix'
 });
 
 export function billingConfigured() {

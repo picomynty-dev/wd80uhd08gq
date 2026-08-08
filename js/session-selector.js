@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise } from './exercises.js?v=42';
-import { createPlanExercise, trainingRules } from './plans.js?v=42';
-import { numberValue } from './utils.js?v=42';
+import { getAllExercises, getExercise } from './exercises.js?v=421';
+import { createPlanExercise, trainingRules } from './plans.js?v=421';
+import { numberValue } from './utils.js?v=421';
 
 const FOCUS_PROFILES = [
   {
