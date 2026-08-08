@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=43';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=44';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
@@ -317,6 +317,10 @@ function sessionExpiring() {
 
 async function refreshSession() {
   if (!session?.refresh_token) throw new Error('La sesión ha caducado. Vuelve a iniciar sesión.');
+  if (navigator.onLine === false) {
+    emit({ auth: 'authenticated', sync: 'offline', user: session.user || status.user, entitlement: cachedEntitlement(), lastError: '' });
+    return session;
+  }
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -330,6 +334,12 @@ async function refreshSession() {
       emit({ auth: 'authenticated', user: session.user, lastError: '' });
       return session;
     } catch (error) {
+      const message = asErrorMessage(error);
+      const isNetwork = navigator.onLine === false || /no se pudo conectar|network|fetch/i.test(message);
+      if (isNetwork) {
+        emit({ auth: 'authenticated', sync: 'offline', user: session.user || status.user, entitlement: cachedEntitlement(), lastError: '' });
+        return session;
+      }
       clearSession();
       throw error;
     } finally {
@@ -341,7 +351,13 @@ async function refreshSession() {
 
 async function ensureSession() {
   if (!session) return null;
-  if (sessionExpiring()) await refreshSession();
+  if (sessionExpiring()) {
+    if (navigator.onLine === false) {
+      emit({ auth: 'authenticated', sync: 'offline', user: session.user || status.user, entitlement: cachedEntitlement(), lastError: '' });
+      return session;
+    }
+    await refreshSession();
+  }
   return session;
 }
 
@@ -761,7 +777,19 @@ export async function initCloud(nextHooks = {}) {
     await reconcile({ reason: 'startup', silent: true });
     return getCloudStatus();
   } catch (error) {
-    emit({ auth: session ? 'error' : 'guest', sync: session ? 'error' : 'guest', lastError: asErrorMessage(error) });
+    const message = asErrorMessage(error);
+    const networkLike = navigator.onLine === false || /no se pudo conectar|network|fetch/i.test(message);
+    if (session && networkLike) {
+      emit({
+        auth: 'authenticated',
+        sync: 'offline',
+        user: session.user || status.user,
+        entitlement: cachedEntitlement(),
+        lastError: ''
+      });
+      return getCloudStatus();
+    }
+    emit({ auth: session ? 'error' : 'guest', sync: session ? 'error' : 'guest', lastError: message });
     return getCloudStatus();
   }
 }
@@ -1012,26 +1040,17 @@ export function cloudProgressPhotoSummary(photoIds = referencedPhotoIds()) {
   };
 }
 
-export async function cloudDeleteAccount() {
+export async function cloudDeleteAccount({ confirmation = 'ELIMINAR' } = {}) {
   await ensureSession();
   if (!session?.access_token) throw new Error('Debes iniciar sesión.');
+  if (navigator.onLine === false) throw new Error('Necesitas conexión para eliminar la cuenta.');
 
-  const photoIds = referencedPhotoIds();
-  if (photoIds.length) {
-    queuePhotoDeletes(photoIds);
-    await flushPhotoDeletes();
-  }
-
-  await rawRequest('/rest/v1/rpc/delete_my_account', {
-    method: 'POST',
-    token: session.access_token,
-    body: {}
-  });
+  const result = await cloudInvokeUserFunction('account-delete', { confirmation });
   const userId = session?.user?.id;
   if (userId && meta.users) delete meta.users[userId];
   saveMeta();
   clearSession();
-  return true;
+  return result || { deleted: true };
 }
 
 export function notifyCloudStateChanged(localState) {
@@ -1158,6 +1177,10 @@ export async function cloudInvokeUserFunction(functionName, body = {}, { retryAu
 
 export async function cloudRefreshAccount() {
   if (!session) return getCloudStatus();
+  if (navigator.onLine === false) {
+    emit({ auth: 'authenticated', sync: 'offline', user: session.user || status.user, entitlement: cachedEntitlement(), lastError: '' });
+    return getCloudStatus();
+  }
   await fetchCurrentUser();
   await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
   return getCloudStatus();

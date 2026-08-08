@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=43';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=43';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=43';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=44';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=44';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=44';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=43';
+} from './stats.js?v=44';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=43';
+} from './coach.js?v=44';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=43';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=43';
+} from './adaptive.js?v=44';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=44';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=43';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=43';
+} from './calendar-planner.js?v=44';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=44';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=43';
+} from './progression-engine.js?v=44';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=43';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=43';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=43';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=43';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=43';
+} from './utils.js?v=44';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=44';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=44';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=44';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=44';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=43';
+} from './photo-progress.js?v=44';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,10 +103,12 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=43';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=43';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=43';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=43';
+} from './cloud.js?v=44';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=44';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=44';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=44';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=44';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=44';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -154,6 +156,9 @@ let billingPricePreview = null;
 let billingActivationPoll = null;
 let billingAccountSummary = billingManagementCachedSummary();
 let billingAccountLoading = false;
+let billingAccountError = '';
+let availableVersion = '';
+let lastVersionCheckAt = 0;
 
 
 init();
@@ -175,6 +180,7 @@ function init() {
   else setView(requestedInitialView());
   setBillingEventHandler(handleBillingEvent);
   queueMicrotask(bootCloudFoundation);
+  queueMicrotask(() => checkForAppUpdate({ quiet: true }));
 }
 
 function bodyProgressPhotoIds(sourceState = state) {
@@ -289,13 +295,18 @@ function bindGlobalEvents() {
   window.addEventListener('online', updateHud);
   window.addEventListener('offline', updateHud);
   window.addEventListener('online', () => {
-    cloudSyncNow({ silent: true })
-      .then(() => syncCloudPhotosForState({ quiet: true }))
-      .catch(() => {});
+    reconnectCloudAccount({ quiet: true }).catch(() => {});
+    checkForAppUpdate({ quiet: true }).catch(() => {});
   });
   window.addEventListener('pagehide', persistPendingInputs);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') persistPendingInputs();
+    if (document.visibilityState === 'hidden') {
+      persistPendingInputs();
+      return;
+    }
+    if (Date.now() - lastVersionCheckAt > 10 * 60 * 1000) {
+      checkForAppUpdate({ quiet: true }).catch(() => {});
+    }
   });
   document.addEventListener('keydown', (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -3614,6 +3625,19 @@ function profileSettingsHtml() {
       ${settingSwitch('restSound','Sonido al terminar','Emite un aviso cuando finaliza el descanso.',state.settings.restSound)}
       ${settingSwitch('restVibrate','Vibración si está disponible','No todos los iPhone o navegadores la permiten.',state.settings.restVibrate)}
     </form>
+    <section class="section card beta-ready-card">
+      <div class="beta-ready-head">
+        <div><p class="eyebrow">BETA · My Fit Plan v4.4</p><h2>Ayuda, privacidad y feedback</h2><p class="muted small">Comprueba tu versión, envía incidencias y consulta los documentos preparados para la beta.</p></div>
+        <span class="beta-version-pill">v4.4</span>
+      </div>
+      <div class="beta-action-grid">
+        <button class="button button-primary" type="button" data-action="beta-feedback-open">Enviar feedback</button>
+        <button class="button button-secondary" type="button" data-action="beta-check-update">Buscar actualización</button>
+        <button class="button button-secondary" type="button" data-action="legal-privacy">Privacidad</button>
+        <button class="button button-secondary" type="button" data-action="legal-terms">Términos Beta</button>
+      </div>
+      ${(() => { const legal = legalLaunchStatus(); return `<div class="legal-readiness ${legal.ready ? 'is-ready' : 'is-pending'}"><strong>${legal.ready ? 'Documentación lista' : 'Pendiente antes de beta pública'}</strong><span>${legal.ready ? 'Responsable y contacto configurados.' : `Falta completar: ${esc(legal.blockers.join(' y '))}.`}</span></div>`; })()}
+    </section>
     <section class="section card"><p class="eyebrow">Copia de seguridad</p><h2>Exportar o importar datos</h2><p class="muted small">Crea un archivo con tu plan, entrenamientos, ejercicios personalizados, ajustes y medidas.</p><div class="grid grid-2"><button class="button button-secondary" type="button" data-action="export-backup">Exportar copia</button><label class="button button-secondary file-button">Importar copia<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div></section>
     <section class="section card danger-zone"><p class="eyebrow">Zona de seguridad</p><h2>Borrar todos los datos</h2><p class="muted small">Esta acción elimina el perfil y el progreso guardado en este dispositivo.</p><button class="button button-danger" type="button" data-action="reset-data">Borrar datos</button></section>
   </section>`;
@@ -3645,7 +3669,19 @@ function cloudSyncTone() {
 
 function cloudDate(value) {
   if (!value) return 'Todavía no';
-  try { return formatDateTime(value); } catch { return String(value); }
+  try {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  } catch {
+    return String(value);
+  }
 }
 
 function billingCadenceLabel(value) {
@@ -3678,9 +3714,17 @@ function billingSubscriptionCardHtml(info) {
 
   const billing = billingAccountSummary;
   if (!billing) {
-    return `<article class="card subscription-management-card">
-      <div><p class="eyebrow">Suscripción Premium</p><h2>Cargando facturación…</h2><p class="muted small">Premium está activo. Estamos consultando el estado de Paddle mediante My Fit Plan Cloud.</p></div>
-      <span class="subscription-status-pill">…</span>
+    const offline = navigator.onLine === false;
+    const failed = Boolean(billingAccountError);
+    return `<article class="card subscription-management-card ${failed || offline ? 'is-unavailable' : ''}">
+      <div>
+        <p class="eyebrow">Suscripción Premium</p>
+        <h2>${offline ? 'Facturación disponible al volver a conectarte' : failed ? 'No podemos consultar Paddle ahora mismo' : 'Cargando facturación…'}</h2>
+        <p class="muted small">${offline ? 'Tu acceso Premium guardado permanece disponible. La renovación y gestión de pago necesitan internet.' : failed ? 'Tu plan no se ha modificado. Puedes reintentar la consulta sin perder datos.' : 'Premium está activo. Estamos consultando el estado de Paddle mediante My Fit Plan Cloud.'}</p>
+      </div>
+      <div class="subscription-management-actions">
+        ${(failed || offline) ? '<button class="button button-secondary" type="button" data-action="billing-refresh">Reintentar</button>' : ''}
+      </div>
     </article>`;
   }
 
@@ -3722,14 +3766,18 @@ async function refreshBillingAccount({ quiet = true } = {}) {
   if (!navigator.onLine) return billingAccountSummary;
 
   billingAccountLoading = true;
+  billingAccountError = '';
   try {
     billingAccountSummary = await fetchBillingSummary({ force: true });
+    billingAccountError = '';
     if (currentView === 'profile') refreshCloudAccountDom();
     if (!quiet) showToast('Facturación actualizada.', 'success');
     return billingAccountSummary;
   } catch (error) {
+    billingAccountError = String(error?.message || error || 'Error de facturación');
     reportRuntimeIssue(error, 'Estado de facturación');
-    if (!quiet) showToast('No se pudo actualizar la facturación.', 'warning');
+    if (currentView === 'profile') refreshCloudAccountDom();
+    if (!quiet) showToast('No se pudo actualizar la facturación. Tu plan no ha cambiado.', 'warning');
     return billingAccountSummary;
   } finally {
     billingAccountLoading = false;
@@ -3749,6 +3797,129 @@ async function openSubscriptionPortal(target = 'overview') {
     reportRuntimeIssue(error, 'Portal Paddle');
     showToast(error?.message || 'No se pudo abrir la gestión de suscripción.', 'danger');
   }
+}
+
+async function reconnectCloudAccount({ quiet = false } = {}) {
+  if (navigator.onLine === false) {
+    if (!quiet) showToast('Sigues sin conexión. Tus cambios permanecen guardados en este dispositivo.', 'warning');
+    return { status: 'offline' };
+  }
+
+  try {
+    await cloudRefreshAccount();
+    await cloudSyncNow({ silent: true });
+    await syncCloudPhotosForState({ quiet: true });
+    if (hasPremiumAccess(cloudAccountSummary().plan)) {
+      clearBillingManagementCache();
+      await refreshBillingAccount({ quiet: true });
+    }
+    refreshCloudAccountDom();
+    if (!quiet) showToast('Conexión restablecida y datos revisados.', 'success');
+    return { status: 'connected' };
+  } catch (error) {
+    reportRuntimeIssue(error, 'Reconexión Cloud');
+    if (!quiet) showToast(cloudAuthError(error), 'danger');
+    return { status: 'error', error };
+  }
+}
+
+function legalDocumentHtml(kind) {
+  const isPrivacy = kind === 'privacy';
+  const sections = isPrivacy ? privacySections() : termsSections();
+  const title = isPrivacy ? 'Privacidad' : 'Términos de la Beta';
+  const legal = legalLaunchStatus();
+  const controller = LEGAL_CONFIG.controllerName || 'PENDIENTE DE COMPLETAR';
+  const contact = LEGAL_CONFIG.contactEmail || 'PENDIENTE DE COMPLETAR';
+
+  return `<div class="modal-header">
+    <div><p class="eyebrow">MY FIT PLAN · BETA</p><h2>${esc(title)}</h2><p class="muted small">Documento técnico de preparación. Última revisión ${esc(LEGAL_CONFIG.effectiveDate)}.</p></div>
+    <button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button>
+  </div>
+  ${!legal.ready ? `<article class="notice notice-warning legal-draft-warning"><strong>No publicar todavía.</strong> Falta identificar al responsable y un contacto real antes de abrir la beta pública.</article>` : ''}
+  <section class="legal-identity-card">
+    <span><small>Responsable</small><strong>${esc(controller)}</strong></span>
+    <span><small>Contacto</small><strong>${esc(contact)}</strong></span>
+    <span><small>Ámbito</small><strong>${esc(LEGAL_CONFIG.jurisdiction)}</strong></span>
+  </section>
+  <div class="legal-document-sections">${sections.map((section) => `<article><h3>${esc(section.title)}</h3><p>${esc(section.body)}</p></article>`).join('')}</div>
+  <div class="modal-actions"><button class="button button-primary" type="button" data-close-modal>Cerrar</button></div>`;
+}
+
+function openLegalDocument(kind) {
+  const wrapper = openModal(legalDocumentHtml(kind), { wide: true });
+  decorateInteractiveElements(wrapper);
+}
+
+function feedbackKindLabel(value) {
+  return value === 'bug' ? 'Problema' : value === 'idea' ? 'Idea' : 'Experiencia';
+}
+
+function openBetaFeedbackModal() {
+  const info = cloudAccountSummary();
+  if (!info.signedIn) {
+    const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">BETA FEEDBACK</p><h2>Inicia sesión para enviar feedback</h2><p class="muted small">Así podemos vincular la incidencia a una cuenta de prueba sin abrir un formulario público al spam.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div><div class="modal-actions"><button class="button button-secondary" type="button" data-action="hud-export-diagnostics">Exportar diagnóstico</button><button class="button button-primary" type="button" data-action="cloud-signin">Iniciar sesión</button></div>`);
+    decorateInteractiveElements(wrapper);
+    return;
+  }
+
+  const latestIssue = runtimeIssues[0];
+  const suggested = latestIssue ? `He encontrado este problema: ${latestIssue.message}` : '';
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">BETA FEEDBACK</p><h2>Ayúdanos a mejorar My Fit Plan</h2><p class="muted small">No se adjuntan fotografías, rutinas ni historial. El diagnóstico opcional contiene solo estado técnico básico y hasta 3 errores de esta apertura.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    <form id="betaFeedbackForm" class="form-grid">
+      <label class="field"><span>Tipo</span><select name="kind"><option value="bug"${latestIssue ? ' selected' : ''}>Problema</option><option value="idea">Idea</option><option value="experience"${latestIssue ? '' : ' selected'}>Experiencia</option></select></label>
+      <label class="field field-full"><span>Cuéntanos qué ha pasado o qué mejorarías</span><textarea name="message" minlength="10" maxlength="2000" required placeholder="Ejemplo: al abrir el calendario…">${esc(suggested)}</textarea></label>
+      <label class="feedback-diagnostic-consent"><input type="checkbox" name="diagnostics" checked><span><strong>Adjuntar diagnóstico técnico básico</strong><small>Versión, pantalla, conexión, plan, tamaño de ventana y errores de esta apertura. Nunca fotografías ni datos de tarjeta.</small></span></label>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-primary" type="submit">Enviar feedback</button></div>
+    </form>`);
+
+  wrapper.querySelector('#betaFeedbackForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
+
+    try {
+      const diagnostics = data.has('diagnostics')
+        ? betaFeedbackSnapshot({ view: currentView, runtimeIssues, layout: getHudLayoutSnapshot() })
+        : null;
+      await submitBetaFeedback({
+        kind: String(data.get('kind') || 'experience'),
+        message: String(data.get('message') || ''),
+        diagnostics
+      });
+      closeModal();
+      showToast(`Feedback enviado · ${feedbackKindLabel(String(data.get('kind') || 'experience'))}. Gracias.`, 'success');
+    } catch (error) {
+      reportRuntimeIssue(error, 'Beta feedback');
+      showToast(cloudAuthError(error), 'danger');
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  decorateInteractiveElements(wrapper);
+}
+
+async function checkForAppUpdate({ quiet = false } = {}) {
+  lastVersionCheckAt = Date.now();
+  const result = await fetchLatestVersion();
+  if (result.status === 'offline') {
+    if (!quiet) showToast('Sin conexión: no se puede comprobar la versión ahora.', 'warning');
+    return result;
+  }
+  if (result.status === 'error') {
+    if (!quiet) showToast('No se pudo consultar la última versión.', 'warning');
+    return result;
+  }
+  if (result.updateAvailable) {
+    availableVersion = result.latest;
+    showUpdateBanner(null, result.latest);
+    if (!quiet) showToast(`Nueva versión ${result.latest} disponible.`, 'success');
+    return result;
+  }
+  availableVersion = '';
+  if (!quiet) showToast('Tienes la versión más reciente de My Fit Plan.', 'success');
+  return result;
 }
 
 function profileAccountHtml() {
@@ -3793,7 +3964,7 @@ function profileAccountHtml() {
       <article class="card metric-card"><div class="metric metric-name">Automática</div><div class="metric-label">Nube principal</div></article>
     </section>
     ${info.conflict ? `<article class="card cloud-conflict-card"><p class="eyebrow">Requiere decisión</p><h2>Hay dos versiones distintas de tus datos</h2><p class="muted">No hemos sobrescrito ninguna. Revisa cuál quieres conservar.</p><button class="button button-primary" type="button" data-action="cloud-open-conflict">Resolver conflicto</button></article>` : ''}
-    ${info.lastError ? `<article class="notice notice-warning"><strong>Cloud:</strong> ${esc(info.lastError)}</article>` : ''}
+    ${info.lastError ? `<article class="notice notice-warning cloud-error-notice"><div><strong>Cloud:</strong> ${esc(info.lastError)}</div><button class="button button-secondary button-small" type="button" data-action="cloud-reconnect">Reintentar conexión</button></article>` : ''}
     <article class="card cloud-sync-card cloud-sync-automatic">
       <div>
         <p class="eyebrow">Sincronización automática</p>
@@ -3843,7 +4014,14 @@ function cloudAuthError(error) {
     ['Email not confirmed', 'Confirma primero el correo que te ha enviado My Fit Plan.'],
     ['User already registered', 'Ya existe una cuenta con ese correo.'],
     ['Password should be at least', 'La contraseña no cumple la longitud mínima.'],
-    ['rate limit', 'Se han hecho demasiados intentos. Espera un momento y vuelve a probar.']
+    ['rate limit', 'Se han hecho demasiados intentos. Espera un momento y vuelve a probar.'],
+    ['feedback_store_failed', 'No se pudo guardar el feedback. Inténtalo de nuevo.'],
+    ['invalid_message', 'Revisa el texto del feedback.'],
+    ['billing_cancel_failed', 'Paddle no pudo cancelar la suscripción. La cuenta no se ha eliminado. Gestiona primero la suscripción y vuelve a intentarlo.'],
+    ['storage_cleanup_failed', 'No se pudieron borrar todas las fotografías cloud. La cuenta no se ha eliminado.'],
+    ['database_cleanup_failed', 'No se pudieron borrar todos los datos cloud. La cuenta no se ha eliminado.'],
+    ['auth_delete_failed', 'Los datos se limpiaron parcialmente, pero Supabase no pudo cerrar la cuenta. Revisa la incidencia antes de continuar.'],
+    ['paddle_api_key_not_configured', 'La eliminación Premium todavía no está preparada en el servidor.']
   ];
   const found = replacements.find(([key]) => raw.toLowerCase().includes(key.toLowerCase()));
   return found ? found[1] : raw;
@@ -4025,9 +4203,36 @@ async function signOutCloudAccount() {
 }
 
 function deleteCloudAccount() {
-  confirmAction({ title: 'Eliminar cuenta de My Fit Plan', message: 'Se borrarán la cuenta, los datos de la nube y el progreso guardado en este dispositivo, incluidas las fotografías locales. No se puede deshacer.', confirmLabel: 'Eliminar definitivamente', danger: true, onConfirm: async () => {
+  const info = cloudAccountSummary();
+  const premiumWarning = hasPremiumAccess(info.plan) && info.plan !== 'founder'
+    ? '<article class="notice notice-warning"><strong>Suscripción Premium:</strong> antes de borrar la cuenta, My Fit Plan solicitará a Paddle la cancelación inmediata de la suscripción Sandbox. Si Paddle no puede cancelarla, la cuenta NO se borrará.</article>'
+    : '';
+
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">ELIMINAR CUENTA</p><h2>Borrar cuenta y datos definitivamente</h2><p class="muted small">Se eliminarán los datos Cloud, fotografías privadas, datos locales de este dispositivo y el acceso de Supabase Auth.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+    ${premiumWarning}
+    <article class="notice notice-danger"><strong>No se puede deshacer.</strong> Exporta una copia antes si quieres conservar rutinas, historial o medidas.</article>
+    <form id="deleteAccountForm" class="form-grid">
+      <label class="field field-full"><span>Escribe ELIMINAR para confirmar</span><input name="confirmation" autocomplete="off" spellcheck="false" placeholder="ELIMINAR" required></label>
+      <div class="modal-actions"><button class="button button-secondary" type="button" data-close-modal>Cancelar</button><button class="button button-danger" type="submit">Eliminar definitivamente</button></div>
+    </form>`);
+
+  wrapper.querySelector('#deleteAccountForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const value = String(new FormData(form).get('confirmation') || '').trim().toUpperCase();
+    if (value !== 'ELIMINAR') {
+      showToast('Escribe ELIMINAR exactamente para confirmar.', 'warning');
+      return;
+    }
+
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Eliminando…';
+    }
+
     try {
-      await cloudDeleteAccount();
+      await cloudDeleteAccount({ confirmation: 'ELIMINAR' });
       try { await clearProgressPhotoStore(); }
       catch (photoError) { reportRuntimeIssue(photoError, 'Borrado local de fotografías al eliminar cuenta'); }
       state = createEmptyState();
@@ -4035,8 +4240,17 @@ function deleteCloudAccount() {
       closeModal();
       showToast('Cuenta y datos eliminados.', 'success');
       renderWelcome();
-    } catch (error) { showToast(cloudAuthError(error), 'danger'); }
-  }});
+    } catch (error) {
+      reportRuntimeIssue(error, 'Eliminar cuenta');
+      showToast(cloudAuthError(error), 'danger');
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Eliminar definitivamente';
+      }
+    }
+  });
+
+  decorateInteractiveElements(wrapper);
 }
 
 function appearanceOption(value, title, subtitle, icon, selected) {
@@ -4221,6 +4435,11 @@ async function handleAppClick(event) {
     'billing-manage': () => openSubscriptionPortal('overview'),
     'billing-payment-method': () => openSubscriptionPortal('payment'),
     'billing-refresh': () => refreshBillingAccount({ quiet: false }),
+    'cloud-reconnect': () => reconnectCloudAccount({ quiet: false }),
+    'beta-feedback-open': openBetaFeedbackModal,
+    'beta-check-update': () => checkForAppUpdate({ quiet: false }),
+    'legal-privacy': () => openLegalDocument('privacy'),
+    'legal-terms': () => openLegalDocument('terms'),
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
   try {
@@ -5687,6 +5906,8 @@ function runHudHealthCheck() {
   add('cloud-sync', !['error','conflict'].includes(cloudHealth.sync), 'Sincronización cloud', cloudHealth.sync === 'synced' ? 'Datos sincronizados.' : cloudHealth.sync === 'conflict' ? 'Hay dos versiones pendientes de resolver.' : cloudHealth.sync === 'offline' ? 'Sin conexión: el guardado local continúa activo.' : cloudHealth.sync === 'error' ? cloudHealth.lastError || 'Error de sincronización.' : 'Sistema cloud preparado.', ['error','conflict'].includes(cloudHealth.sync) ? 'warning' : 'success');
   add('exercises', missingCriticalIds.length === 0, 'Referencias activas de ejercicios', missingCriticalIds.length ? `Faltan ${missingCriticalIds.length}: ${missingCriticalIds.slice(0,3).join(', ')}` : `${Object.keys(allExercises).length} ejercicios disponibles.`);
   add('history-exercises', missingHistoryIds.length === 0, 'Referencias históricas', missingHistoryIds.length ? `${missingHistoryIds.length} ejercicio${missingHistoryIds.length === 1 ? '' : 's'} eliminado${missingHistoryIds.length === 1 ? '' : 's'} conserva${missingHistoryIds.length === 1 ? '' : 'n'} registros sin ficha técnica.` : 'Todo el historial mantiene una ficha disponible.', 'warning');
+  const legalHealth = legalLaunchStatus();
+  add('legal-beta', legalHealth.ready, 'Privacidad y términos', legalHealth.ready ? 'Responsable y contacto completados.' : `Pendiente para beta pública: ${legalHealth.blockers.join(', ')}.`, 'warning');
   add('runtime', runtimeIssues.length === 0, 'Errores de ejecución', runtimeIssues.length ? `${runtimeIssues.length} incidencia${runtimeIssues.length === 1 ? '' : 's'} detectada${runtimeIssues.length === 1 ? '' : 's'}.` : 'Sin errores detectados durante esta apertura.', 'warning');
 
   const errors = checks.filter((item) => !item.ok && item.severity === 'error').length;
@@ -5714,7 +5935,7 @@ function openHudDiagnostics() {
   const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">SUPERVISIÓN DE FALLOS</p><h2>Diagnóstico de My Fit Plan</h2><p class="muted">Comprobación local sin enviar información fuera del dispositivo.</p></div><button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button></div>
     <div class="hud-diagnostic-list">${health.checks.map((item) => `<article class="${item.ok ? 'is-ok' : `is-${item.severity}`} "><span>${item.ok ? hudIcon('check') : hudIcon(item.severity === 'warning' ? 'warning' : 'close')}</span><div><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></div><b>${item.ok ? 'Correcto' : item.severity === 'warning' ? 'Aviso' : 'Error'}</b></article>`).join('')}</div>
     ${runtimeIssues.length ? `<section class="hud-runtime-log"><p class="eyebrow">INCIDENCIAS DE ESTA APERTURA</p>${runtimeIssues.map((issue) => `<article><strong>${esc(issue.context)}</strong><p>${esc(issue.message)}</p><small>${formatDateTime(issue.createdAt)}</small></article>`).join('')}</section>` : ''}
-    <div class="modal-actions"><button class="button button-secondary" type="button" data-action="hud-export-diagnostics">Exportar informe</button><button class="button button-secondary" type="button" data-action="hud-repair-data">Normalizar datos</button><button class="button button-primary" type="button" data-close-modal>Cerrar</button></div>`, { wide: true });
+    <div class="modal-actions"><button class="button button-secondary" type="button" data-action="hud-export-diagnostics">Exportar informe</button><button class="button button-secondary" type="button" data-action="beta-feedback-open">Enviar incidencia</button><button class="button button-secondary" type="button" data-action="hud-repair-data">Normalizar datos</button><button class="button button-primary" type="button" data-close-modal>Cerrar</button></div>`, { wide: true });
   decorateInteractiveElements(wrapper);
 }
 
@@ -5755,10 +5976,18 @@ async function forceApplicationUpdate() {
   closeModal();
   showToast('Comprobando actualización…');
   try {
+    const latest = await checkForAppUpdate({ quiet: true });
     const registration = await navigator.serviceWorker?.getRegistration?.();
     await registration?.update?.();
-    if (registration?.waiting) showUpdateBanner(registration.waiting);
-    else showToast('My Fit Plan está actualizado.', 'success');
+    if (registration?.waiting) {
+      showUpdateBanner(registration.waiting, latest?.latest || availableVersion);
+      return;
+    }
+    if (latest?.updateAvailable) {
+      showUpdateBanner(null, latest.latest);
+      return;
+    }
+    showToast('My Fit Plan está actualizado.', 'success');
   } catch (error) {
     reportRuntimeIssue(error, 'Actualización PWA');
     showToast('No se pudo comprobar la actualización.', 'danger');
@@ -5768,7 +5997,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=43', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=44', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
@@ -5783,13 +6012,31 @@ async function registerServiceWorker() {
   }
 }
 
-function showUpdateBanner(worker) {
-  waitingServiceWorker = worker;
+function showUpdateBanner(worker = null, version = '') {
+  if (worker) waitingServiceWorker = worker;
+  if (version) availableVersion = String(version);
   updateBanner.hidden = false;
-  updateBanner.innerHTML = '<span><strong>Nueva versión disponible</strong><small>Pulsa para actualizar My Fit Plan.</small></span><b>Actualizar</b>';
+  updateBanner.innerHTML = `<span><strong>Nueva versión${availableVersion ? ` ${esc(availableVersion)}` : ''} disponible</strong><small>Pulsa para actualizar My Fit Plan.</small></span><b>Actualizar</b>`;
 }
 
-function handleUpdateClick() {
-  if (waitingServiceWorker) waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
-  else window.location.reload();
+async function handleUpdateClick() {
+  if (waitingServiceWorker) {
+    waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker?.getRegistration?.();
+    await registration?.update?.();
+    if (registration?.waiting) {
+      waitingServiceWorker = registration.waiting;
+      waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
+  } catch {}
+
+  const url = new URL(window.location.href);
+  if (availableVersion) url.searchParams.set('v', availableVersion.replace(/[^0-9.]/g, ''));
+  url.searchParams.set('fresh', Date.now().toString());
+  window.location.replace(url.toString());
 }
