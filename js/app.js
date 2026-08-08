@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=41';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=41';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=41';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=42';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=42';
+import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=42';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=41';
+} from './stats.js?v=42';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=41';
+} from './coach.js?v=42';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=41';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=41';
+} from './adaptive.js?v=42';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=42';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=41';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=41';
+} from './calendar-planner.js?v=42';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=42';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=41';
+} from './progression-engine.js?v=42';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=41';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=41';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=41';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=41';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=41';
+} from './utils.js?v=42';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=42';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=42';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=42';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=42';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=41';
+} from './photo-progress.js?v=42';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,8 +103,9 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=41';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=41';
+} from './cloud.js?v=42';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=42';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=42';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -148,6 +149,9 @@ const runtimeIssues = [];
 let cloudUiStatus = cloudAccountSummary();
 let pendingCloudConflict = null;
 let recoveryModalOpened = false;
+let billingPricePreview = null;
+let billingActivationPoll = null;
+
 
 init();
 
@@ -166,6 +170,7 @@ function init() {
   if (!state.profile) renderWelcome();
   else if (!state.onboardingCompleted) renderOnboardingUpgrade();
   else setView(requestedInitialView());
+  setBillingEventHandler(handleBillingEvent);
   queueMicrotask(bootCloudFoundation);
 }
 
@@ -521,18 +526,167 @@ function premiumPreviewCard(featureId, { compact = false } = {}) {
   </section>`;
 }
 
+function billingPriceText(cadence) {
+  const item = billingPricePreview?.[cadence];
+  if (item?.formattedSubtotal) return item.formattedSubtotal;
+  return cadence === 'monthly' ? '4,99 €' : '39,99 €';
+}
+
+function billingIntervalLabel(cadence) {
+  return cadence === 'annual' ? '/ año' : '/ mes';
+}
+
+async function hydratePremiumPricing(wrapper) {
+  if (!wrapper || premiumUnlocked()) return;
+  const summary = billingSummary();
+  const statusNode = wrapper.querySelector('[data-billing-status]');
+
+  if (!summary.configured) {
+    if (statusNode) statusNode.textContent = 'Checkout todavía no configurado.';
+    return;
+  }
+
+  if (!navigator.onLine) {
+    if (statusNode) statusNode.textContent = 'Conéctate a internet para ver el precio localizado y contratar Premium.';
+    return;
+  }
+
+  try {
+    if (statusNode) statusNode.textContent = 'Calculando precios de Sandbox…';
+    billingPricePreview = await previewPremiumPrices({ force: true });
+
+    for (const cadence of ['monthly', 'annual']) {
+      const node = wrapper.querySelector(`[data-billing-price="${cadence}"]`);
+      if (node) node.textContent = billingPriceText(cadence);
+    }
+
+    if (billingPricePreview.status === 'invalid-prices') {
+      wrapper.querySelectorAll('[data-action^="premium-buy-"]').forEach((button) => button.disabled = true);
+      if (statusNode) statusNode.textContent = 'Los IDs de precio no coinciden con mensual/anual. No abriremos ningún cobro.';
+      return;
+    }
+
+    if (billingPricePreview.status === 'error') {
+      if (statusNode) statusNode.textContent = 'No se pudo consultar Paddle. Puedes reintentar en unos segundos.';
+      return;
+    }
+
+    if (statusNode) statusNode.textContent = 'Sandbox · no se cobrará dinero real.';
+  } catch (error) {
+    if (statusNode) statusNode.textContent = 'No se pudo cargar el precio de Paddle.';
+    reportRuntimeIssue(error, 'Paddle PricePreview');
+  }
+}
+
+async function buyPremium(cadence) {
+  const info = cloudAccountSummary();
+  if (!info.signedIn) {
+    closeModal();
+    return openCloudSignupModal();
+  }
+  if (hasPremiumAccess(info.plan)) {
+    showToast(`${planLabel(info.plan)} ya está activo.`, 'success');
+    return;
+  }
+
+  try {
+    showToast('Abriendo Paddle Sandbox…');
+    await openPremiumCheckout({
+      cadence,
+      userId: info.userId,
+      email: info.email
+    });
+  } catch (error) {
+    reportRuntimeIssue(error, 'Paddle Checkout');
+    showToast(error?.message || 'No se pudo abrir el checkout.', 'danger');
+  }
+}
+
+function stopBillingActivationPoll() {
+  if (billingActivationPoll) {
+    clearInterval(billingActivationPoll);
+    billingActivationPoll = null;
+  }
+}
+
+async function pollPremiumActivation({ attempts = 12, intervalMs = 1500 } = {}) {
+  stopBillingActivationPoll();
+  let remaining = attempts;
+
+  const tick = async () => {
+    remaining -= 1;
+    try {
+      await cloudRefreshAccount();
+      refreshCloudAccountDom();
+
+      if (hasPremiumAccess(currentPlan())) {
+        stopBillingActivationPoll();
+        closeModal();
+        if (currentView === 'home') renderHome();
+        showToast('Premium activado correctamente.', 'success');
+        return;
+      }
+    } catch {}
+
+    if (remaining <= 0) {
+      stopBillingActivationPoll();
+      showToast('Pago recibido. Paddle todavía está sincronizando Premium; pulsa «Actualizar plan» en unos segundos.', 'warning');
+    }
+  };
+
+  await tick();
+  if (remaining > 0 && !hasPremiumAccess(currentPlan())) {
+    billingActivationPoll = setInterval(tick, intervalMs);
+  }
+}
+
+function handleBillingEvent(data) {
+  const name = String(data?.name || data?.event || '');
+  if (name === 'checkout.completed') {
+    showToast('Pago de prueba completado. Activando Premium…', 'success');
+    pollPremiumActivation();
+  } else if (name === 'checkout.error') {
+    showToast('Paddle no pudo completar el checkout.', 'danger');
+  }
+}
+
 function openPremiumPaywall(featureId = '') {
   const info = cloudAccountSummary();
   const feature = premiumFeature(featureId);
   const unlocked = hasPremiumAccess(info.plan);
   const plan = planLabel(info.plan);
   const expiration = info.plan === 'premium' && info.premiumExpiresAt ? cloudDate(info.premiumExpiresAt) : '';
+
+  const pricing = !unlocked && info.signedIn ? `
+    <section class="premium-billing-section">
+      <div class="premium-billing-head">
+        <div><p class="eyebrow">PADDLE SANDBOX</p><h3>Elige tu suscripción</h3><p class="muted small">Estamos probando el flujo completo con pagos de prueba. No se cobrará dinero real en esta versión.</p></div>
+        <span class="premium-sandbox-badge">SANDBOX</span>
+      </div>
+      <div class="premium-price-grid">
+        <article class="premium-price-card">
+          <span class="premium-price-kicker">Mensual</span>
+          <div class="premium-price-line"><strong data-billing-price="monthly">${esc(billingPriceText('monthly'))}</strong><small>/ mes</small></div>
+          <p>Cancela cuando quieras. Ideal para probar Premium durante poco tiempo.</p>
+          <button class="button button-premium button-block" type="button" data-action="premium-buy-monthly">Probar pago mensual</button>
+        </article>
+        <article class="premium-price-card is-featured">
+          <span class="premium-price-badge">MEJOR VALOR</span>
+          <span class="premium-price-kicker">Anual</span>
+          <div class="premium-price-line"><strong data-billing-price="annual">${esc(billingPriceText('annual'))}</strong><small>/ año</small></div>
+          <p>Un único plan anual para mantener todas las funciones inteligentes activas.</p>
+          <button class="button button-premium button-block" type="button" data-action="premium-buy-annual">Probar pago anual</button>
+        </article>
+      </div>
+      <p class="premium-billing-status" data-billing-status>Preparando Paddle Sandbox…</p>
+    </section>` : '';
+
   const wrapper = openModal(`<div class="premium-paywall">
     <div class="premium-paywall-glow" aria-hidden="true"></div>
     <div class="modal-header premium-paywall-header"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>${unlocked ? `${esc(plan)} activo` : esc(feature.title)}</h2><p class="muted">${unlocked ? 'Tu cuenta ya tiene acceso a todas las funciones Premium.' : esc(feature.description)}</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
     <div class="premium-paywall-plan ${unlocked ? 'is-active' : ''}">
       <div><span class="premium-paywall-mark">MFP+</span><div><small>${unlocked ? 'TU PLAN' : 'PLAN PREMIUM'}</small><strong>${unlocked ? esc(plan) : 'My Fit Plan Premium'}</strong></div></div>
-      <span>${unlocked ? (info.plan === 'founder' ? 'Acceso permanente' : expiration ? `Hasta ${esc(expiration)}` : 'Activo') : 'Próximamente'}</span>
+      <span>${unlocked ? (info.plan === 'founder' ? 'Acceso permanente' : expiration ? `Hasta ${esc(expiration)}` : 'Activo') : 'Sandbox conectado'}</span>
     </div>
     <div class="premium-paywall-features">
       <article><span>◎</span><div><strong>Entrenamiento adaptativo</strong><small>Energía, sueño, tiempo y molestias.</small></div></article>
@@ -544,14 +698,18 @@ function openPremiumPaywall(featureId = '') {
       <div><strong>Free</strong><span>Rutinas manuales</span><span>Entrenamiento personalizado</span><span>Biblioteca</span><span>Historial básico</span><span>Cloud y fotos privadas</span></div>
       <div class="is-premium"><strong>Premium</strong><span>Todo lo Free</span><span>My Fit Plan inteligente</span><span>Progresión y deload</span><span>Smart replan</span><span>Análisis avanzado</span></div>
     </div>
-    ${!info.signedIn ? '<p class="notice notice-info">Para tener Premium necesitaremos una cuenta My Fit Plan. Crear la cuenta seguirá siendo gratis.</p>' : ''}
+    ${pricing}
+    ${!info.signedIn ? '<p class="notice notice-info">Para contratar Premium necesitas una cuenta My Fit Plan. Crear la cuenta sigue siendo gratis.</p>' : ''}
     ${info.planExpired ? '<p class="notice notice-warning">Tu acceso Premium anterior ha caducado. La cuenta sigue activa en Free y tus datos no se han perdido.</p>' : ''}
-    <div class="premium-paywall-note"><strong>Beta comercial</strong><p>Los pagos todavía no están activados. Esta versión valida los bloqueos y entitlements antes de conectar el sistema de cobro.</p></div>
     <div class="modal-actions">
       <button class="button button-secondary" type="button" data-close-modal>Cerrar</button>
-      ${!info.signedIn ? '<button class="button button-primary" type="button" data-action="premium-create-account">Crear cuenta gratis</button>' : `<button class="button button-primary" type="button" data-action="premium-refresh-plan">${unlocked ? 'Actualizar estado' : 'Comprobar mi plan'}</button>`}
+      ${!info.signedIn ? '<button class="button button-primary" type="button" data-action="premium-create-account">Crear cuenta gratis</button>' : `<button class="button button-secondary" type="button" data-action="premium-refresh-plan">${unlocked ? 'Actualizar estado' : 'Ya he pagado · actualizar'}</button>`}
     </div>
   </div>`);
+
+  if (!unlocked && info.signedIn) {
+    window.setTimeout(() => hydratePremiumPricing(wrapper), 0);
+  }
   return wrapper;
 }
 
@@ -3512,7 +3670,7 @@ function profileAccountHtml() {
       <span class="cloud-plan-pill ${info.plan === 'founder' ? 'is-founder' : info.plan === 'premium' ? 'is-premium' : ''}">${esc(plan)}</span>
     </article>
     <article class="card premium-account-card ${hasPremiumAccess(info.plan) ? 'is-unlocked' : ''}">
-      <div class="premium-account-head"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>${hasPremiumAccess(info.plan) ? `${esc(plan)} desbloqueado` : 'Funciones inteligentes'}</h2><p class="muted small">${info.plan === 'founder' ? 'Acceso Founder permanente para esta cuenta.' : info.plan === 'premium' ? (info.premiumExpiresAt ? `Premium activo hasta ${esc(cloudDate(info.premiumExpiresAt))}.` : 'Premium activo en esta cuenta.') : 'Tu cuenta Free mantiene rutinas, biblioteca, historial, Cloud y fotos privadas.'}</p></div>${hasPremiumAccess(info.plan) ? '<span class="premium-account-check">✓</span>' : '<span class="premium-account-lock">★</span>'}</div>
+      <div class="premium-account-head"><div><p class="eyebrow">MY FIT PLAN PREMIUM</p><h2>${hasPremiumAccess(info.plan) ? `${esc(plan)} desbloqueado` : 'Funciones inteligentes'}</h2><p class="muted small">${info.plan === 'founder' ? 'Acceso Founder permanente para esta cuenta.' : info.plan === 'premium' ? (info.premiumExpiresAt ? `Premium activo hasta ${esc(cloudDate(info.premiumExpiresAt))}.` : 'Premium activo en esta cuenta.') : 'Tu cuenta Free mantiene rutinas, biblioteca, historial, Cloud y fotos privadas. Premium ya está conectado a Paddle Sandbox para pruebas de compra.'}</p></div>${hasPremiumAccess(info.plan) ? '<span class="premium-account-check">✓</span>' : '<span class="premium-account-lock">★</span>'}</div>
       <div class="premium-account-mini-features"><span>My Fit Plan IA</span><span>Progresión</span><span>Smart replan</span><span>Análisis</span></div>
       <div class="premium-account-actions"><button class="button ${hasPremiumAccess(info.plan) ? 'button-secondary' : 'button-premium'}" type="button" data-action="premium-open">${hasPremiumAccess(info.plan) ? 'Ver mi Premium' : 'Ver Premium'}</button><button class="text-link" type="button" data-action="premium-refresh-plan">Actualizar plan</button></div>
     </article>
@@ -3944,6 +4102,8 @@ async function handleAppClick(event) {
     'cloud-signout': () => confirmAction({ title: 'Cerrar sesión', message: 'Tus datos seguirán guardados en este dispositivo. Podrás volver a conectar la cuenta cuando quieras.', confirmLabel: 'Cerrar sesión', onConfirm: signOutCloudAccount }),
     'cloud-delete-account': deleteCloudAccount,
     'premium-open': () => openPremiumPaywall(target.dataset.premiumFeature || ''),
+    'premium-buy-monthly': () => buyPremium('monthly'),
+    'premium-buy-annual': () => buyPremium('annual'),
     'premium-refresh-plan': refreshPremiumPlan,
     'premium-create-account': () => { closeModal(); openCloudSignupModal(); },
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
@@ -5397,9 +5557,11 @@ function runHudHealthCheck() {
   add('plan-targets', invalidPlanTargets === 0, 'Objetivos de rutina', invalidPlanTargets ? `${invalidPlanTargets} objetivo${invalidPlanTargets === 1 ? '' : 's'} necesita${invalidPlanTargets === 1 ? '' : 'n'} normalización.` : 'Series, rangos y descansos válidos.');
   add('history-structure', invalidHistorySessions === 0, 'Estructura del historial', invalidHistorySessions ? `${invalidHistorySessions} sesión${invalidHistorySessions === 1 ? '' : 'es'} presenta${invalidHistorySessions === 1 ? '' : 'n'} datos incompletos.` : 'Historial estructuralmente correcto.', 'warning');
   const cloudHealth = getCloudStatus();
+  const billingHealth = billingSummary();
   const cloudPlan = cloudAccountSummary();
   const cloudPhotos = cloudProgressPhotoSummary(bodyProgressPhotoIds());
   add('premium-entitlement', ['free','premium','founder'].includes(cloudPlan.plan), 'Plan de cuenta', `${planLabel(cloudPlan.plan)} · ${cloudPlan.planSource || 'system'}${cloudPlan.planExpired ? ' · Premium caducado' : ''}`);
+  add('billing-sandbox', billingHealth.configured, 'Paddle Sandbox', billingHealth.configured ? 'Producto y precios mensual/anual configurados.' : 'Falta configurar producto o precios.', billingHealth.configured ? 'success' : 'warning');
   add('cloud-photos', cloudPhotos.pending === 0 || !cloudPhotos.signedIn, 'Fotografías cloud', !cloudPhotos.signedIn ? 'Modo local: las fotografías permanecen en este dispositivo.' : cloudPhotos.pending ? `${cloudPhotos.pending} fotografía${cloudPhotos.pending === 1 ? '' : 's'} pendiente${cloudPhotos.pending === 1 ? '' : 's'} de sincronizar.` : `${cloudPhotos.synced}/${cloudPhotos.total} fotografías referenciadas sincronizadas.`, cloudPhotos.pending ? 'warning' : 'success');
   add('cloud-auth', cloudHealth.auth !== 'error', 'My Fit Plan Cloud', cloudHealth.auth === 'authenticated' ? `Cuenta conectada · ${cloudAccountSummary().email}` : cloudHealth.auth === 'error' ? cloudHealth.lastError || 'Error de autenticación.' : 'Modo local disponible sin cuenta.', cloudHealth.auth === 'error' ? 'warning' : 'success');
   add('cloud-sync', !['error','conflict'].includes(cloudHealth.sync), 'Sincronización cloud', cloudHealth.sync === 'synced' ? 'Datos sincronizados.' : cloudHealth.sync === 'conflict' ? 'Hay dos versiones pendientes de resolver.' : cloudHealth.sync === 'offline' ? 'Sin conexión: el guardado local continúa activo.' : cloudHealth.sync === 'error' ? cloudHealth.lastError || 'Error de sincronización.' : 'Sistema cloud preparado.', ['error','conflict'].includes(cloudHealth.sync) ? 'warning' : 'success');
@@ -5486,7 +5648,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=41', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=42', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

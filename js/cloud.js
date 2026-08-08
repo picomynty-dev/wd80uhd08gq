@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=41';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=42';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
