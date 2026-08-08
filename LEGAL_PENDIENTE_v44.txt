@@ -1,0 +1,13 @@
+MY FIT PLAN v4.4 — DATOS LEGALES PENDIENTES
+
+Antes de una beta pública hay que completar en:
+js/legal.js
+
+LEGAL_CONFIG.controllerName
+LEGAL_CONFIG.contactEmail
+
+No se han inventado esos datos.
+
+El resto del centro de Privacidad/Términos está preparado como borrador técnico
+y debe revisarse antes de producción, especialmente por el tratamiento de
+peso, medidas y fotografías corporales.

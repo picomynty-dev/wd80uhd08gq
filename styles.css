@@ -8526,3 +8526,70 @@ body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pu
   .subscription-management-metrics { grid-template-columns: 1fr; }
   .subscription-management-actions .button { flex: 1 1 100%; }
 }
+
+
+/* =========================================================
+   My Fit Plan v4.4 · Beta Ready
+   ========================================================= */
+.beta-ready-card { display:grid; gap:14px; }
+.beta-ready-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.beta-version-pill {
+  flex:0 0 auto; padding:7px 10px; border-radius:999px;
+  background:var(--accent-soft); color:var(--accent); font-size:.65rem; font-weight:900;
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.beta-action-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.legal-readiness {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:11px 12px; border-radius:14px; border:1px solid var(--border);
+  background:var(--surface-soft); font-size:.72rem;
+}
+.legal-readiness span { color:var(--muted); text-align:right; font-size:.64rem; }
+.legal-readiness.is-pending { border-color:rgba(245,158,11,.35); }
+.legal-readiness.is-pending strong { color:#f59e0b; }
+.legal-readiness.is-ready strong { color:var(--success); }
+
+.legal-draft-warning { margin-bottom:14px; }
+.legal-identity-card {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:14px;
+}
+.legal-identity-card span {
+  display:grid; gap:4px; padding:12px; border:1px solid var(--border);
+  border-radius:14px; background:var(--surface-soft);
+}
+.legal-identity-card small { color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-size:.55rem; }
+.legal-identity-card strong { font-size:.72rem; overflow-wrap:anywhere; }
+.legal-document-sections { display:grid; gap:10px; }
+.legal-document-sections article {
+  padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-soft);
+}
+.legal-document-sections h3 { margin:0 0 6px; font-size:.9rem; }
+.legal-document-sections p { margin:0; color:var(--muted); font-size:.72rem; line-height:1.55; }
+
+.feedback-diagnostic-consent {
+  display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--border);
+  border-radius:14px; background:var(--surface-soft); cursor:pointer;
+}
+.feedback-diagnostic-consent input { margin-top:3px; }
+.feedback-diagnostic-consent span { display:grid; gap:3px; }
+.feedback-diagnostic-consent small { color:var(--muted); font-size:.62rem; line-height:1.4; }
+
+.cloud-error-notice {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.subscription-management-card.is-unavailable {
+  border-color:rgba(245,158,11,.28);
+}
+
+.notice-danger {
+  border-color:color-mix(in srgb, var(--danger) 35%, var(--border));
+  background:color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+@media (max-width: 620px) {
+  .beta-action-grid { grid-template-columns:1fr; }
+  .legal-readiness { align-items:flex-start; flex-direction:column; }
+  .legal-readiness span { text-align:left; }
+  .legal-identity-card { grid-template-columns:1fr; }
+  .cloud-error-notice { align-items:flex-start; flex-direction:column; }
+}

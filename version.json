@@ -1,0 +1,8 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.4",
+  "label": "Beta Ready Sandbox",
+  "channel": "beta",
+  "releasedAt": "2026-08-08T18:56:00+02:00",
+  "minimumSupported": "4.4"
+}

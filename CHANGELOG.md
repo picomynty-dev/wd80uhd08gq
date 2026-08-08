@@ -1,3 +1,21 @@
+# My Fit Plan v4.4 — Beta Ready Sandbox
+
+- Añade el año a fechas Premium y de facturación.
+- Añade centro Beta con feedback, privacidad y términos.
+- Añade feedback autenticado mediante Edge Function + `mfp_beta_feedback`.
+- Añade detector de versión nueva mediante `version.json`.
+- Mantiene sesión y Premium cacheado cuando caduca el token sin conexión.
+- Añade reconexión Cloud manual y automática.
+- Mejora estados de error de Paddle/Supabase sin degradar el plan.
+- Sustituye el borrado de cuenta por una Edge Function autenticada.
+- Cancela inmediatamente la suscripción Paddle antes de eliminar una cuenta Premium.
+- Borra Storage, datos cloud y Supabase Auth.
+- El webhook ignora de forma idempotente eventos tardíos de usuarios ya eliminados.
+- Preserva exactamente las 10 acciones Premium existentes.
+- Mantiene las 6 pestañas de Perfil visibles en móvil.
+- Paddle continúa en Sandbox; no hay cobros reales.
+- Mantiene un bloqueo legal visible hasta completar responsable y contacto reales.
+
 # My Fit Plan v4.3 — Packaging Hotfix
 
 - Corrige la etiqueta superior que seguía mostrando v4.2.

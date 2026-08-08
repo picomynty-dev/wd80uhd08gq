@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.3: Premium con gestión segura de suscripción mediante Paddle Customer Portal.",
+  "description": "My Fit Plan 4.4 Beta Ready: cuenta, Cloud, Premium Sandbox, feedback, privacidad, borrado de cuenta y actualizaciones.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
