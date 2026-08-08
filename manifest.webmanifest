@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.2.1: monetización Paddle Sandbox con precios mensual/anual corregidos.",
+  "description": "My Fit Plan 4.3: Premium con gestión segura de suscripción mediante Paddle Customer Portal.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

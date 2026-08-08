@@ -8440,3 +8440,89 @@ body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pu
   .premium-price-card { padding: 13px; }
   .premium-price-line strong { font-size: 1.6rem; }
 }
+
+
+/* =========================================================
+   My Fit Plan v4.3 · Subscription Management
+   ========================================================= */
+.subscription-management-card {
+  display: grid;
+  gap: 15px;
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+}
+.subscription-management-card.is-canceling {
+  border-color: rgba(245, 158, 11, .38);
+}
+.subscription-management-card.is-founder {
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+}
+.subscription-management-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+.subscription-management-head h2,
+.subscription-management-card h2 {
+  margin: 3px 0 4px;
+}
+.subscription-status-pill {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.subscription-status-pill.is-active {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+.subscription-status-pill.is-canceling {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, .35);
+  background: rgba(245, 158, 11, .08);
+}
+.subscription-status-pill.is-founder {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+.subscription-management-metrics {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+.subscription-management-metrics span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+.subscription-management-metrics small {
+  color: var(--muted);
+  font-size: .58rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.subscription-management-metrics strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: .78rem;
+}
+.subscription-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 520px) {
+  .subscription-management-metrics { grid-template-columns: 1fr; }
+  .subscription-management-actions .button { flex: 1 1 100%; }
+}

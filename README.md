@@ -1,21 +1,30 @@
-# My Fit Plan v4.2 · Monetization Sandbox
+# My Fit Plan v4.3 · Subscription Management Sandbox
 
-v4.2 conecta el Premium de My Fit Plan con Paddle Sandbox manteniendo el cliente
-sin permisos para concederse Premium.
+## Novedad principal
+Perfil > Cuenta muestra el estado real de la suscripción Paddle y permite abrir
+el Customer Portal mediante un enlace autenticado y temporal.
 
-## Incluye
-- Checkout mensual/anual Paddle Sandbox.
-- PricePreview localizado.
-- Validación automática de que cada price ID tenga la periodicidad esperada.
-- `customData.mfp_user_id` para vincular pago y cuenta.
-- Edge Function `paddle-webhook`.
-- Billing mirror en `mfp_billing`.
-- Entitlement Premium actualizado únicamente desde servidor.
-- Deduplicación y protección frente a eventos fuera de orden.
-- Premium/Founder offline heredado de v4.1.
-- Cloud y Cloud Photos conservados.
-- Barra Perfil móvil 6/6 conservada.
+## Seguridad
+- La PWA nunca contiene `PADDLE_API_KEY`.
+- `billing-portal` exige un JWT válido de Supabase (`auth: user`).
+- El user_id se toma del JWT, nunca del body enviado por el navegador.
+- `mfp_billing` sigue sin estar expuesta al cliente.
+- La API key Paddle vive únicamente en Edge Function Secrets.
+- Los enlaces de Customer Portal no se guardan ni se cachean.
 
-## Importante
-Esta build es SANDBOX. Solo admite pagos de prueba y no debe cambiarse a Live
-hasta completar el ciclo de compra, renovación, cancelación y recuperación.
+## UX
+Para Premium:
+- periodicidad mensual/anual,
+- estado,
+- próxima renovación,
+- fecha de finalización si existe cancelación programada,
+- Gestionar suscripción,
+- Método de pago,
+- Actualizar facturación.
+
+Founder permanece independiente de Paddle.
+
+## Estado
+La interfaz y la Edge Function han sido probadas con mocks. Falta únicamente
+desplegar `billing-portal`, configurar la API key Sandbox y comprobar el portal
+real con la suscripción de prueba existente.

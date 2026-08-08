@@ -1,3 +1,18 @@
+# My Fit Plan v4.3 — Subscription Management Sandbox
+
+- Perfil > Cuenta incorpora gestión de suscripción.
+- Muestra Mensual/Anual, estado y fecha de renovación/finalización.
+- Detecta cancelaciones programadas y explica cuándo volverá a Free.
+- Añade botón Gestionar suscripción.
+- Añade botón Método de pago.
+- Crea enlaces autenticados y temporales del Paddle Customer Portal.
+- Nueva Edge Function `billing-portal` protegida con JWT de usuario.
+- El cliente no puede elegir otro user_id para consultar billing.
+- Paddle API key exclusivamente server-side.
+- Founder no depende de Paddle.
+- Mantiene las seis pestañas de Perfil visibles en móvil.
+- No requiere SQL nuevo.
+
 # My Fit Plan v4.2 — Monetization Sandbox
 
 - Paddle Sandbox conectado al paywall Premium.

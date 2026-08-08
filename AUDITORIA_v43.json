@@ -1,0 +1,38 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.3 Subscription Management Sandbox",
+  "generatedAt": "2026-08-08T16:35:13",
+  "static": {
+    "javascriptModules": 27,
+    "uiActions": 116,
+    "uiActionsHandled": 116,
+    "missingImports": [],
+    "pwaResources": 37,
+    "clientSecretHits": []
+  },
+  "tests": {
+    "safeBillingSummary": "passed",
+    "cancellationDateReturned": "passed",
+    "customerIdNotLeaked": "passed",
+    "subscriptionIdNotLeaked": "passed",
+    "portalSessionCreated": "passed",
+    "paddleApiKeyServerSide": "passed",
+    "paymentMethodDeepLink": "passed",
+    "missingApiKeyBlocked": "passed",
+    "mobile320SubscriptionCard": "passed",
+    "mobile390SubscriptionCard": "passed",
+    "desktopSubscriptionCard": "passed",
+    "profileTabs6of6": "passed",
+    "horizontalOverflow": "passed",
+    "realPaddlePortal": "pending user deployment"
+  },
+  "security": {
+    "edgeFunctionAuth": "authenticated Supabase user",
+    "verifyJwt": true,
+    "billingUserResolution": "JWT claims only",
+    "portalLinksCached": false,
+    "paddleApiKeyInClient": false,
+    "mfpBillingClientAccess": "none"
+  },
+  "sqlRequired": false
+}
