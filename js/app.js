@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=44';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=44';
-import { APP_VERSION, createEmptyState, loadState, saveState as persistState, validateImportedState } from './storage.js?v=44';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=45';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=45';
+import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=45';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=44';
+} from './stats.js?v=45';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=44';
+} from './coach.js?v=45';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=44';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=44';
+} from './adaptive.js?v=45';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=45';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=44';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=44';
+} from './calendar-planner.js?v=45';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=45';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=44';
+} from './progression-engine.js?v=45';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=44';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=44';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=44';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=44';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=44';
+} from './utils.js?v=45';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=45';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=45';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=45';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=45';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=44';
+} from './photo-progress.js?v=45';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,12 +103,12 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=44';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=44';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=44';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=44';
-import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=44';
-import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=44';
+} from './cloud.js?v=45';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=45';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=45';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=45';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=45';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=45';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -159,6 +159,7 @@ let billingAccountLoading = false;
 let billingAccountError = '';
 let availableVersion = '';
 let lastVersionCheckAt = 0;
+let legacyRecoveryPromptedForUser = '';
 
 
 init();
@@ -222,6 +223,7 @@ async function syncCloudPhotosForState({ quiet = true } = {}) {
 async function bootCloudFoundation() {
   await initCloud({
     getState: () => state,
+    createEmptyState,
     replaceState: replaceStateFromCloud,
     onStatusChange: handleCloudStatusChange,
     onConflict: handleCloudConflict,
@@ -230,6 +232,103 @@ async function bootCloudFoundation() {
   cloudUiStatus = cloudAccountSummary();
   refreshCloudAccountDom();
   await syncCloudPhotosForState({ quiet: true });
+  if (cloudAccountSummary().signedIn) routeAfterCloudAuth({ reason: 'startup' });
+}
+
+function legacyRecoverySummary(candidate) {
+  return {
+    profile: candidate?.profileName || 'Perfil sin nombre',
+    updatedAt: candidate?.updatedAt || null,
+    sessions: Number(candidate?.sessions || 0),
+    routines: Number(candidate?.routines || 0),
+    bodyEntries: Number(candidate?.bodyEntries || 0)
+  };
+}
+
+function maybeOfferLegacyStateRecovery() {
+  const account = cloudAccountSummary();
+  const userId = String(account.userId || '');
+  if (!account.signedIn || !userId || state.profile) return false;
+  if (legacyRecoveryPromptedForUser === userId) return false;
+  if (document.querySelector('.modal-backdrop')) return false;
+
+  const candidate = findLegacyStateCandidates(3)[0];
+  if (!candidate?.state?.profile) return false;
+
+  legacyRecoveryPromptedForUser = userId;
+  const summary = legacyRecoverySummary(candidate);
+
+  const wrapper = openModal(`<div class="modal-header">
+      <div><p class="eyebrow">RECUPERACIÓN v4.5</p><h2>Hemos encontrado una copia local anterior</h2><p class="muted small">Tu cuenta está conectada, pero no contiene un perfil cargado. My Fit Plan ha encontrado una copia antigua en este dispositivo y no la restaurará sin tu permiso.</p></div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <article class="card legacy-recovery-card">
+      <div><small>Perfil encontrado</small><strong>${esc(summary.profile)}</strong></div>
+      <div><small>Última actualización</small><strong>${esc(summary.updatedAt ? cloudDate(summary.updatedAt) : 'Sin fecha')}</strong></div>
+      <div><small>Sesiones</small><strong>${summary.sessions}</strong></div>
+      <div><small>Rutinas</small><strong>${summary.routines}</strong></div>
+      <div><small>Progreso físico</small><strong>${summary.bodyEntries}</strong></div>
+    </article>
+    <article class="notice notice-warning"><strong>Comprueba el nombre.</strong> Restaura esta copia solo si reconoces el perfil. La recuperación sustituirá el estado vacío de esta cuenta y lo subirá a My Fit Plan Cloud.</article>
+    <div class="modal-actions">
+      <button class="button button-secondary" type="button" data-close-modal>Ahora no</button>
+      <button class="button button-primary" type="button" data-action="legacy-recovery-restore">Restaurar ${esc(summary.profile)}</button>
+    </div>`);
+  wrapper._legacyRecoveryCandidate = candidate;
+  decorateInteractiveElements(wrapper);
+  return true;
+}
+
+async function restoreLegacyStateCandidate() {
+  const wrapper = document.querySelector('.modal-backdrop');
+  const candidate = wrapper?._legacyRecoveryCandidate;
+  if (!candidate?.state?.profile) {
+    showToast('La copia de recuperación ya no está disponible.', 'warning');
+    return;
+  }
+
+  try {
+    state = persistState(candidate.state);
+    applySettings();
+    updateProfileShortcut();
+    closeModal();
+    setView(state.onboardingCompleted ? 'home' : 'profile');
+    if (!state.onboardingCompleted) renderOnboardingUpgrade();
+
+    const result = await cloudUploadNow();
+    await syncCloudPhotosForState({ quiet: true });
+    showToast(
+      result.status === 'offline'
+        ? 'Copia restaurada en este dispositivo. Se subirá cuando vuelva internet.'
+        : 'Copia local restaurada y guardada en My Fit Plan Cloud.',
+      result.status === 'offline' ? 'warning' : 'success'
+    );
+  } catch (error) {
+    reportRuntimeIssue(error, 'Recuperación de estado legacy');
+    showToast(cloudAuthError(error), 'danger');
+  }
+}
+
+function routeAfterCloudAuth({ reason = 'auth' } = {}) {
+  cachedHudHealthAt = 0;
+  applySettings();
+  updateProfileShortcut();
+
+  if (!state.profile) {
+    renderWelcome();
+    if (cloudAccountSummary().signedIn) {
+      window.setTimeout(() => maybeOfferLegacyStateRecovery(), 80);
+    }
+    return 'welcome';
+  }
+
+  if (!state.onboardingCompleted) {
+    renderOnboardingUpgrade();
+    return 'onboarding';
+  }
+
+  setView('home');
+  return 'home';
 }
 
 function replaceStateFromCloud(payload) {
@@ -239,10 +338,17 @@ function replaceStateFromCloud(payload) {
     applySettings();
     updateProfileShortcut();
     updateHud();
-    if (!state.profile) renderWelcome();
-    else if (!state.onboardingCompleted) renderOnboardingUpgrade();
-    else setView(currentView === 'profile' ? 'profile' : requestedInitialView());
-    if (currentView === 'profile') showProfileTab('account');
+    if (!state.profile) {
+      renderWelcome();
+    } else if (!state.onboardingCompleted) {
+      renderOnboardingUpgrade();
+    } else {
+      const target = document.body.classList.contains('onboarding-mode')
+        ? 'home'
+        : (currentView === 'profile' ? 'profile' : requestedInitialView());
+      setView(target);
+      if (target === 'profile') showProfileTab('account');
+    }
     window.setTimeout(() => syncCloudPhotosForState({ quiet: true }), 0);
   } catch (error) {
     reportRuntimeIssue(error, 'Restauración desde la nube');
@@ -353,7 +459,13 @@ function reportRuntimeIssue(error, context = 'Aplicación') {
 }
 
 function setOnboardingMode(enabled) {
-  document.body.classList.toggle('onboarding-mode', Boolean(enabled));
+  const onboarding = Boolean(enabled);
+  document.body.classList.toggle('onboarding-mode', onboarding);
+  if (onboarding && activeSessionBar) {
+    activeSessionBar.hidden = true;
+    activeSessionBar.innerHTML = '';
+  }
+  if (onboarding && restTimerDock) restTimerDock.hidden = true;
 }
 
 function setView(view) {
@@ -953,6 +1065,7 @@ function renderWelcome() {
       </div>
       <p class="onboarding-legal">Para mayores de 18 años. La aplicación ofrece orientación general y no sustituye a profesionales sanitarios o del entrenamiento.</p>
     </section>`;
+  updateHud();
 }
 
 function renderOnboardingUpgrade() {
@@ -975,6 +1088,7 @@ function renderOnboardingUpgrade() {
         <button class="button button-secondary" type="button" data-action="onboarding-keep-current">Mantener mi configuración actual</button>
       </div>
     </section>`;
+  updateHud();
 }
 
 function onboardingDraftFromState() {
@@ -4084,8 +4198,12 @@ async function submitCloudSignup(form) {
     const result = await cloudSignUp({ displayName: data.get('displayName'), email: data.get('email'), password: data.get('password') });
     if (!result.needsConfirmation) await syncCloudPhotosForState({ quiet: true });
     closeModal();
-    if (result.needsConfirmation) showToast('Cuenta creada. Abre el correo de confirmación para activar My Fit Plan Cloud.', 'success');
-    else showToast('Cuenta creada. Datos y fotografías sincronizados.', 'success');
+    if (result.needsConfirmation) {
+      showToast('Cuenta creada. Abre el correo de confirmación para activar My Fit Plan Cloud.', 'success');
+    } else {
+      const destination = routeAfterCloudAuth({ reason: 'signup' });
+      showToast(destination === 'home' ? 'Cuenta creada. Tus datos están sincronizados.' : 'Cuenta creada. Completa la configuración para empezar.', 'success');
+    }
     refreshCloudAccountDom();
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
@@ -4101,7 +4219,15 @@ async function submitCloudSignin(form) {
     await cloudSignIn({ email: data.get('email'), password: data.get('password') });
     await syncCloudPhotosForState({ quiet: true });
     closeModal();
-    showToast(cloudAccountSummary().conflict ? 'Sesión iniciada. Hay un conflicto real pendiente en Perfil → Cuenta.' : 'Sesión iniciada. Datos y fotografías se sincronizan automáticamente.', cloudAccountSummary().conflict ? 'warning' : 'success');
+    const destination = routeAfterCloudAuth({ reason: 'signin' });
+    showToast(
+      cloudAccountSummary().conflict
+        ? 'Sesión iniciada. Hay un conflicto real pendiente en Perfil → Cuenta.'
+        : destination === 'home'
+          ? 'Sesión iniciada. Tu cuenta se ha cargado correctamente.'
+          : 'Sesión iniciada. Completa la configuración para empezar.',
+      cloudAccountSummary().conflict ? 'warning' : 'success'
+    );
     refreshCloudAccountDom();
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
@@ -4237,9 +4363,10 @@ function deleteCloudAccount() {
       catch (photoError) { reportRuntimeIssue(photoError, 'Borrado local de fotografías al eliminar cuenta'); }
       state = createEmptyState();
       state = persistState(state);
+      currentView = 'home';
       closeModal();
-      showToast('Cuenta y datos eliminados.', 'success');
       renderWelcome();
+      showToast('Cuenta y datos eliminados.', 'success');
     } catch (error) {
       reportRuntimeIssue(error, 'Eliminar cuenta');
       showToast(cloudAuthError(error), 'danger');
@@ -4440,6 +4567,7 @@ async function handleAppClick(event) {
     'beta-check-update': () => checkForAppUpdate({ quiet: false }),
     'legal-privacy': () => openLegalDocument('privacy'),
     'legal-terms': () => openLegalDocument('terms'),
+    'legacy-recovery-restore': restoreLegacyStateCandidate,
     'hud-open-settings': () => { closeModal(); setView('profile'); showProfileTab('settings'); }
   };
   try {
@@ -5828,7 +5956,12 @@ function updateHud() {
 
   if (activeSessionBar) {
     const workout = state.activeWorkout;
-    const visible = Boolean(workout && currentView !== 'workout');
+    const appReady = Boolean(
+      state.profile
+      && state.onboardingCompleted
+      && !document.body.classList.contains('onboarding-mode')
+    );
+    const visible = Boolean(workout && appReady && currentView !== 'workout');
     activeSessionBar.hidden = !visible;
     if (visible) {
       const sets = workout.exercises.flatMap((exercise) => exercise.sets || []);
@@ -5997,7 +6130,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=44', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=45', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

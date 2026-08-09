@@ -1,6 +1,6 @@
 'use strict';
 
-import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=44';
+import { CLOUD_CONFIG, cloudRedirectUrl } from './cloud-config.js?v=45';
 
 const SESSION_KEY = 'mfpCloudSessionV40';
 const META_KEY = 'mfpCloudMetaV40';
@@ -10,6 +10,7 @@ const RECOVERY_KEY = 'mfpCloudRecoveryV401';
 
 let hooks = {
   getState: () => null,
+  createEmptyState: () => ({}),
   replaceState: () => {},
   onStatusChange: () => {},
   onConflict: () => {},
@@ -95,12 +96,55 @@ function userMeta(userId) {
   return record;
 }
 
+
+function localOwnerId() {
+  return String(meta.localOwnerId || '');
+}
+
+function setLocalOwner(userId = '') {
+  meta.localOwnerId = String(userId || '');
+  saveMeta();
+  return meta.localOwnerId;
+}
+
+function localBelongsToDifferentUser(userId) {
+  const owner = localOwnerId();
+  return Boolean(owner && userId && owner !== String(userId));
+}
+
+function inferLocalOwnerForSession(localPayload = null) {
+  if (localOwnerId()) return localOwnerId();
+
+  const payload = localPayload || cloudPayload(hooks.getState());
+  const hash = stateHash(payload);
+
+  // Migración desde v4.4: identifica a qué cuenta pertenecía el estado local
+  // comparándolo con el último hash sincronizado de todas las cuentas conocidas.
+  const matchedOwner = Object.entries(meta.users || {}).find(([, record]) => (
+    record?.lastSyncedHash && record.lastSyncedHash === hash
+  ))?.[0];
+
+  if (matchedOwner) {
+    setLocalOwner(matchedOwner);
+    return matchedOwner;
+  }
+
+  const userId = session?.user?.id;
+  if (!userId) return '';
+  const record = userMeta(userId);
+  if (record.lastSyncedHash && record.lastSyncedHash === hash) {
+    setLocalOwner(userId);
+    return userId;
+  }
+  return '';
+}
+
 function recoveryStore() {
   return readJson(RECOVERY_KEY, { users: {} });
 }
 
-function saveRecoverySnapshot(localState, reason = 'cloud-download') {
-  const userId = session?.user?.id;
+function saveRecoverySnapshot(localState, reason = 'cloud-download', targetUserId = session?.user?.id) {
+  const userId = String(targetUserId || '');
   if (!userId || !meaningfulState(localState)) return false;
   const store = recoveryStore();
   store.users ||= {};
@@ -540,6 +584,7 @@ function markSynced(payload, revision) {
   record.lastSyncAt = new Date().toISOString();
   record.initialized = true;
   record.preferredSource = record.preferredSource || 'cloud';
+  meta.localOwnerId = userId;
   saveMeta();
   conflictSnapshot = null;
   emit({ sync: 'synced', lastSyncAt: record.lastSyncAt, conflict: false, lastError: '' });
@@ -548,6 +593,7 @@ function markSynced(payload, revision) {
 async function pullRemote(remote) {
   if (!remote?.payload) return null;
   hooks.replaceState(remote.payload, { source: 'cloud', revision: remote.revision });
+  if (session?.user?.id) setLocalOwner(session.user.id);
   const normalizedLocal = cloudPayload(hooks.getState());
   if (stateHash(normalizedLocal) !== stateHash(remote.payload)) {
     const updated = await updateRemoteState(normalizedLocal, Number(remote.revision || 0));
@@ -625,7 +671,7 @@ async function fetchProfile() {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
-async function reconcile({ reason = 'manual', silent = false } = {}) {
+async function reconcile({ reason = 'manual', silent = false, cloudFirst = false, accountSwitch = false } = {}) {
   if (!CLOUD_CONFIG.enabled) return { status: 'disabled' };
   if (!navigator.onLine) {
     emit({ sync: session ? 'offline' : 'guest' });
@@ -645,7 +691,20 @@ async function reconcile({ reason = 'manual', silent = false } = {}) {
     const record = userMeta(session.user.id);
 
     if (!remote) {
+      inferLocalOwnerForSession(localPayload);
+      const switchedAccount = Boolean(accountSwitch || localBelongsToDifferentUser(session.user.id));
+
+      if (switchedAccount) {
+        if (localHasData) saveRecoverySnapshot(localPayload, 'account-switch-no-cloud', localOwnerId());
+        const emptyState = hooks.createEmptyState();
+        hooks.replaceState(emptyState, { source: 'account-switch-new-account', revision: 0 });
+        setLocalOwner(session.user.id);
+        await createRemoteState(cloudPayload(hooks.getState()));
+        return { status: 'created-empty', reason, accountSwitch: true };
+      }
+
       await createRemoteState(localPayload);
+      setLocalOwner(session.user.id);
       return { status: 'uploaded', reason };
     }
 
@@ -654,6 +713,49 @@ async function reconcile({ reason = 'manual', silent = false } = {}) {
     let remoteHasData = meaningfulState(remotePayload);
     let remoteRevision = Math.max(0, Number(remote.revision || 0));
     let knownRevision = Math.max(0, Number(record.lastRevision || 0));
+
+    inferLocalOwnerForSession(localPayload);
+    const switchedAccount = Boolean(accountSwitch || localBelongsToDifferentUser(session.user.id));
+
+    // v4.5: al iniciar o cambiar de cuenta, una nube que contiene datos
+    // nunca puede ser sobrescrita automáticamente por un estado local vacío
+    // o por datos que pertenecen a otra cuenta.
+    if (remoteHasData && (cloudFirst || switchedAccount || !localHasData)) {
+      if (localHasData && localHash !== remoteHash) {
+        saveRecoverySnapshot(localPayload, switchedAccount ? 'account-switch' : `${reason}-cloud-first`, switchedAccount ? localOwnerId() : session.user.id);
+      }
+      await pullRemote(remote);
+      return {
+        status: 'downloaded',
+        reason,
+        autoResolved: 'cloud',
+        accountSwitch: switchedAccount
+      };
+    }
+
+    // Si cambiamos a otra cuenta y la nube de esa cuenta está vacía,
+    // tampoco copiamos los datos del usuario anterior.
+    if (switchedAccount && !remoteHasData) {
+      if (localHasData) saveRecoverySnapshot(localPayload, 'account-switch-empty-cloud', localOwnerId());
+      const emptyState = hooks.createEmptyState();
+      hooks.replaceState(emptyState, { source: 'account-switch-empty', revision: remoteRevision });
+      setLocalOwner(session.user.id);
+      const normalizedEmpty = cloudPayload(hooks.getState());
+
+      if (stateHash(normalizedEmpty) !== remoteHash) {
+        const updated = await updateRemoteState(normalizedEmpty, remoteRevision, { force: true });
+        if (updated) return { status: 'uploaded-empty', reason, accountSwitch: true };
+      }
+
+      markSynced(normalizedEmpty, remoteRevision);
+      return { status: 'synced', reason, accountSwitch: true };
+    }
+
+    // Salvaguarda adicional para metadata antigua de v4.4.
+    if (!localHasData && remoteHasData) {
+      await pullRemote(remote);
+      return { status: 'downloaded', reason, autoResolved: 'cloud-empty-local' };
+    }
 
     // Primer enlace de este dispositivo: la nube es la referencia principal.
     // Antes de sustituir datos locales distintos guardamos una copia de recuperación.
@@ -774,7 +876,14 @@ export async function initCloud(nextHooks = {}) {
     const user = await fetchCurrentUser();
     if (!user) return getCloudStatus();
     await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
-    await reconcile({ reason: 'startup', silent: true });
+    const startupPayload = cloudPayload(hooks.getState());
+    const switchedAccount = localBelongsToDifferentUser(session.user.id);
+    await reconcile({
+      reason: 'startup',
+      silent: true,
+      cloudFirst: !meaningfulState(startupPayload) || switchedAccount,
+      accountSwitch: switchedAccount
+    });
     return getCloudStatus();
   } catch (error) {
     const message = asErrorMessage(error);
@@ -814,7 +923,12 @@ export async function cloudSignUp({ displayName = '', email = '', password = '' 
       saveSession(data);
       await fetchCurrentUser();
       await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
-      await reconcile({ reason: 'signup' });
+      const switchedAccount = localBelongsToDifferentUser(session.user.id);
+      await reconcile({
+        reason: 'signup',
+        cloudFirst: switchedAccount,
+        accountSwitch: switchedAccount
+      });
       return { signedIn: true, needsConfirmation: false, user: session.user };
     }
     emit({ auth: 'guest', sync: 'guest', pendingEmail: cleanEmail });
@@ -837,7 +951,12 @@ export async function cloudSignIn({ email = '', password = '' }) {
     saveSession(data);
     await fetchCurrentUser();
     await Promise.allSettled([fetchEntitlement(), fetchProfile()]);
-    await reconcile({ reason: 'signin' });
+    const switchedAccount = localBelongsToDifferentUser(session.user.id);
+    await reconcile({
+      reason: 'signin',
+      cloudFirst: true,
+      accountSwitch: switchedAccount
+    });
     return session.user;
   } catch (error) {
     clearSession();
@@ -1048,6 +1167,7 @@ export async function cloudDeleteAccount({ confirmation = 'ELIMINAR' } = {}) {
   const result = await cloudInvokeUserFunction('account-delete', { confirmation });
   const userId = session?.user?.id;
   if (userId && meta.users) delete meta.users[userId];
+  if (userId && localOwnerId() === String(userId)) meta.localOwnerId = '';
   saveMeta();
   clearSession();
   return result || { deleted: true };
@@ -1056,6 +1176,7 @@ export async function cloudDeleteAccount({ confirmation = 'ELIMINAR' } = {}) {
 export function notifyCloudStateChanged(localState) {
   if (!session?.user?.id) return;
   const payload = cloudPayload(localState);
+  setLocalOwner(session.user.id);
   const record = userMeta(session.user.id);
   if (stateHash(payload) === record.lastSyncedHash) return;
   emit({ sync: navigator.onLine ? 'dirty' : 'offline' });

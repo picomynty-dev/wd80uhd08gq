@@ -1,10 +1,10 @@
-import { clone, isoDay, numberValue, uid } from './utils.js?v=44';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=44';
-import { normalizePlanner } from './calendar-planner.js?v=44';
+import { clone, isoDay, numberValue, uid } from './utils.js?v=45';
+import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=45';
+import { normalizePlanner } from './calendar-planner.js?v=45';
 
-export const STORAGE_KEY = 'myFitPlanStateV44';
-export const LEGACY_KEYS = ['myFitPlanStateV44', 'myFitPlanStateV43', 'myFitPlanStateV421', 'myFitPlanStateV42', 'myFitPlanStateV41', 'myFitPlanStateV402', 'myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '4.4 Beta Ready Sandbox';
+export const STORAGE_KEY = 'myFitPlanStateV45';
+export const LEGACY_KEYS = ['myFitPlanStateV45', 'myFitPlanStateV44', 'myFitPlanStateV43', 'myFitPlanStateV421', 'myFitPlanStateV42', 'myFitPlanStateV41', 'myFitPlanStateV402', 'myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
+export const APP_VERSION = '4.5 Stability & Landing Sandbox';
 
 export const defaultSettings = {
   accent: 'custom',
@@ -50,6 +50,57 @@ export const defaultState = {
 
 export function createEmptyState() {
   return clone(defaultState);
+}
+
+export function findLegacyStateCandidates(limit = 5) {
+  const candidates = [];
+  const seen = new Set();
+
+  for (const key of [...new Set(LEGACY_KEYS)]) {
+    if (key === STORAGE_KEY) continue;
+
+    let raw = null;
+    try { raw = localStorage.getItem(key); }
+    catch { continue; }
+    if (!raw) continue;
+
+    try {
+      const state = normalizeState(JSON.parse(raw));
+      const meaningful = Boolean(
+        state.profile
+        || state.onboardingCompleted
+        || state.plan
+        || state.history?.length
+        || state.routineFolders?.length
+        || state.bodyProgress?.length
+        || state.weightHistory?.length
+      );
+      if (!meaningful) continue;
+
+      const signature = JSON.stringify({
+        name: state.profile?.name || '',
+        updatedAt: state.updatedAt || '',
+        history: state.history?.length || 0,
+        routines: state.routineFolders?.reduce((sum, folder) => sum + (folder.routines?.length || 0), 0) || 0
+      });
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+
+      candidates.push({
+        key,
+        state,
+        profileName: state.profile?.name || 'Perfil sin nombre',
+        updatedAt: state.updatedAt || state.createdAt || null,
+        sessions: state.history?.length || 0,
+        routines: state.routineFolders?.reduce((sum, folder) => sum + (folder.routines?.length || 0), 0) || (state.plan ? 1 : 0),
+        bodyEntries: state.bodyProgress?.length || 0
+      });
+    } catch {}
+  }
+
+  return candidates
+    .sort((a, b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0))
+    .slice(0, Math.max(1, Number(limit || 5)));
 }
 
 export function loadState() {
