@@ -1,38 +1,22 @@
-# My Fit Plan v4.6 · Beta Pilot Sandbox
+# My Fit Plan v4.7 · External Beta Candidate
 
-## Objetivo
-v4.6 convierte la aplicación estable de v4.5 en una versión preparada para
-hacer un piloto controlado con testers.
+Esta versión continúa exactamente desde la v4.6 validada. Su objetivo es preparar la beta externa sin activar cobros reales ni abrir todavía la distribución a terceros.
 
-## Incluye
-- Beta Pilot configurable desde `beta-config.json`.
-- Welcome del tester una sola vez por cuenta.
-- Guía del tester.
-- Checklist de 4 pasos.
-- Feedback rápido flotante.
-- Progreso del piloto en Inicio y Perfil > Ajustes.
-- Control remoto de apertura, mantenimiento, versión mínima y feedback.
-- Bloqueo explícito de distribución externa mientras falten datos legales.
+## Qué cambia
+- Responsable: Raúl Vera.
+- Privacidad/contacto: pacopacoe826@gmail.com.
+- Nuevo consentimiento separado para datos de progreso físico.
+- Avisos legales ampliados para beta externa.
+- Control remoto de cohorte sigue activo.
 
-## No cambia
-- Entrenamiento directo.
-- My Fit Plan adaptativo.
-- Entrenamiento personalizado.
-- Progresión y deload.
-- Calendario inteligente.
-- Premium / Founder.
-- Paddle Sandbox.
-- Webhooks.
-- Supabase SQL.
+## Qué NO cambia
+- Motores de entrenamiento.
+- Progresión, calendario y biblioteca.
+- Cloud ya validado.
+- Paddle sigue en Sandbox.
+- Edge Function de feedback.
 
-## Servidor
-No hay que desplegar nada nuevo en Supabase.
-El feedback utiliza la infraestructura `beta-feedback` de v4.4 que ya fue
-validada en real.
+## Bloqueo deliberado
+`externalDistributionAllowed` sigue en `false`.
 
-## Distribución
-`beta-config.json` contiene:
-`externalDistributionAllowed: false`
-
-No cambiarlo a `true` hasta completar responsable y correo de contacto en
-`js/legal.js` y validar la versión publicada.
+Falta decidir una dirección postal de contacto adecuada antes de considerar la distribución externa legalmente cerrada. No se ha inventado ninguna dirección ni código postal.

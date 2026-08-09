@@ -1,0 +1,21 @@
+MY FIT PLAN v4.7 — CONTROL BETA EXTERNA CANDIDATA
+
+Archivo remoto: beta-config.json
+
+pilotOpen
+- true: activa la experiencia de prueba controlada.
+
+feedbackEnabled
+- true: permite feedback.
+
+maintenance
+- true: muestra mantenimiento.
+
+minimumVersion
+- Debe ser 4.7 para esta candidata.
+
+externalDistributionAllowed
+- DEBE SEGUIR EN false durante la validación.
+- Solo pasar a true después de cerrar los datos legales pendientes y validar v4.7 publicada.
+
+No contiene contraseñas, API keys ni Secrets.

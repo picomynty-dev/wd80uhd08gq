@@ -1,0 +1,22 @@
+MY FIT PLAN v4.7 — PRUEBA DESPUÉS DE SUBIR
+
+NO TOQUES SUPABASE NI PADDLE.
+NO CAMBIES externalDistributionAllowed A true TODAVÍA.
+
+1. Sube los archivos de 1_SUBIR_EN_LA_RAIZ a la raíz de GitHub.
+2. Sube los archivos de 2_SUBIR_DENTRO_DE_JS dentro de /js y sobrescribe.
+3. Abre tu enlace de GitHub Pages añadiendo ?v=47.
+
+COMPRUEBA:
+- Arriba aparece v4.7.
+- Tu cuenta y progreso anteriores siguen cargando.
+- Perfil > Ajustes muestra el Centro del tester.
+- Debe indicar piloto externo bloqueado SOLO por la dirección postal de contacto.
+- Privacidad muestra Raúl Vera y pacopacoe826@gmail.com.
+- Al hacer una configuración nueva aparecen dos checks: mayoría de edad y consentimiento de datos de progreso físico.
+- Sin el segundo check no deja continuar.
+- Entrenamiento, series, historial, calendario, fotos y Cloud siguen funcionando.
+- Enviar feedback sigue guardándolo como antes.
+- Paddle continúa en Sandbox.
+
+Si todo esto pasa, v4.7 queda validada técnicamente.

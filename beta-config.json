@@ -1,14 +1,14 @@
 {
   "app": "My Fit Plan",
-  "channel": "beta-pilot",
+  "channel": "external-beta-candidate",
   "pilotOpen": true,
-  "cohort": "Pilot 01",
-  "title": "Beta Pilot · Primera cohorte",
-  "message": "Usa My Fit Plan como lo harías normalmente, completa al menos un entrenamiento y cuéntanos qué parte te resultó más útil o confusa.",
+  "cohort": "External Beta Candidate 01",
+  "title": "Beta externa · Candidata v4.7",
+  "message": "Prueba la candidata externa como un usuario nuevo: crea o conecta tu cuenta, completa la configuración, realiza un entrenamiento y envía feedback desde la aplicación.",
   "feedbackEnabled": true,
   "maintenance": false,
   "maintenanceMessage": "",
-  "minimumVersion": "4.6",
+  "minimumVersion": "4.7",
   "externalDistributionAllowed": false,
-  "updatedAt": "2026-08-09T13:54:00+02:00"
+  "updatedAt": "2026-08-09T14:23:00+02:00"
 }

@@ -1,0 +1,15 @@
+MY FIT PLAN v4.7 — ESTADO LEGAL PARA BETA EXTERNA
+
+YA COMPLETADO EN js/legal.js:
+- Responsable: Raúl Vera
+- Correo de privacidad/contacto: pacopacoe826@gmail.com
+- Aviso de privacidad ampliado
+- Consentimiento separado de datos de progreso físico
+
+SIGUE PENDIENTE:
+- Dirección postal de contacto del responsable.
+
+Se ha respetado la preferencia de no inventar ni forzar un código postal.
+La app mantiene: "externalDistributionAllowed": false
+
+No compartir públicamente esta candidata hasta validar la versión publicada y cerrar el dato de contacto postal.

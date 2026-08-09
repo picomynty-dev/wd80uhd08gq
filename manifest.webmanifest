@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.6 Beta Pilot: guía de tester, progreso de prueba, feedback rápido y control remoto del piloto.",
+  "description": "My Fit Plan 4.7 External Beta Candidate: identidad legal, consentimiento de progreso físico y preparación controlada para testers externos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

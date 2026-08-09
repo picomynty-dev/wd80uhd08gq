@@ -1,8 +1,8 @@
 {
   "app": "My Fit Plan",
-  "version": "4.6",
-  "label": "Beta Pilot Sandbox",
-  "channel": "beta-pilot",
-  "releasedAt": "2026-08-09T13:54:00+02:00",
-  "minimumSupported": "4.6"
+  "version": "4.7",
+  "label": "External Beta Candidate",
+  "channel": "external-beta-candidate",
+  "releasedAt": "2026-08-09T14:23:00+02:00",
+  "minimumSupported": "4.7"
 }

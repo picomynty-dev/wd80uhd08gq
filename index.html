@@ -44,7 +44,7 @@
       sync();
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=46">
+  <link rel="stylesheet" href="./styles.css?v=47">
   <title>My Fit Plan</title>
 </head>
 <body>
@@ -64,7 +64,7 @@
       </nav>
       <div class="rail-footer">
         <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Centro de control</strong><small id="railHealthText">Sistema operativo</small></div></button>
-        <div class="rail-version"><span class="status-dot"></span><span>v4.6 · Beta Pilot</span></div>
+        <div class="rail-version"><span class="status-dot"></span><span>v4.7 · External Beta</span></div>
       </div>
     </aside>
 
@@ -81,7 +81,7 @@
         </div>
         <div class="topbar-actions">
           <span id="networkStatus" class="network-status is-online"><span class="network-dot"></span><span class="network-label">Online</span></span>
-          <span class="version-badge" aria-label="Versión 4.6">v4.6</span>
+          <span class="version-badge" aria-label="Versión 4.7">v4.7</span>
           <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
           <button id="hudControlButton" class="hud-control-button" type="button" data-action="hud-control" aria-label="Abrir centro de control"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></button>
           <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
@@ -110,7 +110,7 @@
       if (window.location.protocol === 'file:') {
         const app = document.querySelector('#app');
         document.querySelectorAll('.bottom-nav,.desktop-rail').forEach((node) => node.hidden = true);
-        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 4.6</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
+        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 4.7</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
       }
     });
     window.setTimeout(() => {
@@ -149,6 +149,6 @@
       }).catch(() => {});
     })();
   </script>
-  <script type="module" src="./js/app.js?v=46"></script>
+  <script type="module" src="./js/app.js?v=47"></script>
 </body>
 </html>
