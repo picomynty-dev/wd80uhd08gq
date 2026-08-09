@@ -1,5 +1,5 @@
-import { isoDay, numberValue, startOfWeek } from './utils.js?v=45';
-import { getExercise } from './exercises.js?v=45';
+import { isoDay, numberValue, startOfWeek } from './utils.js?v=46';
+import { getExercise } from './exercises.js?v=46';
 
 export function completedSets(exercise) {
   return (exercise?.sets || []).filter((set) => set.completed);

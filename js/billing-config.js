@@ -8,7 +8,7 @@ export const BILLING_CONFIG = Object.freeze({
     annual: 'pri_01kzgz6wr16d5bg6zz2ndc3txz'
   }),
   productId: 'pro_01kzgz375ynjkcf33d50v5xe2r',
-  appVersion: '4.5 Stability & Landing Sandbox'
+  appVersion: '4.6 Beta Pilot Sandbox'
 });
 
 export function billingConfigured() {

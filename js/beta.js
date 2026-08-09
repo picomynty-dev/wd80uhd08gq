@@ -1,7 +1,7 @@
 'use strict';
 
-import { APP_VERSION } from './storage.js?v=45';
-import { cloudAccountSummary, cloudInvokeUserFunction } from './cloud.js?v=45';
+import { APP_VERSION } from './storage.js?v=46';
+import { cloudAccountSummary, cloudInvokeUserFunction } from './cloud.js?v=46';
 
 function numericVersion(value) {
   const match = String(value || '').match(/(\d+)\.(\d+)(?:\.(\d+))?/);

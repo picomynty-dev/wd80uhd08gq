@@ -7,7 +7,7 @@ export const CLOUD_CONFIG = Object.freeze({
   entitlementTable: 'mfp_entitlements',
   photoBucket: 'mfp-progress-photos',
   schemaVersion: 410,
-  appVersion: '4.5 Stability & Landing Sandbox'
+  appVersion: '4.6 Beta Pilot Sandbox'
 });
 
 export function cloudRedirectUrl() {

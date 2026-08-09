@@ -1,6 +1,6 @@
 'use strict';
 
-import { cloudInvokeUserFunction } from './cloud.js?v=45';
+import { cloudInvokeUserFunction } from './cloud.js?v=46';
 
 let cachedSummary = null;
 let summaryPromise = null;

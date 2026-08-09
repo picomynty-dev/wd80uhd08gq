@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=45';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=45';
-import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=45';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=46';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=46';
+import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=46';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=45';
+} from './stats.js?v=46';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=45';
+} from './coach.js?v=46';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=45';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=45';
+} from './adaptive.js?v=46';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=46';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=45';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=45';
+} from './calendar-planner.js?v=46';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=46';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=45';
+} from './progression-engine.js?v=46';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=45';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=45';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=45';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=45';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=45';
+} from './utils.js?v=46';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=46';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=46';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=46';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=46';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=45';
+} from './photo-progress.js?v=46';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,12 +103,23 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=45';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=45';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=45';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=45';
-import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=45';
-import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=45';
+} from './cloud.js?v=46';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=46';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=46';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=46';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=46';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=46';
+import {
+  betaPilotChecklist,
+  betaPilotNeedsUpdate,
+  betaPilotNeedsWelcome,
+  betaPilotUserState,
+  ensureBetaPilotUser,
+  fetchBetaPilotConfig,
+  markBetaPilotFeedbackSent,
+  markBetaPilotGuideOpened,
+  markBetaPilotWelcomeSeen
+} from './beta-pilot.js?v=46';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -160,6 +171,10 @@ let billingAccountError = '';
 let availableVersion = '';
 let lastVersionCheckAt = 0;
 let legacyRecoveryPromptedForUser = '';
+let betaPilotConfig = null;
+let betaPilotConfigStatus = 'idle';
+let betaPilotWelcomeOpen = false;
+let betaPilotCloudAuthenticated = false;
 
 
 init();
@@ -182,6 +197,7 @@ function init() {
   setBillingEventHandler(handleBillingEvent);
   queueMicrotask(bootCloudFoundation);
   queueMicrotask(() => checkForAppUpdate({ quiet: true }));
+  queueMicrotask(bootBetaPilot);
 }
 
 function bodyProgressPhotoIds(sourceState = state) {
@@ -230,9 +246,250 @@ async function bootCloudFoundation() {
     onRecovery: () => window.setTimeout(openCloudNewPasswordModal, 50)
   });
   cloudUiStatus = cloudAccountSummary();
+  betaPilotCloudAuthenticated = Boolean(cloudAccountSummary().signedIn);
   refreshCloudAccountDom();
-  await syncCloudPhotosForState({ quiet: true });
   if (cloudAccountSummary().signedIn) routeAfterCloudAuth({ reason: 'startup' });
+  activateBetaPilotIfReady();
+  await syncCloudPhotosForState({ quiet: true });
+  activateBetaPilotIfReady();
+}
+
+function activateBetaPilotIfReady() {
+  if (betaPilotConfigStatus !== 'ok' || !betaPilotConfig) return false;
+  if (!betaPilotCloudAuthenticated && !cloudAccountSummary().signedIn) {
+    updateBetaPilotUi();
+    return false;
+  }
+
+  betaPilotCloudAuthenticated = true;
+  updateBetaPilotUi();
+
+  if (
+    betaPilotConfig.pilotOpen
+    && currentView === 'home'
+    && state.profile
+    && state.onboardingCompleted
+    && !document.body.classList.contains('onboarding-mode')
+    && !document.querySelector('.beta-pilot-home-card')
+  ) {
+    renderHome();
+  }
+
+  if (betaPilotConfig.pilotOpen) {
+    window.setTimeout(() => maybeOpenBetaPilotWelcome(), 100);
+  }
+  return true;
+}
+
+async function bootBetaPilot() {
+  betaPilotConfigStatus = 'loading';
+  const result = await fetchBetaPilotConfig();
+  betaPilotConfigStatus = result.status;
+  if (result.config) betaPilotConfig = result.config;
+
+  if (betaPilotConfig?.maintenance) {
+    showPilotStatusBanner(
+      betaPilotConfig.maintenanceMessage || 'Beta Pilot está temporalmente en mantenimiento.',
+      'maintenance'
+    );
+  } else if (betaPilotNeedsUpdate(betaPilotConfig)) {
+    showPilotStatusBanner(
+      `Esta cohorte necesita My Fit Plan ${esc(betaPilotConfig.minimumVersion)} o superior.`,
+      'update'
+    );
+    showUpdateBanner(null, betaPilotConfig.minimumVersion);
+  } else {
+    hidePilotStatusBanner();
+  }
+
+  activateBetaPilotIfReady();
+}
+
+function pilotLegalReady() {
+  return legalLaunchStatus().ready && Boolean(betaPilotConfig?.externalDistributionAllowed);
+}
+
+function pilotProgress() {
+  return betaPilotChecklist(state);
+}
+
+function ensurePilotStatusBanner() {
+  let banner = document.querySelector('#betaPilotStatusBanner');
+  if (banner) return banner;
+  banner = document.createElement('button');
+  banner.id = 'betaPilotStatusBanner';
+  banner.type = 'button';
+  banner.className = 'beta-pilot-status-banner';
+  banner.hidden = true;
+  banner.dataset.action = 'beta-pilot-guide';
+  document.body.appendChild(banner);
+  return banner;
+}
+
+function showPilotStatusBanner(message, tone = 'info') {
+  const banner = ensurePilotStatusBanner();
+  banner.hidden = false;
+  banner.dataset.tone = tone;
+  banner.innerHTML = `<span><small>BETA PILOT</small><strong>${esc(message)}</strong></span><b>Ver</b>`;
+}
+
+function hidePilotStatusBanner() {
+  const banner = document.querySelector('#betaPilotStatusBanner');
+  if (banner) banner.hidden = true;
+}
+
+function ensureBetaQuickButton() {
+  let button = document.querySelector('#betaQuickFeedback');
+  if (button) return button;
+  button = document.createElement('button');
+  button.id = 'betaQuickFeedback';
+  button.type = 'button';
+  button.className = 'beta-quick-feedback';
+  button.dataset.action = 'beta-feedback-open';
+  button.innerHTML = `<span>BETA</span><strong>Feedback</strong>`;
+  button.setAttribute('aria-label', 'Enviar feedback de la beta');
+  document.body.appendChild(button);
+  return button;
+}
+
+function updateBetaPilotUi() {
+  const account = cloudAccountSummary();
+  const appReady = Boolean(
+    account.signedIn
+    && state.profile
+    && state.onboardingCompleted
+    && !document.body.classList.contains('onboarding-mode')
+  );
+  const quick = ensureBetaQuickButton();
+  const feedbackEnabled = betaPilotConfig?.feedbackEnabled !== false;
+  quick.hidden = !(appReady && feedbackEnabled && currentView !== 'workout');
+
+  document.body.classList.toggle('beta-pilot-open', Boolean(betaPilotConfig?.pilotOpen));
+  document.body.classList.toggle('beta-pilot-maintenance', Boolean(betaPilotConfig?.maintenance));
+}
+
+function betaPilotStepIcon(done) {
+  return done ? '✓' : '○';
+}
+
+function betaPilotProgressHtml({ compact = false } = {}) {
+  const progress = pilotProgress();
+  return `<div class="beta-pilot-progress ${compact ? 'is-compact' : ''}">
+    <div class="beta-pilot-progress-head">
+      <div><small>PROGRESO DEL PILOTO</small><strong>${progress.completed}/${progress.total} pasos</strong></div>
+      <span>${progress.percentage}%</span>
+    </div>
+    <div class="beta-pilot-progress-track"><i style="width:${progress.percentage}%"></i></div>
+    <div class="beta-pilot-steps">
+      ${progress.steps.map((step) => `<div class="${step.done ? 'is-done' : ''}">
+        <b>${betaPilotStepIcon(step.done)}</b>
+        <span><strong>${esc(step.label)}</strong>${compact ? '' : `<small>${esc(step.detail)}</small>`}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function betaPilotHomeCardHtml() {
+  if (!betaPilotConfig?.pilotOpen || !cloudAccountSummary().signedIn) return '';
+  const progress = pilotProgress();
+  const legalReady = pilotLegalReady();
+
+  return `<section class="beta-pilot-home-card">
+    <div class="beta-pilot-home-head">
+      <div>
+        <p class="eyebrow">${esc(betaPilotConfig.cohort || 'Beta Pilot')}</p>
+        <h2>${progress.completed === progress.total ? 'Prueba completada' : 'Tu prueba Beta está en marcha'}</h2>
+        <p>${esc(betaPilotConfig.message || 'Usa My Fit Plan y cuéntanos cómo podemos mejorarlo.')}</p>
+      </div>
+      <div class="beta-pilot-score"><strong>${progress.percentage}%</strong><small>pilot</small></div>
+    </div>
+    ${betaPilotProgressHtml({ compact: true })}
+    <div class="beta-pilot-home-actions">
+      <button class="button button-primary" type="button" data-action="beta-pilot-guide">Ver guía de tester</button>
+      ${betaPilotConfig.feedbackEnabled !== false ? '<button class="button button-secondary" type="button" data-action="beta-feedback-open">Enviar feedback</button>' : ''}
+    </div>
+    ${legalReady ? '' : '<p class="beta-pilot-internal-note">Piloto interno listo. La distribución externa permanece bloqueada hasta completar la configuración legal.</p>'}
+  </section>`;
+}
+
+function openBetaPilotGuide() {
+  if (betaPilotWelcomeOpen) {
+    markBetaPilotWelcomeSeen();
+    betaPilotWelcomeOpen = false;
+  }
+  markBetaPilotGuideOpened();
+  const progress = pilotProgress();
+  const legal = legalLaunchStatus();
+  const externalReady = pilotLegalReady();
+
+  const wrapper = openModal(`<div class="modal-header">
+      <div>
+        <p class="eyebrow">${esc(betaPilotConfig?.cohort || 'BETA PILOT')}</p>
+        <h2>Guía del tester</h2>
+        <p class="muted small">${esc(betaPilotConfig?.message || 'Entrena con normalidad y cuéntanos qué mejorarías.')}</p>
+      </div>
+      <button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button>
+    </div>
+    ${betaPilotProgressHtml()}
+    <section class="beta-pilot-guide-grid">
+      <article><span>01</span><div><strong>Usa la app de verdad</strong><p>No busques fallos a propósito al principio. Intenta completar tu entrenamiento como lo harías normalmente.</p></div></article>
+      <article><span>02</span><div><strong>Anota lo que te frene</strong><p>Si no entiendes un botón, una recomendación o un dato, eso nos interesa tanto como un error técnico.</p></div></article>
+      <article><span>03</span><div><strong>Envía feedback desde My Fit Plan</strong><p>El diagnóstico opcional no incluye fotografías ni datos de tarjeta.</p></div></article>
+    </section>
+    <article class="legal-readiness ${externalReady ? 'is-ready' : 'is-pending'}">
+      <strong>${externalReady ? 'Distribución externa preparada' : 'Solo pruebas internas por ahora'}</strong>
+      <span>${externalReady ? 'La configuración del piloto permite compartir esta cohorte.' : `Pendiente: ${esc(legal.blockers.join(' y ') || 'habilitación de distribución externa')}.`}</span>
+    </article>
+    <div class="modal-actions">
+      ${betaPilotConfig?.feedbackEnabled !== false ? '<button class="button button-secondary" type="button" data-action="beta-feedback-open">Enviar feedback</button>' : ''}
+      <button class="button button-primary" type="button" data-close-modal>Seguir probando</button>
+    </div>`, { wide: true });
+
+  decorateInteractiveElements(wrapper);
+}
+
+function maybeOpenBetaPilotWelcome() {
+  if (betaPilotWelcomeOpen) return false;
+  if (!betaPilotNeedsWelcome(betaPilotConfig)) return false;
+  if (!state.profile || !state.onboardingCompleted || currentView === 'workout') return false;
+  if (document.querySelector('.modal-backdrop')) return false;
+
+  betaPilotWelcomeOpen = true;
+  ensureBetaPilotUser();
+
+  const wrapper = openModal(`<div class="modal-header">
+      <div>
+        <p class="eyebrow">${esc(betaPilotConfig?.cohort || 'BETA PILOT')}</p>
+        <h2>Bienvenido al piloto de My Fit Plan</h2>
+        <p class="muted small">No necesitas aprender un proceso especial: queremos comprobar si la app se entiende usándola con normalidad.</p>
+      </div>
+      <button class="modal-close" type="button" data-action="beta-pilot-welcome-dismiss" aria-label="Cerrar">×</button>
+    </div>
+    <section class="beta-pilot-welcome-hero">
+      <span>BETA</span>
+      <div><strong>${esc(betaPilotConfig?.title || 'Primera cohorte')}</strong><p>${esc(betaPilotConfig?.message || '')}</p></div>
+    </section>
+    ${betaPilotProgressHtml()}
+    <div class="modal-actions">
+      <button class="button button-secondary" type="button" data-action="beta-pilot-guide">Ver cómo participar</button>
+      <button class="button button-primary" type="button" data-action="beta-pilot-welcome-dismiss">Empezar prueba</button>
+    </div>`, { wide: true });
+
+  wrapper.addEventListener('click', (event) => {
+    if (event.target === wrapper) {
+      markBetaPilotWelcomeSeen();
+      betaPilotWelcomeOpen = false;
+    }
+  });
+  decorateInteractiveElements(wrapper);
+  return true;
+}
+
+function dismissBetaPilotWelcome() {
+  markBetaPilotWelcomeSeen();
+  betaPilotWelcomeOpen = false;
+  closeModal();
+  updateBetaPilotUi();
 }
 
 function legacyRecoverySummary(candidate) {
@@ -359,7 +616,10 @@ function replaceStateFromCloud(payload) {
 function handleCloudStatusChange(nextStatus) {
   cloudUiStatus = { ...cloudAccountSummary(), ...nextStatus };
   document.body.dataset.cloudSync = nextStatus.sync || 'guest';
+  if (nextStatus.auth === 'authenticated') betaPilotCloudAuthenticated = true;
+  if (nextStatus.auth === 'guest') betaPilotCloudAuthenticated = false;
   refreshCloudAccountDom();
+  activateBetaPilotIfReady();
   if (nextStatus.recovery && !recoveryModalOpened) window.setTimeout(openCloudNewPasswordModal, 50);
 }
 
@@ -494,6 +754,7 @@ function setView(view) {
     renderRecoveryScreen(view, error);
   }
   updateHud();
+  updateBetaPilotUi();
   app.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: state.settings.reduceMotion ? 'auto' : 'smooth' });
 }
@@ -908,6 +1169,8 @@ function renderHome() {
           <div><strong>${percentage}%</strong><small>semana</small></div>
         </div>
       </section>
+
+      ${betaPilotHomeCardHtml()}
 
       ${hasPremium ? `<section class="coach-command-card coach-tone-${coach.tone}">
         <div class="coach-command-header">
@@ -3741,16 +4004,25 @@ function profileSettingsHtml() {
     </form>
     <section class="section card beta-ready-card">
       <div class="beta-ready-head">
-        <div><p class="eyebrow">BETA · My Fit Plan v4.4</p><h2>Ayuda, privacidad y feedback</h2><p class="muted small">Comprueba tu versión, envía incidencias y consulta los documentos preparados para la beta.</p></div>
-        <span class="beta-version-pill">v4.4</span>
+        <div><p class="eyebrow">BETA PILOT · My Fit Plan v4.6</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
+        <span class="beta-version-pill">v4.6</span>
       </div>
+      ${betaPilotConfig?.pilotOpen ? betaPilotProgressHtml({ compact: true }) : '<div class="notice"><strong>Piloto no iniciado.</strong> La configuración remota todavía no ha abierto esta cohorte.</div>'}
       <div class="beta-action-grid">
-        <button class="button button-primary" type="button" data-action="beta-feedback-open">Enviar feedback</button>
+        <button class="button button-primary" type="button" data-action="beta-pilot-guide">Guía del tester</button>
+        <button class="button button-secondary" type="button" data-action="beta-feedback-open"${betaPilotConfig?.feedbackEnabled === false ? ' disabled' : ''}>Enviar feedback</button>
         <button class="button button-secondary" type="button" data-action="beta-check-update">Buscar actualización</button>
         <button class="button button-secondary" type="button" data-action="legal-privacy">Privacidad</button>
         <button class="button button-secondary" type="button" data-action="legal-terms">Términos Beta</button>
       </div>
-      ${(() => { const legal = legalLaunchStatus(); return `<div class="legal-readiness ${legal.ready ? 'is-ready' : 'is-pending'}"><strong>${legal.ready ? 'Documentación lista' : 'Pendiente antes de beta pública'}</strong><span>${legal.ready ? 'Responsable y contacto configurados.' : `Falta completar: ${esc(legal.blockers.join(' y '))}.`}</span></div>`; })()}
+      ${(() => {
+        const legal = legalLaunchStatus();
+        const externalReady = legal.ready && Boolean(betaPilotConfig?.externalDistributionAllowed);
+        return `<div class="legal-readiness ${externalReady ? 'is-ready' : 'is-pending'}">
+          <strong>${externalReady ? 'Piloto externo preparado' : 'Piloto externo bloqueado'}</strong>
+          <span>${externalReady ? 'Documentación y configuración de distribución completadas.' : `Pendiente antes de compartir: ${esc(legal.blockers.join(' y ') || 'activar distribución externa')}.`}</span>
+        </div>`;
+      })()}
     </section>
     <section class="section card"><p class="eyebrow">Copia de seguridad</p><h2>Exportar o importar datos</h2><p class="muted small">Crea un archivo con tu plan, entrenamientos, ejercicios personalizados, ajustes y medidas.</p><div class="grid grid-2"><button class="button button-secondary" type="button" data-action="export-backup">Exportar copia</button><label class="button button-secondary file-button">Importar copia<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div></section>
     <section class="section card danger-zone"><p class="eyebrow">Zona de seguridad</p><h2>Borrar todos los datos</h2><p class="muted small">Esta acción elimina el perfil y el progreso guardado en este dispositivo.</p><button class="button button-danger" type="button" data-action="reset-data">Borrar datos</button></section>
@@ -4002,7 +4274,11 @@ function openBetaFeedbackModal() {
         message: String(data.get('message') || ''),
         diagnostics
       });
+      markBetaPilotFeedbackSent();
       closeModal();
+      if (currentView === 'home') renderHome();
+      else if (currentView === 'profile') refreshCloudAccountDom();
+      updateBetaPilotUi();
       showToast(`Feedback enviado · ${feedbackKindLabel(String(data.get('kind') || 'experience'))}. Gracias.`, 'success');
     } catch (error) {
       reportRuntimeIssue(error, 'Beta feedback');
@@ -4229,6 +4505,8 @@ async function submitCloudSignin(form) {
       cloudAccountSummary().conflict ? 'warning' : 'success'
     );
     refreshCloudAccountDom();
+    updateBetaPilotUi();
+    window.setTimeout(() => maybeOpenBetaPilotWelcome(), 120);
   } catch (error) {
     showToast(cloudAuthError(error), 'danger');
     submit.disabled = false; submit.textContent = 'Entrar';
@@ -4565,6 +4843,8 @@ async function handleAppClick(event) {
     'cloud-reconnect': () => reconnectCloudAccount({ quiet: false }),
     'beta-feedback-open': openBetaFeedbackModal,
     'beta-check-update': () => checkForAppUpdate({ quiet: false }),
+    'beta-pilot-guide': openBetaPilotGuide,
+    'beta-pilot-welcome-dismiss': dismissBetaPilotWelcome,
     'legal-privacy': () => openLegalDocument('privacy'),
     'legal-terms': () => openLegalDocument('terms'),
     'legacy-recovery-restore': restoreLegacyStateCandidate,
@@ -5954,6 +6234,8 @@ function updateHud() {
   if (railHealth) railHealth.textContent = health.errors ? `${health.errors} incidencia${health.errors === 1 ? '' : 's'}` : health.warnings ? `${health.warnings} aviso${health.warnings === 1 ? '' : 's'}` : 'Sistema operativo';
   document.body.classList.toggle('has-runtime-issue', Boolean(runtimeIssues.length));
 
+  updateBetaPilotUi();
+
   if (activeSessionBar) {
     const workout = state.activeWorkout;
     const appReady = Boolean(
@@ -6130,7 +6412,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=45', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=46', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
