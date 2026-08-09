@@ -1,0 +1,63 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.6 Beta Pilot Sandbox",
+  "generatedAt": "2026-08-09T12:04:24",
+  "static": {
+    "javascriptModules": 30,
+    "edgeFunctions": 4,
+    "uiActions": 124,
+    "uiActionsHandled": 124,
+    "premiumActions": 10,
+    "clientSecrets": 0,
+    "serviceWorkerResources": 40
+  },
+  "coreWorkoutLogic": {
+    "unchanged": true,
+    "modules": {
+      "adaptive.js": true,
+      "calendar-planner.js": true,
+      "coach.js": true,
+      "exercise-intelligence.js": true,
+      "exercises.js": true,
+      "plans.js": true,
+      "premium.js": true,
+      "progression-engine.js": true,
+      "search.js": true,
+      "session-selector.js": true,
+      "stats.js": true,
+      "visuals.js": true
+    }
+  },
+  "betaPilot": {
+    "remoteConfig": true,
+    "oneTimeWelcomePerAccount": true,
+    "testerGuide": true,
+    "fourStepChecklist": true,
+    "quickFeedback": true,
+    "feedbackUsesExistingBackend": true,
+    "minimumVersionControl": true,
+    "maintenanceControl": true,
+    "externalDistributionAllowed": false
+  },
+  "tests": {
+    "pilotWelcomeOnce": "passed",
+    "remoteConfigLoaded": "passed",
+    "checklist3of4BeforeFeedback": "passed",
+    "feedbackSubmission": "passed",
+    "checklist4of4AfterFeedback": "passed",
+    "mobile390NoOverflow": "passed",
+    "desktopPilotCard": "passed",
+    "quickFeedbackHiddenDuringWorkout": "passed",
+    "realActiveWorkoutBannerPreserved": "passed",
+    "coreWorkoutModules12of12Unchanged": "passed"
+  },
+  "serverChangesRequired": false,
+  "sqlRequired": false,
+  "paddleChangesRequired": false,
+  "launchBlockers": [
+    "Completar responsable del tratamiento",
+    "Completar correo real de privacidad/contacto",
+    "Después de completar legal, cambiar externalDistributionAllowed a true en beta-config.json",
+    "Validar v4.6 en GitHub Pages antes de invitar testers externos"
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.5: estabilidad de cuenta, login cloud-first, landing pulida y recuperación segura de sesiones.",
+  "description": "My Fit Plan 4.6 Beta Pilot: guía de tester, progreso de prueba, feedback rápido y control remoto del piloto.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

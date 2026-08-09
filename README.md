@@ -1,26 +1,38 @@
-# My Fit Plan v4.5 · Stability & Landing Sandbox
+# My Fit Plan v4.6 · Beta Pilot Sandbox
 
 ## Objetivo
-v4.5 corrige el flujo Welcome → Auth → Cloud → Home y pule la pantalla de
-bienvenida sin modificar la lógica estable de entrenamiento.
+v4.6 convierte la aplicación estable de v4.5 en una versión preparada para
+hacer un piloto controlado con testers.
 
-## Cambios
-- Login correcto abre Inicio cuando la cuenta tiene un perfil Cloud.
-- Cloud-first durante login para proteger la nube frente a estados locales vacíos.
-- Aislamiento del estado local por usuario.
-- Cambio de cuenta sin copiar automáticamente los datos del usuario anterior.
-- Sesión persistida recupera Cloud aunque el estado local esté vacío.
-- Banner "Sesión en curso" oculto en Welcome/Onboarding.
-- Banner real de entrenamiento sigue funcionando dentro de la app.
-- Landing centrada y responsive en escritorio/móvil.
-- Recuperación manual de copias locales antiguas si cuenta + nube quedan vacías.
-- Mantiene Premium, Paddle Sandbox, feedback, borrado de cuenta y Beta Ready v4.4.
+## Incluye
+- Beta Pilot configurable desde `beta-config.json`.
+- Welcome del tester una sola vez por cuenta.
+- Guía del tester.
+- Checklist de 4 pasos.
+- Feedback rápido flotante.
+- Progreso del piloto en Inicio y Perfil > Ajustes.
+- Control remoto de apertura, mantenimiento, versión mínima y feedback.
+- Bloqueo explícito de distribución externa mientras falten datos legales.
+
+## No cambia
+- Entrenamiento directo.
+- My Fit Plan adaptativo.
+- Entrenamiento personalizado.
+- Progresión y deload.
+- Calendario inteligente.
+- Premium / Founder.
+- Paddle Sandbox.
+- Webhooks.
+- Supabase SQL.
 
 ## Servidor
-No hay SQL nuevo ni Edge Functions nuevas.
-No cambies Paddle, webhook, Secrets ni Supabase para instalar v4.5.
+No hay que desplegar nada nuevo en Supabase.
+El feedback utiliza la infraestructura `beta-feedback` de v4.4 que ya fue
+validada en real.
 
-## Recuperación
-Si al iniciar sesión la nube está vacía y existe una copia local antigua,
-My Fit Plan mostrará una ventana con nombre/fecha/sesiones/rutinas.
-La copia solo se restaura después de confirmación explícita.
+## Distribución
+`beta-config.json` contiene:
+`externalDistributionAllowed: false`
+
+No cambiarlo a `true` hasta completar responsable y correo de contacto en
+`js/legal.js` y validar la versión publicada.

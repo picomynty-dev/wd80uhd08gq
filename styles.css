@@ -8720,3 +8720,247 @@ body.onboarding-mode .onboarding-legal {
   .legacy-recovery-card { grid-template-columns:1fr 1fr; }
   .legacy-recovery-card > div:first-child { grid-column:1 / -1; }
 }
+
+
+/* =========================================================
+   My Fit Plan v4.6 · Beta Pilot
+   ========================================================= */
+.beta-pilot-home-card {
+  display:grid;
+  gap:16px;
+  padding:20px;
+  border:1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 35%),
+    var(--surface);
+  overflow:hidden;
+}
+.beta-pilot-home-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+}
+.beta-pilot-home-head h2 { margin:4px 0 7px; }
+.beta-pilot-home-head p:not(.eyebrow) {
+  margin:0;
+  color:var(--muted);
+  max-width:720px;
+  font-size:.76rem;
+  line-height:1.5;
+}
+.beta-pilot-score {
+  flex:0 0 auto;
+  width:70px;
+  aspect-ratio:1;
+  border:1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  border-radius:22px;
+  display:grid;
+  place-content:center;
+  text-align:center;
+  background:color-mix(in srgb, var(--accent) 7%, var(--surface-soft));
+}
+.beta-pilot-score strong { font-size:1.05rem; }
+.beta-pilot-score small { color:var(--muted); text-transform:uppercase; font-size:.52rem; letter-spacing:.08em; }
+
+.beta-pilot-progress { display:grid; gap:10px; }
+.beta-pilot-progress-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:12px;
+}
+.beta-pilot-progress-head > div { display:grid; gap:2px; }
+.beta-pilot-progress-head small {
+  color:var(--muted);
+  font-size:.54rem;
+  letter-spacing:.08em;
+}
+.beta-pilot-progress-head strong { font-size:.78rem; }
+.beta-pilot-progress-head > span {
+  color:var(--accent);
+  font-weight:900;
+  font-size:.76rem;
+}
+.beta-pilot-progress-track {
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:var(--surface-soft);
+  border:1px solid var(--border);
+}
+.beta-pilot-progress-track i {
+  display:block;
+  height:100%;
+  min-width:2px;
+  border-radius:inherit;
+  background:var(--accent);
+}
+.beta-pilot-steps {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.beta-pilot-steps > div {
+  display:flex;
+  gap:9px;
+  min-width:0;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface-soft);
+}
+.beta-pilot-steps b {
+  flex:0 0 auto;
+  color:var(--muted);
+}
+.beta-pilot-steps .is-done b,
+.beta-pilot-steps .is-done strong { color:var(--success); }
+.beta-pilot-steps span { display:grid; gap:2px; min-width:0; }
+.beta-pilot-steps strong { font-size:.66rem; }
+.beta-pilot-steps small {
+  color:var(--muted);
+  font-size:.56rem;
+  line-height:1.35;
+}
+.beta-pilot-progress.is-compact .beta-pilot-steps small { display:none; }
+
+.beta-pilot-home-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.beta-pilot-internal-note {
+  margin:0;
+  padding-top:11px;
+  border-top:1px solid var(--border);
+  color:#f59e0b;
+  font-size:.62rem;
+  line-height:1.45;
+}
+
+.beta-pilot-guide-grid {
+  display:grid;
+  gap:9px;
+  margin:14px 0;
+}
+.beta-pilot-guide-grid article {
+  display:flex;
+  gap:13px;
+  padding:13px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:var(--surface-soft);
+}
+.beta-pilot-guide-grid article > span {
+  flex:0 0 auto;
+  color:var(--accent);
+  font-size:.68rem;
+  font-weight:900;
+}
+.beta-pilot-guide-grid strong { display:block; margin-bottom:3px; }
+.beta-pilot-guide-grid p {
+  margin:0;
+  color:var(--muted);
+  font-size:.68rem;
+  line-height:1.45;
+}
+
+.beta-pilot-welcome-hero {
+  display:flex;
+  gap:14px;
+  align-items:center;
+  padding:16px;
+  margin-bottom:14px;
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius:18px;
+  background:color-mix(in srgb, var(--accent) 7%, var(--surface-soft));
+}
+.beta-pilot-welcome-hero > span {
+  display:grid;
+  place-content:center;
+  width:58px;
+  aspect-ratio:1;
+  border-radius:17px;
+  background:var(--accent);
+  color:var(--accent-contrast);
+  font-weight:950;
+  font-size:.7rem;
+  letter-spacing:.08em;
+}
+.beta-pilot-welcome-hero strong { display:block; margin-bottom:4px; }
+.beta-pilot-welcome-hero p { margin:0; color:var(--muted); font-size:.68rem; line-height:1.45; }
+
+.beta-quick-feedback {
+  position:fixed;
+  right:max(18px, env(safe-area-inset-right));
+  bottom:max(18px, env(safe-area-inset-bottom));
+  z-index:70;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 12px 9px 9px;
+  border:1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  border-radius:999px;
+  background:color-mix(in srgb, var(--surface) 92%, transparent);
+  color:var(--text);
+  box-shadow:0 14px 38px rgba(0,0,0,.22);
+  backdrop-filter:blur(14px);
+}
+.beta-quick-feedback[hidden] { display:none !important; }
+.beta-quick-feedback span {
+  display:grid;
+  place-content:center;
+  min-width:38px;
+  height:28px;
+  padding:0 7px;
+  border-radius:999px;
+  background:var(--accent);
+  color:var(--accent-contrast);
+  font-size:.52rem;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+.beta-quick-feedback strong { font-size:.65rem; }
+
+.beta-pilot-status-banner {
+  position:fixed;
+  z-index:96;
+  left:50%;
+  top:max(12px, env(safe-area-inset-top));
+  transform:translateX(-50%);
+  width:min(calc(100vw - 28px), 680px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 13px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 16px 42px rgba(0,0,0,.25);
+}
+.beta-pilot-status-banner[hidden] { display:none !important; }
+.beta-pilot-status-banner span { display:grid; gap:2px; text-align:left; }
+.beta-pilot-status-banner small {
+  color:var(--muted);
+  font-size:.5rem;
+  letter-spacing:.08em;
+}
+.beta-pilot-status-banner strong { font-size:.66rem; }
+.beta-pilot-status-banner b { color:var(--accent); font-size:.62rem; }
+.beta-pilot-status-banner[data-tone="maintenance"] { border-color:color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.beta-pilot-status-banner[data-tone="update"] { border-color:rgba(245,158,11,.4); }
+
+@media (max-width: 720px) {
+  .beta-pilot-home-head { align-items:center; }
+  .beta-pilot-score { width:60px; border-radius:18px; }
+  .beta-pilot-steps { grid-template-columns:1fr 1fr; }
+  .beta-pilot-home-actions .button { flex:1 1 100%; }
+  .beta-quick-feedback {
+    right:12px;
+    bottom:calc(76px + env(safe-area-inset-bottom));
+  }
+}

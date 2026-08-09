@@ -1,0 +1,41 @@
+MY FIT PLAN v4.6 — CONTROL BETA PILOT
+
+Archivo:
+beta-config.json
+
+Este archivo se sube a la raíz de GitHub y My Fit Plan lo consulta por red.
+
+CAMPOS:
+
+pilotOpen
+- true: muestra Beta Pilot.
+- false: desactiva visualmente el piloto.
+
+cohort
+- Nombre de la cohorte, por ejemplo: Pilot 01.
+
+title / message
+- Texto que verán los testers.
+
+feedbackEnabled
+- true: permite usar el botón de feedback.
+- false: oculta/desactiva el feedback del piloto.
+
+maintenance
+- true: muestra aviso de mantenimiento a los testers.
+
+maintenanceMessage
+- Texto del aviso.
+
+minimumVersion
+- Si se pone una versión superior a la instalada, My Fit Plan muestra
+  aviso de actualización.
+
+externalDistributionAllowed
+- AHORA DEBE SEGUIR EN false.
+- Solo cambiar a true cuando:
+  1. responsable del tratamiento esté completado;
+  2. correo real de privacidad/contacto esté completado;
+  3. la versión publicada haya sido validada.
+
+No contiene contraseñas, API keys ni Secrets.

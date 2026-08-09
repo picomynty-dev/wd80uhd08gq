@@ -1,0 +1,13 @@
+MY FIT PLAN v4.6 — BLOQUEO ANTES DE TESTERS EXTERNOS
+
+La parte técnica de Beta Pilot está preparada.
+
+Siguen pendientes en js/legal.js:
+- LEGAL_CONFIG.controllerName
+- LEGAL_CONFIG.contactEmail
+
+Además:
+beta-config.json mantiene:
+"externalDistributionAllowed": false
+
+No se han inventado datos legales.

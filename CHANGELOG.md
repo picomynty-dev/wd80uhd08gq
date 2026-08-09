@@ -1,3 +1,17 @@
+# My Fit Plan v4.6 — Beta Pilot Sandbox
+
+- Añade Beta Pilot controlable desde `beta-config.json`.
+- Añade welcome del tester una sola vez por cuenta.
+- Añade guía del tester integrada.
+- Añade checklist de cuenta, perfil, entrenamiento y feedback.
+- Añade progreso del piloto en Inicio y Ajustes.
+- Añade feedback rápido flotante fuera del entrenamiento.
+- El feedback reutiliza la Edge Function ya validada.
+- Añade control remoto de pilotOpen, maintenance, minimumVersion y feedbackEnabled.
+- Mantiene externalDistributionAllowed=false mientras faltan datos legales.
+- Preserva intactos los 12 motores principales de entrenamiento.
+- No requiere SQL, Paddle ni cambios de Edge Functions.
+
 # My Fit Plan v4.5 — Stability & Landing Sandbox
 
 - Corrige login que podía quedarse atrapado en la pantalla de bienvenida.

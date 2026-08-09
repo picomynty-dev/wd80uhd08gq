@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'my-fit-plan-';
-const CACHE_NAME = 'my-fit-plan-v45-stability-landing-20260809-1';
+const CACHE_NAME = 'my-fit-plan-v46-beta-pilot-20260809-1';
 
 const CORE_SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
@@ -13,7 +13,7 @@ const OPTIONAL_SHELL = [
   './js/exercises.js', './js/exercises-extra.js', './js/premium-data.js',
   './js/real-motion-bundle-v323a.js', './js/media-bundle-pro-v3222.js', './js/search.js', './js/visuals.js',
   './js/photo-progress.js', './js/plans.js', './js/stats.js', './js/coach.js', './js/adaptive.js',
-  './js/session-selector.js', './js/premium.js', './js/beta.js', './js/legal.js', './js/billing.js', './js/billing-config.js', './js/billing-management.js', './js/exercise-intelligence.js', './js/progression-engine.js', './js/calendar-planner.js'
+  './js/session-selector.js', './js/premium.js', './js/beta.js', './js/legal.js', './js/beta-pilot.js', './js/billing.js', './js/billing-config.js', './js/billing-management.js', './js/exercise-intelligence.js', './js/progression-engine.js', './js/calendar-planner.js'
 ];
 
 const APP_SHELL = [...CORE_SHELL, ...OPTIONAL_SHELL];
@@ -89,7 +89,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (request.destination === 'video' || request.headers.has('range')) return;
-  if (url.pathname.endsWith('/version.json')) {
+  if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('/beta-config.json')) {
     event.respondWith(networkFirst(new Request(request, { cache: 'no-store' })));
     return;
   }
