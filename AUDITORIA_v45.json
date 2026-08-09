@@ -1,0 +1,49 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.5 Stability & Landing Sandbox",
+  "generatedAt": "2026-08-09T11:44:49",
+  "static": {
+    "javascriptModules": 29,
+    "uiActions": 122,
+    "uiActionsHandled": 122,
+    "premiumActions": 10,
+    "clientSecrets": 0,
+    "missingImports": []
+  },
+  "coreWorkoutLogic": {
+    "unchanged": true,
+    "modules": {
+      "adaptive.js": true,
+      "calendar-planner.js": true,
+      "coach.js": true,
+      "exercise-intelligence.js": true,
+      "exercises.js": true,
+      "plans.js": true,
+      "premium.js": true,
+      "progression-engine.js": true,
+      "search.js": true,
+      "session-selector.js": true,
+      "stats.js": true,
+      "visuals.js": true
+    }
+  },
+  "tests": {
+    "landingDesktopCentered": "passed",
+    "ghostWorkoutBannerHiddenOnWelcome": "passed",
+    "validWorkoutBannerStillVisible": "passed",
+    "loginLeavesWelcome": "passed",
+    "remoteProfileLoadedAfterLogin": "passed",
+    "emptyLocalDoesNotOverwriteCloud": "passed",
+    "persistedSessionRestoresCloud": "passed",
+    "accountSwitchDoesNotCrossCopy": "passed",
+    "emptyOtherAccountStaysEmpty": "passed",
+    "legacyRecoveryManualOnly": "passed",
+    "legacyRecoveryRestoreAndUpload": "passed",
+    "landingMobile320NoOverflow": "passed",
+    "premiumBillingYearStillVisible": "passed",
+    "profileTabs6of6": "passed"
+  },
+  "serverChangesRequired": false,
+  "sqlRequired": false,
+  "paddleChangesRequired": false
+}

@@ -1,3 +1,19 @@
+# My Fit Plan v4.5 — Stability & Landing Sandbox
+
+- Corrige login que podía quedarse atrapado en la pantalla de bienvenida.
+- Añade navegación Auth → Cloud → Home explícita.
+- Cloud-first durante inicio de sesión cuando la nube contiene datos.
+- Impide que un estado local vacío sobrescriba automáticamente una nube con perfil.
+- Añade propiedad de cuenta al estado local para evitar contaminación entre usuarios.
+- Migra metadata v4.4 identificando propietario por hash cuando es posible.
+- Cambio de cuenta A → B no copia datos de A a B.
+- Añade recuperación manual de estados legacy v4.4/v4.3 si cuenta y nube quedan vacías.
+- Corrige barra fantasma de “Sesión en curso” en la bienvenida.
+- La barra de una sesión real permanece disponible dentro de la aplicación.
+- Centra y pule la landing en escritorio y móvil.
+- Mantiene intactos los motores de entreno, progresión, deload, calendario y My Fit Plan adaptativo.
+- No requiere cambios de servidor, SQL ni Paddle.
+
 # My Fit Plan v4.4 — Beta Ready Sandbox
 
 - Añade el año a fechas Premium y de facturación.

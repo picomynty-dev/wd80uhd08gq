@@ -8593,3 +8593,130 @@ body[data-cloud-sync="syncing"] #cloudProfileBadge::before { animation: cloud-pu
   .legal-identity-card { grid-template-columns:1fr; }
   .cloud-error-notice { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* =========================================================
+   My Fit Plan v4.5 · Welcome / Auth routing polish
+   ========================================================= */
+body.onboarding-mode .app-shell.hud-shell {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin: 0 !important;
+}
+body.onboarding-mode .app-stage {
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  align-items: stretch;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body.onboarding-mode #app {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body.onboarding-mode .active-session-bar,
+body.onboarding-mode .rest-timer-dock {
+  display: none !important;
+}
+body.onboarding-mode .onboarding-shell {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  min-height: 100dvh;
+  margin: 0 auto !important;
+  padding:
+    max(30px, env(safe-area-inset-top))
+    clamp(18px, 4vw, 42px)
+    max(34px, env(safe-area-inset-bottom));
+}
+body.onboarding-mode .onboarding-intro {
+  align-content: center;
+  gap: clamp(20px, 3vw, 30px);
+}
+body.onboarding-mode .onboarding-brand-lockup {
+  margin-inline: clamp(2px, 1vw, 8px);
+}
+body.onboarding-mode .onboarding-hero-panel {
+  width: 100%;
+  max-width: none;
+  padding: clamp(28px, 4.5vw, 54px);
+  border-radius: clamp(24px, 3vw, 34px);
+}
+body.onboarding-mode .onboarding-hero-panel h1 {
+  max-width: 860px;
+  font-size: clamp(2.25rem, 5vw, 4.25rem);
+  line-height: 1;
+}
+body.onboarding-mode .onboarding-hero-panel > p {
+  max-width: 720px;
+}
+body.onboarding-mode .onboarding-proof-grid {
+  width: 100%;
+}
+body.onboarding-mode .cloud-welcome-actions {
+  width: 100%;
+}
+body.onboarding-mode .onboarding-legal {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+@media (min-width: 1181px) {
+  body.onboarding-mode .onboarding-shell {
+    width: min(calc(100vw - 80px), 1120px);
+  }
+}
+
+@media (max-width: 720px) {
+  body.onboarding-mode .onboarding-shell {
+    padding-inline: 14px;
+  }
+  body.onboarding-mode .onboarding-hero-panel {
+    padding: 26px 20px;
+  }
+  body.onboarding-mode .onboarding-hero-panel h1 {
+    font-size: clamp(2.1rem, 11vw, 3.2rem);
+  }
+  body.onboarding-mode .onboarding-proof-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.legacy-recovery-card {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px;
+  margin:14px 0;
+}
+.legacy-recovery-card > div {
+  display:grid;
+  gap:4px;
+  min-width:0;
+  padding:11px 12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface-soft);
+}
+.legacy-recovery-card small {
+  color:var(--muted);
+  font-size:.56rem;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.legacy-recovery-card strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:.72rem;
+}
+@media (max-width:720px) {
+  .legacy-recovery-card { grid-template-columns:1fr 1fr; }
+  .legacy-recovery-card > div:first-child { grid-column:1 / -1; }
+}

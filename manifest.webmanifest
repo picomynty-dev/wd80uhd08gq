@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.4 Beta Ready: cuenta, Cloud, Premium Sandbox, feedback, privacidad, borrado de cuenta y actualizaciones.",
+  "description": "My Fit Plan 4.5: estabilidad de cuenta, login cloud-first, landing pulida y recuperación segura de sesiones.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

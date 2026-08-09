@@ -1,8 +1,8 @@
 {
   "app": "My Fit Plan",
-  "version": "4.4",
-  "label": "Beta Ready Sandbox",
+  "version": "4.5",
+  "label": "Stability & Landing Sandbox",
   "channel": "beta",
-  "releasedAt": "2026-08-08T18:56:00+02:00",
-  "minimumSupported": "4.4"
+  "releasedAt": "2026-08-09T13:29:00+02:00",
+  "minimumSupported": "4.5"
 }
