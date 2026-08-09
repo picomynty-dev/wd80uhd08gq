@@ -1,7 +1,7 @@
 'use strict';
 
-import { APP_VERSION } from './storage.js?v=46';
-import { cloudAccountSummary } from './cloud.js?v=46';
+import { APP_VERSION } from './storage.js?v=47';
+import { cloudAccountSummary } from './cloud.js?v=47';
 
 const PILOT_STORAGE_KEY = 'mfpBetaPilotV46';
 

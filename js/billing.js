@@ -1,6 +1,6 @@
 'use strict';
 
-import { BILLING_CONFIG, billingConfigured } from './billing-config.js?v=46';
+import { BILLING_CONFIG, billingConfigured } from './billing-config.js?v=47';
 
 const PADDLE_SRC = 'https://cdn.paddle.com/paddle/v2/paddle.js';
 

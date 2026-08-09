@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=46';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=46';
-import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=46';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=47';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=47';
+import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=47';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +17,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=46';
+} from './stats.js?v=47';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=46';
+} from './coach.js?v=47';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=46';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=46';
+} from './adaptive.js?v=47';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=47';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +43,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=46';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=46';
+} from './calendar-planner.js?v=47';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=47';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=46';
+} from './progression-engine.js?v=47';
 import {
   clamp,
   clone,
@@ -67,11 +67,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=46';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=46';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=46';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=46';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=46';
+} from './utils.js?v=47';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=47';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=47';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=47';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=47';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +83,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=46';
+} from './photo-progress.js?v=47';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,12 +103,12 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=46';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=46';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=46';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=46';
-import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=46';
-import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=46';
+} from './cloud.js?v=47';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=47';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=47';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=47';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=47';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=47';
 import {
   betaPilotChecklist,
   betaPilotNeedsUpdate,
@@ -119,7 +119,7 @@ import {
   markBetaPilotFeedbackSent,
   markBetaPilotGuideOpened,
   markBetaPilotWelcomeSeen
-} from './beta-pilot.js?v=46';
+} from './beta-pilot.js?v=47';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1371,7 +1371,8 @@ function onboardingDraftFromState() {
     equipment: Array.isArray(p.equipment) && p.equipment.length ? [...p.equipment] : ['Máquina', 'Mancuernas', 'Polea', 'Banco', 'Barra', 'Peso corporal'],
     path: p.trainingPath || 'recommended',
     templateId: state.plan?.templateId && state.plan.templateId !== 'legacy' ? state.plan.templateId : null,
-    adultConsent: Boolean(state.profile)
+    adultConsent: Boolean(state.profile),
+    specialDataConsent: Boolean(p.privacyConsent?.specialData)
   };
 }
 
@@ -1435,6 +1436,11 @@ function onboardingIdentityStep() {
       <input id="obAdult" type="checkbox" ${d.adultConsent ? 'checked' : ''}>
       <span class="visible-check" aria-hidden="true">✓</span>
       <span><strong>Confirmo que soy mayor de 18 años.</strong><small>Esta primera versión está diseñada únicamente para adultos.</small></span>
+    </label>
+    <label class="consent-row onboarding-consent">
+      <input id="obSpecialData" type="checkbox" ${d.specialDataConsent ? 'checked' : ''}>
+      <span class="visible-check" aria-hidden="true">✓</span>
+      <span><strong>Consiento el uso de mis datos de progreso físico.</strong><small>Peso, medidas y fotografías que decida añadir se usarán para mi seguimiento en My Fit Plan. Puedo no añadirlos y puedo retirar este consentimiento.</small></span>
     </label>`;
 }
 
@@ -1566,6 +1572,7 @@ function captureOnboardingStep() {
     onboardingDraft.weight = numberValue(document.querySelector('#obWeight')?.value) || '';
     onboardingDraft.height = numberValue(document.querySelector('#obHeight')?.value) || '';
     onboardingDraft.adultConsent = Boolean(document.querySelector('#obAdult')?.checked);
+    onboardingDraft.specialDataConsent = Boolean(document.querySelector('#obSpecialData')?.checked);
   } else if (onboardingStep === 2) {
     onboardingDraft.objective = document.querySelector('input[name="ob-objective"]:checked')?.value || onboardingDraft.objective;
     onboardingDraft.experience = document.querySelector('input[name="ob-experience"]:checked')?.value || onboardingDraft.experience;
@@ -1589,6 +1596,7 @@ function validateOnboardingStep() {
   if (onboardingStep === 1) {
     if (!onboardingDraft.name) { showToast('Escribe un nombre o apodo.', 'danger'); return false; }
     if (!onboardingDraft.adultConsent || (onboardingDraft.age && onboardingDraft.age < 18)) { showToast('Debes confirmar que eres mayor de 18 años.', 'danger'); return false; }
+    if (!onboardingDraft.specialDataConsent) { showToast('Necesitamos tu consentimiento para usar los datos de progreso físico que decidas añadir.', 'danger'); return false; }
   }
   if (onboardingStep === 4 && !onboardingDraft.equipment.length) { showToast('Selecciona al menos un tipo de material.', 'danger'); return false; }
   return true;
@@ -1613,6 +1621,12 @@ function finishOnboarding() {
     avoidedExercises: d.avoidedExercises,
     trainingPath: d.path,
     equipment: d.equipment,
+    privacyConsent: {
+      ...(state.profile?.privacyConsent || {}),
+      specialData: true,
+      specialDataAt: state.profile?.privacyConsent?.specialDataAt || new Date().toISOString(),
+      specialDataNoticeVersion: '4.7'
+    },
     setupVersion: '3.1'
   };
   let plan;
@@ -4004,8 +4018,8 @@ function profileSettingsHtml() {
     </form>
     <section class="section card beta-ready-card">
       <div class="beta-ready-head">
-        <div><p class="eyebrow">BETA PILOT · My Fit Plan v4.6</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
-        <span class="beta-version-pill">v4.6</span>
+        <div><p class="eyebrow">BETA EXTERNA · My Fit Plan v4.7</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
+        <span class="beta-version-pill">v4.7</span>
       </div>
       ${betaPilotConfig?.pilotOpen ? betaPilotProgressHtml({ compact: true }) : '<div class="notice"><strong>Piloto no iniciado.</strong> La configuración remota todavía no ha abierto esta cohorte.</div>'}
       <div class="beta-action-grid">
@@ -4216,15 +4230,17 @@ function legalDocumentHtml(kind) {
   const legal = legalLaunchStatus();
   const controller = LEGAL_CONFIG.controllerName || 'PENDIENTE DE COMPLETAR';
   const contact = LEGAL_CONFIG.contactEmail || 'PENDIENTE DE COMPLETAR';
+  const postal = LEGAL_CONFIG.contactPostalAddress || 'PENDIENTE DE COMPLETAR';
 
   return `<div class="modal-header">
     <div><p class="eyebrow">MY FIT PLAN · BETA</p><h2>${esc(title)}</h2><p class="muted small">Documento técnico de preparación. Última revisión ${esc(LEGAL_CONFIG.effectiveDate)}.</p></div>
     <button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button>
   </div>
-  ${!legal.ready ? `<article class="notice notice-warning legal-draft-warning"><strong>No publicar todavía.</strong> Falta identificar al responsable y un contacto real antes de abrir la beta pública.</article>` : ''}
+  ${!legal.ready ? `<article class="notice notice-warning legal-draft-warning"><strong>No compartir con testers externos todavía.</strong> Pendiente: ${esc(legal.blockers.join(', '))}.</article>` : ''}
   <section class="legal-identity-card">
     <span><small>Responsable</small><strong>${esc(controller)}</strong></span>
     <span><small>Contacto</small><strong>${esc(contact)}</strong></span>
+    <span><small>Contacto postal</small><strong>${esc(postal)}</strong></span>
     <span><small>Ámbito</small><strong>${esc(LEGAL_CONFIG.jurisdiction)}</strong></span>
   </section>
   <div class="legal-document-sections">${sections.map((section) => `<article><h3>${esc(section.title)}</h3><p>${esc(section.body)}</p></article>`).join('')}</div>
@@ -6412,7 +6428,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=46', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=47', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
