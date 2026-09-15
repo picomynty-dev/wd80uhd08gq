@@ -1,0 +1,21 @@
+MY FIT PLAN v4.6 — PRUEBA DESPUÉS DE SUBIR
+
+NO TOQUES SUPABASE NI PADDLE.
+
+1. Sube el paquete v4.6 y sobrescribe.
+2. Abre:
+https://picomynty-dev.github.io/wd80uhd08gq/?v=46
+
+COMPRUEBA:
+- Arriba aparece v4.6.
+- Con tu cuenta iniciada aparece Beta Pilot en Inicio.
+- La primera vez aparece "Bienvenido al piloto de My Fit Plan".
+- Pulsa Empezar prueba.
+- En Inicio aparece el progreso del piloto.
+- El botón BETA Feedback aparece abajo.
+- En Entrenar el botón flotante desaparece.
+- Perfil > Ajustes muestra Centro del tester.
+- Debe indicar "Piloto externo bloqueado".
+- Enviar feedback debe seguir guardándolo en mfp_beta_feedback.
+
+No hace falta hacer otro pago Sandbox.

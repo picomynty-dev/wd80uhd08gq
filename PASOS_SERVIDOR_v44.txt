@@ -1,0 +1,114 @@
+MY FIT PLAN v4.4 — PASOS SERVIDOR
+
+IMPORTANTE
+- Seguimos en PADDLE SANDBOX.
+- No me envíes ninguna API key ni Secret.
+- No borres la configuración de v4.3 que ya funciona.
+
+============================================================
+1) SQL DE FEEDBACK
+============================================================
+Supabase > SQL Editor
+
+Ejecuta:
+my-fit-plan-v44-beta-feedback.sql
+
+Crea `mfp_beta_feedback`.
+El navegador NO tiene permisos directos sobre esta tabla.
+
+============================================================
+2) PADDLE_API_KEY
+============================================================
+La misma API key Sandbox guardada en Supabase como:
+
+PADDLE_API_KEY
+
+ahora necesita DOS permisos:
+- customer_portal_session.write
+- subscription.write
+
+El primero mantiene funcionando Gestionar suscripción.
+El segundo permite que "Eliminar cuenta" cancele inmediatamente una
+suscripción antes de borrar al usuario.
+
+Si Paddle no permite editar los permisos de tu key actual, crea una API key
+Sandbox nueva con esos dos permisos y reemplaza el valor de PADDLE_API_KEY
+en Supabase Edge Functions > Secrets.
+
+NO la pongas en GitHub.
+NO me la envíes.
+
+============================================================
+3) EDGE FUNCTION beta-feedback
+============================================================
+Crea/actualiza:
+beta-feedback
+
+Código:
+my-fit-plan-v44-beta-feedback-index.ts
+
+JWT verification: ACTIVADA
+
+============================================================
+4) EDGE FUNCTION account-delete
+============================================================
+Crea/actualiza:
+account-delete
+
+Código:
+my-fit-plan-v44-account-delete-index.ts
+
+JWT verification: ACTIVADA
+
+============================================================
+5) REDEPLOY paddle-webhook
+============================================================
+Actualiza la función existente:
+paddle-webhook
+
+Código:
+my-fit-plan-v44-paddle-webhook-index.ts
+
+JWT verification: DESACTIVADA
+
+PADDLE_WEBHOOK_SECRET:
+NO CAMBIAR si el webhook actual ya devuelve 200.
+
+Este redeploy solo añade protección para que una cancelación generada al
+eliminar una cuenta no recree billing si el usuario ya ha sido borrado.
+
+============================================================
+6) billing-portal
+============================================================
+No necesita cambios de código si ya funciona.
+Al usar el mismo PADDLE_API_KEY con ambos permisos seguirá funcionando.
+
+============================================================
+7) FRONTEND
+============================================================
+Sube:
+my-fit-plan-v44-upload-seguro.zip
+
+Después abre:
+https://picomynty-dev.github.io/wd80uhd08gq/?v=44
+
+============================================================
+8) PRUEBA SEGURA
+============================================================
+Primero:
+- Perfil > Ajustes > Enviar feedback
+- Envía una prueba.
+- Comprueba en Supabase > Table Editor > mfp_beta_feedback que aparece.
+
+NO pruebes "Eliminar cuenta" con tu cuenta principal.
+Para validar el borrado real, crea una cuenta Sandbox desechable, añade datos
+de prueba y usa esa cuenta.
+
+============================================================
+9) BLOQUEO LEGAL
+============================================================
+La v4.4 muestra Privacidad/Términos, pero deja claramente pendiente:
+- responsable del tratamiento
+- correo de privacidad/contacto
+
+No abras todavía la beta pública hasta completar esos dos datos.

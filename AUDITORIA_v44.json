@@ -1,0 +1,51 @@
+{
+  "app": "My Fit Plan",
+  "version": "4.4 Beta Ready Sandbox",
+  "generatedAt": "2026-08-08T17:09:47",
+  "static": {
+    "javascriptModules": 29,
+    "edgeFunctions": 4,
+    "uiActionsDetected": 121,
+    "uiActionHandlers": 121,
+    "missingActions": [],
+    "missingImports": [],
+    "serviceWorkerResources": 39,
+    "clientSecretHits": [],
+    "premiumActions": 10
+  },
+  "features": {
+    "premiumDatesIncludeYear": true,
+    "betaFeedback": true,
+    "privacyTermsCenter": true,
+    "accountDeletion": true,
+    "offlineSessionPreservation": true,
+    "billingFailureUX": true,
+    "versionDetection": true,
+    "freePremiumMatrixPreserved": true
+  },
+  "tests": {
+    "serverUnitTests": "passed",
+    "uiMobile320": "passed",
+    "uiMobile390": "passed",
+    "uiDesktop": "passed",
+    "feedbackSubmissionMock": "passed",
+    "accountDeleteMock": "passed",
+    "paddleCancelFailureStopsDelete": "passed",
+    "lateWebhookDeletedUser200": "passed",
+    "expiredSessionOfflinePreserved": "passed",
+    "cachedPremiumOfflinePreserved": "passed",
+    "versionJsonNewReleaseDetection": "passed",
+    "profileTabs6of6": "passed",
+    "horizontalOverflow": "passed"
+  },
+  "launchBlockers": [
+    "Completar responsable del tratamiento en js/legal.js",
+    "Completar correo real de privacidad/contacto en js/legal.js",
+    "Ejecutar SQL mfp_beta_feedback",
+    "Dar subscription.write a PADDLE_API_KEY Sandbox",
+    "Desplegar account-delete y beta-feedback",
+    "Redeplegar paddle-webhook v4.4",
+    "Validar feedback real en Supabase",
+    "Validar eliminación real con una cuenta desechable"
+  ]
+}
