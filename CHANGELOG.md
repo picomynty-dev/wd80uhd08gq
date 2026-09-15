@@ -1,3 +1,7 @@
+# 5.0 — Reforma visual y funcional
+
+14 de septiembre de 2026. Nuevo Inicio, bienvenida, navegación, biblioteca y mejora de legibilidad. Correcciones de arranque, guardado de campos y sesiones, ventana de progresión, fechas y caché. Compatibilidad con el estado v4.7. Detalles y límites de verificación en REVISION_5_0.md.
+
 # My Fit Plan v4.7 — External Beta Candidate
 
 - Parte de la v4.6 Beta Pilot validada.

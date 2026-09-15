@@ -1,14 +1,14 @@
 {
   "app": "My Fit Plan",
-  "channel": "external-beta-candidate",
+  "channel": "owner-review",
   "pilotOpen": true,
   "cohort": "External Beta Candidate 01",
-  "title": "Beta externa · Candidata v4.7",
-  "message": "Prueba la candidata externa como un usuario nuevo: crea o conecta tu cuenta, completa la configuración, realiza un entrenamiento y envía feedback desde la aplicación.",
+  "title": "My Fit Plan 5.0 · Revisión del propietario",
+  "message": "Revisa el diseño, tus rutinas y el registro de entrenamiento. El feedback de la beta continúa disponible desde Ajustes.",
   "feedbackEnabled": true,
   "maintenance": false,
   "maintenanceMessage": "",
   "minimumVersion": "4.7",
   "externalDistributionAllowed": false,
-  "updatedAt": "2026-08-09T14:23:00+02:00"
+  "updatedAt": "2026-09-14T20:00:00Z"
 }

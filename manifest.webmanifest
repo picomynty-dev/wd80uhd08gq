@@ -1,12 +1,12 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "My Fit Plan 4.7 External Beta Candidate: identidad legal, consentimiento de progreso físico y preparación controlada para testers externos.",
+  "description": "Organiza tus rutinas, registra cada serie y sigue tu progreso con My Fit Plan 5.0.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#05080d",
-  "theme_color": "#070b12",
+  "background_color": "#f3f5f0",
+  "theme_color": "#f3f5f0",
   "icons": [
     {
       "src": "./icons/icon-192.png",

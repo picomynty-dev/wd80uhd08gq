@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-accent="orange" data-theme="system">
+<html lang="es" data-accent="custom" data-theme="light" data-resolved-theme="light" data-design="v5">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -44,7 +44,8 @@
       sync();
     })();
   </script>
-  <link rel="stylesheet" href="./styles.css?v=47">
+  <link rel="stylesheet" href="./styles.css?v=50">
+  <link rel="stylesheet" href="./design-v5.css?v=50">
   <title>My Fit Plan</title>
 </head>
 <body>
@@ -61,10 +62,11 @@
         <button type="button" data-nav="workout" class="nav-item rail-train"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M8 7v10M16 7v10M5 9v6M19 9v6M8 12h8"/></svg></span><span><strong>Entrenar</strong><small>Sesión</small></span></button>
         <button type="button" data-nav="library" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></span><span><strong>Ejercicios</strong><small>Biblioteca</small></span></button>
         <button type="button" data-nav="profile" class="nav-item"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><span><strong>Perfil</strong><small>Progreso</small></span></button>
+        <button type="button" data-nav="calendar" class="nav-item" aria-label="Calendario"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg></span><span><strong>Calendario</strong><small>Mi semana</small></span></button>
       </nav>
       <div class="rail-footer">
-        <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Centro de control</strong><small id="railHealthText">Sistema operativo</small></div></button>
-        <div class="rail-version"><span class="status-dot"></span><span>v4.7 · External Beta</span></div>
+        <button class="rail-control" type="button" data-action="hud-control"><span><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></span><div><strong>Ayuda y diagnóstico</strong><small id="railHealthText">Estado de la aplicación</small></div></button>
+        <div class="rail-version"><span class="status-dot"></span><span>v5.0 · My Fit Plan</span></div>
       </div>
     </aside>
 
@@ -81,7 +83,8 @@
         </div>
         <div class="topbar-actions">
           <span id="networkStatus" class="network-status is-online"><span class="network-dot"></span><span class="network-label">Online</span></span>
-          <span class="version-badge" aria-label="Versión 4.7">v4.7</span>
+          <button class="v5-theme-toggle" type="button" data-action="theme-toggle" aria-label="Cambiar entre tema claro y oscuro">◐</button>
+          <span class="version-badge" aria-label="Versión 5.0">v5.0</span>
           <button id="installButton" class="button button-secondary install-button" type="button" hidden>Instalar</button>
           <button id="hudControlButton" class="hud-control-button" type="button" data-action="hud-control" aria-label="Abrir centro de control"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></button>
           <button id="profileShortcut" class="avatar-button" type="button" data-nav="profile" aria-label="Abrir perfil">MF</button>
@@ -110,7 +113,7 @@
       if (window.location.protocol === 'file:') {
         const app = document.querySelector('#app');
         document.querySelectorAll('.bottom-nav,.desktop-rail').forEach((node) => node.hidden = true);
-        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 4.7</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
+        if (app) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">My Fit Plan 5.0</p><h1>Abre la aplicación desde su enlace web</h1><p>Los módulos necesitan GitHub Pages o un servidor local. No abras <strong>index.html</strong> directamente desde una carpeta.</p></div></section>`;
       }
     });
     window.setTimeout(() => {
@@ -119,36 +122,6 @@
       if (app && !app.innerHTML.trim()) app.innerHTML = `<section class="page boot-help"><div class="hero"><p class="eyebrow">Recuperación</p><h1>No se ha podido iniciar My Fit Plan</h1><p>Recarga la página. Si continúa igual, comprueba que la carpeta <strong>js</strong> está subida completa.</p><button class="button button-primary" type="button" onclick="location.reload()">Recargar</button></div></section>`;
     }, 4000);
   </script>
-  <script>
-    (() => {
-      const marker = 'mfp-clean-runtime-version';
-      try {
-        if (localStorage.getItem(marker) === '46') return;
-        localStorage.setItem(marker, '46');
-      } catch {
-        if (window.location.search.includes('fresh=')) return;
-      }
-      const appBase = new URL('./', window.location.href).pathname;
-      Promise.all([
-        'caches' in window
-          ? caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('my-fit-plan-')).map((key) => caches.delete(key))))
-          : Promise.resolve(),
-        'serviceWorker' in navigator
-          ? navigator.serviceWorker.getRegistrations().then((items) => Promise.all(items
-              .filter((item) => {
-                try { return new URL(item.scope).pathname.startsWith(appBase); }
-                catch { return false; }
-              })
-              .map((item) => item.unregister())))
-          : Promise.resolve()
-      ]).then(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('v', '46');
-        url.searchParams.set('fresh', Date.now().toString());
-        window.location.replace(url.toString());
-      }).catch(() => {});
-    })();
-  </script>
-  <script type="module" src="./js/app.js?v=47"></script>
+<script type="module" src="./js/app.js?v=50"></script>
 </body>
 </html>
