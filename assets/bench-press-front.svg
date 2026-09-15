@@ -1,50 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title desc">
-  <title id="title">Press banca con barra, posición inicial</title>
-  <desc id="desc">Persona tumbada en banco sosteniendo una barra sobre el pecho con los brazos extendidos.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 500" role="img" aria-labelledby="title desc">
+  <title id="title">Músculos frontales trabajados en press banca</title>
+  <desc id="desc">Pectoral mayor en rojo y hombro anterior y tríceps en naranja.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0d1422"/>
-      <stop offset="1" stop-color="#182338"/>
-    </linearGradient>
-    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f8fafc"/>
-      <stop offset="1" stop-color="#b8c2d4"/>
-    </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8e0eb"/><stop offset="1" stop-color="#8c9bad"/></linearGradient>
+    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff3b30"/><stop offset="1" stop-color="#b91c1c"/></linearGradient>
+    <linearGradient id="secondary" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fb923c"/><stop offset="1" stop-color="#ea580c"/></linearGradient>
   </defs>
-  <rect width="640" height="420" rx="34" fill="url(#bg)"/>
-  <circle cx="518" cy="78" r="104" fill="#f97316" opacity=".07"/>
-  <path d="M70 344H570" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
-  <rect x="155" y="278" width="330" height="34" rx="14" fill="#3b465a"/>
-  <rect x="190" y="310" width="18" height="56" rx="7" fill="#253044"/>
-  <rect x="432" y="310" width="18" height="56" rx="7" fill="#253044"/>
-  <path d="M214 277 C253 250 338 242 394 259 C424 268 449 281 468 294" fill="none" stroke="url(#skin)" stroke-width="34" stroke-linecap="round"/>
-  <circle cx="188" cy="270" r="30" fill="url(#skin)" stroke="#64748b" stroke-width="5"/>
-  <path d="M171 266 Q188 248 207 264" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
-  <path d="M284 255 L275 158" stroke="url(#skin)" stroke-width="25" stroke-linecap="round"/>
-  <path d="M363 252 L372 158" stroke="url(#skin)" stroke-width="25" stroke-linecap="round"/>
-  <circle cx="275" cy="151" r="14" fill="#f8fafc" stroke="#64748b" stroke-width="4"/>
-  <circle cx="372" cy="151" r="14" fill="#f8fafc" stroke="#64748b" stroke-width="4"/>
-  <path d="M451 291 L514 331" stroke="url(#skin)" stroke-width="28" stroke-linecap="round"/>
-  <path d="M399 274 L467 321" stroke="url(#skin)" stroke-width="28" stroke-linecap="round"/>
-  <path d="M504 333 L551 333" stroke="#dbe4f0" stroke-width="18" stroke-linecap="round"/>
-  <path d="M456 323 L502 323" stroke="#dbe4f0" stroke-width="18" stroke-linecap="round"/>
-  <line x1="117" y1="132" x2="523" y2="132" stroke="#cbd5e1" stroke-width="10" stroke-linecap="round"/>
-  <rect x="91" y="111" width="24" height="42" rx="8" fill="#64748b"/>
-  <rect x="525" y="111" width="24" height="42" rx="8" fill="#64748b"/>
-  <rect x="69" y="118" width="20" height="28" rx="7" fill="#475569"/>
-  <rect x="551" y="118" width="20" height="28" rx="7" fill="#475569"/>
-  <circle cx="275" cy="132" r="8" fill="#f97316" filter="url(#glow)"/>
-  <circle cx="372" cy="132" r="8" fill="#f97316" filter="url(#glow)"/>
-  <g transform="translate(42 35)">
-    <rect width="176" height="54" rx="18" fill="#111827" opacity=".88" stroke="#334155"/>
-    <circle cx="28" cy="27" r="12" fill="#f97316" opacity=".18"/>
-    <path d="M22 27h12M28 21v12" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>
-    <text x="50" y="24" fill="#f8fafc" font-family="Arial, sans-serif" font-size="15" font-weight="700">POSICIÓN INICIAL</text>
-    <text x="50" y="42" fill="#94a3b8" font-family="Arial, sans-serif" font-size="12">Barra estable sobre el pecho</text>
+  <rect width="320" height="500" rx="30" fill="#0f172a"/>
+  <g>
+    <circle cx="160" cy="62" r="40" fill="url(#body)"/>
+    <path d="M110 108 Q160 86 210 108 L225 232 Q207 269 190 281 L190 306 H130 V281 Q113 268 95 232Z" fill="url(#body)"/>
+    <path d="M104 118 Q82 128 72 158 L51 254 Q45 282 61 292 Q78 300 90 273 L118 181Z" fill="url(#body)"/>
+    <path d="M216 118 Q238 128 248 158 L269 254 Q275 282 259 292 Q242 300 230 273 L202 181Z" fill="url(#body)"/>
+    <path d="M132 302 L119 455 Q118 478 137 483 Q155 482 158 458 L160 342 L162 458 Q165 482 183 483 Q202 478 201 455 L188 302Z" fill="url(#body)"/>
+    <path d="M106 120 Q160 99 214 120 L205 179 Q160 202 115 179Z" fill="url(#primary)" stroke="#7f1d1d" stroke-width="3"/>
+    <path d="M99 119 Q83 128 78 151 Q91 166 110 163 L119 130Z" fill="url(#secondary)"/>
+    <path d="M221 119 Q237 128 242 151 Q229 166 210 163 L201 130Z" fill="url(#secondary)"/>
+    <path d="M74 166 Q89 160 104 176 L89 238 Q78 250 64 240Z" fill="url(#secondary)" opacity=".92"/>
+    <path d="M246 166 Q231 160 216 176 L231 238 Q242 250 256 240Z" fill="url(#secondary)" opacity=".92"/>
+    <path d="M126 199 Q160 213 194 199 L191 267 Q160 281 129 267Z" fill="#aeb9c7" opacity=".58"/>
+    <path d="M135 307 L127 442" stroke="#68778b" stroke-width="4" opacity=".65"/>
+    <path d="M185 307 L193 442" stroke="#68778b" stroke-width="4" opacity=".65"/>
   </g>
-  <path d="M275 184v34M372 184v34" stroke="#f97316" stroke-width="4" stroke-linecap="round" stroke-dasharray="7 8" opacity=".8"/>
+  <g font-family="Arial, sans-serif">
+    <rect x="24" y="20" width="112" height="34" rx="12" fill="#111827" stroke="#334155"/>
+    <circle cx="43" cy="37" r="6" fill="#ef4444"/>
+    <text x="56" y="42" fill="#f8fafc" font-size="14" font-weight="700">Principal</text>
+    <rect x="184" y="20" width="112" height="34" rx="12" fill="#111827" stroke="#334155"/>
+    <circle cx="203" cy="37" r="6" fill="#f97316"/>
+    <text x="216" y="42" fill="#f8fafc" font-size="14" font-weight="700">Secundario</text>
+  </g>
 </svg>
