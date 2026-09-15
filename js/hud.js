@@ -108,6 +108,7 @@ export function decorateInteractiveElements(root = document) {
 
   root.querySelectorAll('button').forEach((button) => {
     if (button.disabled) button.setAttribute('aria-disabled', 'true');
+    else button.removeAttribute('aria-disabled');
     if (!button.getAttribute('aria-label') && !button.textContent.trim()) button.setAttribute('aria-label', 'Acción');
   });
 }
@@ -115,11 +116,11 @@ export function decorateInteractiveElements(root = document) {
 export function pageHudMeta(view, state = {}) {
   const active = state.activeWorkout;
   const map = {
-    home: ['Panel de control', 'Resumen de entrenamiento y progreso'],
+    home: ['Mi espacio', 'Un paso más, a tu ritmo'],
     plan: ['Rutinas', 'Planificación, carpetas y ejercicios'],
-    calendar: ['Calendario inteligente', 'Agenda semanal y recuperación de sesiones'],
-    workout: active ? ['Entrenamiento en curso', active.name || 'Sesión activa'] : ['Centro de entrenamiento', 'Rutina, My Fit Plan o sesión personalizada'],
-    library: ['Biblioteca técnica', 'Ejercicios, técnica y sustituciones'],
+    calendar: ['Mi calendario', 'Organiza tu semana de entrenamiento'],
+    workout: active ? ['Entrenamiento en curso', active.name || 'Sesión activa'] : ['Entrenamiento', 'Elige tu sesión de hoy'],
+    library: ['Ejercicios', 'Encuentra movimientos para tu plan'],
     profile: ['Progreso y perfil', 'Historial, cuerpo, privacidad y ajustes']
   };
   const [title, subtitle] = map[view] || map.home;

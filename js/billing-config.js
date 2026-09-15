@@ -8,7 +8,7 @@ export const BILLING_CONFIG = Object.freeze({
     annual: 'pri_01kzgz6wr16d5bg6zz2ndc3txz'
   }),
   productId: 'pro_01kzgz375ynjkcf33d50v5xe2r',
-  appVersion: '4.7 External Beta Candidate'
+  appVersion: '5.0 Rediseño'
 });
 
 export function billingConfigured() {

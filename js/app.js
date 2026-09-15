@@ -1,8 +1,11 @@
 'use strict';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=47';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=47';
-import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=47';
+import { readableAccentColor } from './theme.js?v=50';
+import { createPendingInputWriter } from './pending-input.js?v=50';
+
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=50';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=50';
+import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=50';
 import {
   buildCalendar,
   calculateStreak,
@@ -17,18 +20,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=47';
+} from './stats.js?v=50';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=47';
+} from './coach.js?v=50';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=47';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=47';
+} from './adaptive.js?v=50';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=50';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -43,15 +46,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=47';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=47';
+} from './calendar-planner.js?v=50';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=50';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=47';
+} from './progression-engine.js?v=50';
 import {
   clamp,
   clone,
@@ -67,11 +70,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=47';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=47';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=47';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=47';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=47';
+} from './utils.js?v=50';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=50';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=50';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=50';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=50';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -83,7 +86,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=47';
+} from './photo-progress.js?v=50';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -103,12 +106,12 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=47';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=47';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=47';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=47';
-import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=47';
-import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=47';
+} from './cloud.js?v=50';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=50';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=50';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=50';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=50';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=50';
 import {
   betaPilotChecklist,
   betaPilotNeedsUpdate,
@@ -119,7 +122,7 @@ import {
   markBetaPilotFeedbackSent,
   markBetaPilotGuideOpened,
   markBetaPilotWelcomeSeen
-} from './beta-pilot.js?v=47';
+} from './beta-pilot.js?v=50';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -177,7 +180,6 @@ let betaPilotWelcomeOpen = false;
 let betaPilotCloudAuthenticated = false;
 
 
-init();
 
 function init() {
   window.__mfpBooted = true;
@@ -729,6 +731,7 @@ function setOnboardingMode(enabled) {
 }
 
 function setView(view) {
+  delayedSaveField.flush();
   setOnboardingMode(false);
   if (view !== 'workout' && !state.activeWorkout) {
     pendingWorkoutSelection = null;
@@ -737,7 +740,12 @@ function setView(view) {
   }
   currentView = view;
   const activeNav = view === 'calendar' ? 'plan' : view;
-  document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === activeNav));
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    const selected = item.dataset.nav === (item.closest('.rail-nav') ? view : activeNav);
+    item.classList.toggle('active', selected);
+    if (selected) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
   const renderers = {
     home: renderHome,
     plan: renderPlan,
@@ -823,9 +831,7 @@ function mixHex(hex, targetHex, amount) {
 }
 
 function accentContrast(hex) {
-  const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > 0.62 ? '#08111f' : '#ffffff';
+  return readableAccentColor(hex);
 }
 
 function legacyAccentHex() {
@@ -851,6 +857,7 @@ function applySettings(preview = {}) {
   const accentSoft = resolved === 'dark' ? mixHex(accent, '#111724', 0.79) : mixHex(accent, '#ffffff', 0.89);
   root.dataset.accent = 'custom';
   root.dataset.theme = appearance;
+  root.dataset.resolvedTheme = resolved;
   root.style.setProperty('--accent', accent);
   root.style.setProperty('--accent-dark', accentDark);
   root.style.setProperty('--accent-soft', accentSoft);
@@ -1122,146 +1129,67 @@ function renderHome() {
   const days = state.plan?.days || [];
   const nextDay = days.length ? days[state.nextWorkoutIndex % days.length] : null;
   const weekly = sessionsThisWeek(state.history);
-  const goal = Number(state.profile.days || days.length || 3);
-  const percentage = clamp(Math.round((weekly.length / Math.max(1, goal)) * 100), 0, 100);
+  const goal = Math.max(1, Number(state.profile.days || days.length || 3));
+  const percentage = clamp(Math.round(weekly.length / goal * 100), 0, 100);
   const lastSession = state.history[0];
   const calendar = buildCalendar(state.history);
-  const recentRecords = recentPersonalRecords(3);
+  const records = recentPersonalRecords(3);
   const firstName = state.profile.name?.trim().split(/\s+/)[0] || 'deportista';
-  const streak = calculateStreak(state.history);
-  const todayLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
-  const nextExerciseCount = state.activeWorkout?.exercises?.length || nextDay?.exercises?.length || 0;
-  const estimatedMinutes = Number(state.profile.minutes || 45);
+  const next = state.activeWorkout || nextDay;
+  const minutes = next ? estimatePlanMinutes(next) : Number(state.profile.minutes || 45);
+  const weeklyVolume = weekly.reduce((total, session) => total + sessionVolume(session), 0);
+  const weeklyMinutes = Math.round(weekly.reduce((total, session) => total + Number(session.durationSeconds || 0), 0) / 60);
+  const allRecords = personalRecords(state.history, state.customExercises);
   const coach = buildCoachDashboard(state.history, state.plan, state.nextWorkoutIndex, state.profile, state.customExercises);
-  const progressionDashboard = buildProgressionDashboard(state.history, state.plan, state.customExercises);
-  const hasPremium = premiumUnlocked();
   ensurePlanner();
-  const plannerSummary = buildPlannerSummary(state.planner, state.plan, state.history);
+  const planner = buildPlannerSummary(state.planner, state.plan, state.history);
+  const dateLabel = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+  const weekSeries = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - 6 + index);
+    const sessions = state.history.filter((session) => isoDay(session.finishedAt || session.startedAt) === isoDay(date));
+    return { label: formatDate(date, { year: undefined }), value: sessions.reduce((sum, session) => sum + sessionVolume(session), 0) };
+  });
+  const maxVolume = Math.max(1, ...weekSeries.map((day) => day.value));
+  app.innerHTML = `<section class="page home-v5">
+    <header class="v5-greeting"><div><p class="eyebrow">${esc(dateLabel)}</p><h1>Tu siguiente paso, ${esc(firstName)}<span>.</span></h1><p class="muted">Cada sesión cuenta. Sigue construyendo tu progreso.</p></div><button class="v5-date-button" type="button" data-nav-local="calendar">${hudIcon('calendar')}<span>Mi calendario</span></button></header>
 
-  app.innerHTML = `
-    <section class="page home-page premium-home">
-      <header class="dashboard-greeting">
-        <div>
-          <p class="eyebrow">${esc(todayLabel)}</p>
-          <h1>Vamos a por ello, ${esc(firstName)}.</h1>
-          <p class="muted">Semana activa · ${weekly.length} de ${goal} sesiones completadas</p>
-        </div>
-        <div class="streak-orb" aria-label="Racha de ${streak} días"><span>⚡</span><strong>${streak}</strong><small>racha</small></div>
-      </header>
-
-      <section class="today-command-card">
-        <div class="today-card-glow" aria-hidden="true"></div>
-        <div class="today-command-copy">
-          <div class="today-command-topline"><span class="live-dot"></span><span>${state.activeWorkout ? 'SESIÓN EN CURSO' : 'ENTRENAMIENTO DE HOY'}</span></div>
-          <h2>${esc(state.activeWorkout?.name || nextDay?.name || 'Crea tu siguiente rutina')}</h2>
-          <div class="today-metadata">
-            <span><b>${nextExerciseCount}</b> ejercicios</span>
-            <span><b>${estimatedMinutes}</b> min</span>
-            <span><b>${percentage}%</b> semana</span>
-          </div>
-          <p>${state.activeWorkout ? 'Tu progreso está guardado. Continúa exactamente donde lo dejaste.' : nextDay ? (hasPremium ? 'Sesión preparada según tu plan. Registra cada serie y deja que My Fit Plan controle el progreso.' : 'Sesión preparada según tu plan. Registra cada serie para construir tu historial y tus marcas.') : 'Añade un día y tus ejercicios para empezar.'}</p>
-          <div class="today-command-actions">
-            <button class="button button-primary command-primary" type="button" data-action="home-workout"><span>${state.activeWorkout ? 'Continuar sesión' : 'Empezar entrenamiento'}</span><b>→</b></button>
-            <button class="command-icon-button" type="button" data-nav-local="plan" aria-label="Editar plan">✎</button>
-          </div>
-        </div>
-        <div class="progress-orbit" style="--progress:${percentage * 3.6}deg" aria-label="${percentage}% del objetivo semanal">
-          <div><strong>${percentage}%</strong><small>semana</small></div>
-        </div>
+    <div class="v5-home-top">
+      <section class="v5-session-hero">
+        <div class="v5-hero-top"><span class="v5-hero-label">${hudIcon(state.activeWorkout ? 'bolt' : 'train')}${state.activeWorkout ? 'Continúa donde lo dejaste' : 'Tu próximo entrenamiento'}</span><span class="v5-hero-index">${String((state.nextWorkoutIndex % Math.max(1, days.length)) + 1).padStart(2, '0')}<small> / ${String(days.length || 1).padStart(2, '0')}</small></span></div>
+        <div class="v5-session-copy"><p>${esc(state.plan?.name || 'Un plan a tu medida')}</p><h2>${esc(next?.name || 'Aquí empieza tu plan')}</h2><div class="v5-session-meta"><span>${hudIcon('train')}${next?.exercises?.length || 0} ejercicios</span><span>${hudIcon('timer')}${minutes} min aprox.</span><span>${hudIcon('user')}${esc(experienceLabel(state.profile.experience))}</span></div></div>
+        <div class="v5-session-bottom"><button class="button button-primary" type="button" data-action="${state.activeWorkout ? 'home-workout' : nextDay?.exercises?.length ? 'training-routine-direct' : 'home-workout'}">${state.activeWorkout ? 'Continuar sesión' : 'Empezar a entrenar'}${hudIcon('arrow')}</button><button class="v5-hero-link" type="button" data-nav-local="plan">Ver mi rutina</button></div>
+        <div class="v5-hero-art" aria-hidden="true"><span>↗</span><i></i><i></i><i></i></div>
       </section>
 
-      ${betaPilotHomeCardHtml()}
+      <section class="v5-week-card"><div class="v5-card-heading"><h2>Tu semana</h2><span class="v5-pill">${weekly.length >= goal ? 'Objetivo cumplido' : 'En marcha'}</span></div><div class="v5-week-main"><div><strong>${weekly.length}<small> / ${goal}</small></strong><span>sesiones completadas</span></div><div class="v5-week-ring" style="--progress:${percentage * 3.6}deg" role="img" aria-label="${percentage}% del objetivo semanal"><span>${percentage}%</span></div></div>${weekStripHtml()}<p class="v5-week-message">${weekly.length >= goal ? 'Has alcanzado tu objetivo de esta semana.' : weekly.length ? `Te quedan ${goal - weekly.length} sesiones para tu objetivo.` : 'Tu primera sesión de la semana te espera.'}</p></section>
+    </div>
 
-      ${hasPremium ? `<section class="coach-command-card coach-tone-${coach.tone}">
-        <div class="coach-command-header">
-          <div class="coach-identity"><span class="coach-mark">MFP</span><span><small>ENTRENADOR</small><strong>Análisis local</strong></span></div>
-          <span class="coach-confidence"><i></i> Confianza ${coach.confidenceLabel.toLowerCase()}</span>
-        </div>
-        <div class="coach-command-main">
-          <div>
-            <p class="eyebrow">${coach.nextDay ? `Próxima sesión · ${esc(coach.nextDay.name)}` : 'Análisis de entrenamiento'}</p>
-            <h2>${esc(coach.headline)}</h2>
-            <p>${esc(coach.description)}</p>
-          </div>
-          <div class="coach-score-ring" style="--coach-score:${coach.confidence * 3.6}deg"><strong>${coach.confidence}%</strong><small>datos</small></div>
-        </div>
-        ${coach.primary ? `<div class="coach-primary-focus">
-          <span class="coach-status-icon coach-status-${coach.primary.tone}">${coach.primary.icon}</span>
-          <div><small>${esc(coach.primary.label)} · ${esc(coach.primary.exerciseName)}</small><strong>${esc(coach.primary.nextGoal)}</strong></div>
-        </div>` : ''}
-        <div class="coach-command-metrics">
-          <span><strong>${coach.progressCount}</strong><small>señales positivas</small></span>
-          <span><strong>${coach.attentionCount}</strong><small>puntos a revisar</small></span>
-          <span><strong>${coach.weekly.adherence}%</strong><small>objetivo semanal</small></span>
-        </div>
-        <button class="coach-open-button" type="button" data-action="coach-details"><span>Ver análisis completo</span><b>→</b></button>
-      </section>` : premiumPreviewCard('coach-analysis')}
+    <section class="v5-metrics" aria-label="Resumen de progreso">
+      <article><span>${hudIcon('history')}Entrenamientos</span><strong>${state.history.length}<small>en total</small></strong><p>${weekly.length} esta semana</p></article>
+      <article><span>${hudIcon('timer')}Tiempo activo</span><strong>${weeklyMinutes}<small>min</small></strong><p>Esta semana</p></article>
+      <article><span>${hudIcon('chart')}Volumen semanal</span><strong>${formatWeight(weeklyVolume)}<small>kg</small></strong><p>Peso × repeticiones registradas</p></article>
+      <article><span>${hudIcon('bolt')}Marcas personales</span><strong>${allRecords.length}<small>ejercicios</small></strong><p>Tu mejor registro en cada ejercicio</p></article>
+    </section>
 
-      ${hasPremium ? `<section class="progression-home-card">
-        <div class="progression-home-header">
-          <div class="progression-home-brand"><span class="progression-home-icon">↗</span><div><p class="eyebrow">Progresión automática</p><h2>${progressionDashboard.ready ? `${progressionDashboard.ready} ejercicio${progressionDashboard.ready === 1 ? '' : 's'} listo${progressionDashboard.ready === 1 ? '' : 's'} para subir` : 'Objetivos de carga actualizados'}</h2></div></div>
-          <button class="button button-secondary button-small" type="button" data-action="progression-dashboard">Ver análisis</button>
-        </div>
-        <div class="progression-home-stats">
-          <span class="is-ready"><strong>${progressionDashboard.ready}</strong><small>subir carga</small></span>
-          <span><strong>${progressionDashboard.improving}</strong><small>mejorando</small></span>
-          <span class="${progressionDashboard.attention ? 'has-alert' : ''}"><strong>${progressionDashboard.attention}</strong><small>a revisar</small></span>
-          <span><strong>${progressionDashboard.baseline}</strong><small>sin referencia</small></span>
-        </div>
-        ${progressionDashboard.top[0] ? `<div class="progression-home-focus"><span class="coach-status-icon coach-status-${progressionDashboard.top[0].tone}">${progressionDashboard.top[0].icon}</span><div><small>PRÓXIMA ACCIÓN</small><strong>${esc(progressionDashboard.top[0].exerciseName)} · ${esc(progressionDashboard.top[0].title)}</strong><p>${esc(progressionDashboard.top[0].nextGoal)}</p></div></div>` : ''}
-      </section>` : premiumPreviewCard('progression')}
+    <div class="v5-home-middle">
+      <section class="v5-panel"><div class="v5-card-heading"><div><p class="eyebrow">Constancia en movimiento</p><h2>Tu actividad</h2></div><span class="muted small">Últimos 7 días</span></div><div class="v5-volume-chart" role="img" aria-label="Volumen de los últimos 7 días: ${weekSeries.map((day) => `${day.label}: ${formatWeight(day.value)} kg`).join('; ')}">${weekSeries.map((day) => `<div><span class="v5-bar-track"><i style="height:${day.value ? Math.max(4, Math.round(day.value / maxVolume * 100)) : 0}%"></i></span><small>${esc(day.label.replace(/ de /g, ' '))}</small></div>`).join('')}</div><div class="v5-chart-caption"><span><i></i>Volumen de entrenamiento (kg)</span><button class="text-link" type="button" data-action="go-history">Ver historial ${hudIcon('arrow')}</button></div>${!state.history.length ? '<p class="v5-empty-note">El gráfico se llenará con tus entrenamientos guardados.</p>' : ''}</section>
+      <section class="v5-panel v5-next-panel"><div class="v5-card-heading"><div><p class="eyebrow">Tu agenda</p><h2>Lo que viene</h2></div>${hudIcon('calendar')}</div><div class="v5-agenda-item"><span class="v5-agenda-icon">${hudIcon('train')}</span><div><strong>${esc(planner.next?.name || 'Organiza tu semana')}</strong><p>${planner.next ? `${esc(formatPlannerDate(planner.next.date))} · ${esc(planner.next.preferredTime)}` : 'Elige los días que mejor encajan contigo.'}</p></div></div><p class="muted small">${esc(planner.message)}</p><button class="button button-secondary button-block" type="button" data-nav-local="calendar">Organizar calendario ${hudIcon('arrow')}</button></section>
+    </div>
 
-      <section class="planner-home-card">
-        <div class="planner-home-header">
-          <div class="planner-home-brand"><span class="planner-home-icon">◷</span><div><p class="eyebrow">Planificación inteligente</p><h2>${plannerSummary.next ? esc(plannerSummary.next.name) : 'Organiza tu semana'}</h2></div></div>
-          <button class="button button-secondary button-small" type="button" data-nav-local="calendar">Abrir calendario</button>
-        </div>
-        <div class="planner-home-main">
-          <div>
-            <strong>${plannerSummary.next ? `${formatPlannerDate(plannerSummary.next.date)} · ${esc(plannerSummary.next.preferredTime)}` : 'Sin próxima sesión'}</strong>
-            <p>${esc(plannerSummary.message)}</p>
-          </div>
-          <div class="planner-home-stats">
-            <span><strong>${plannerSummary.week.completed}</strong><small>completadas</small></span>
-            <span class="${plannerSummary.missed.length ? 'has-alert' : ''}"><strong>${plannerSummary.missed.length}</strong><small>pendientes</small></span>
-            <span><strong>${plannerSummary.adherence}%</strong><small>cumplimiento</small></span>
-          </div>
-        </div>
-        ${plannerMiniWeekHtml(plannerSummary.week)}
-      </section>
+    <section class="v5-shortcuts" aria-label="Accesos rápidos">${[
+      ['scale', 'Registrar peso', 'Sigue tu evolución', 'data-action="quick-weight"'],
+      ['photo', 'Progreso físico', 'Fotos y medidas', 'data-action="body-progress-home"'],
+      ['search', 'Explorar ejercicios', 'Técnica y alternativas', 'data-nav-local="library"']
+    ].map(([icon, title, subtitle, action]) => `<button type="button" ${action}><span class="v5-shortcut-icon">${hudIcon(icon)}</span><span><strong>${title}</strong><small>${subtitle}</small></span>${hudIcon('arrow')}</button>`).join('')}</section>
 
-      <section class="weekly-performance-card">
-        <div class="section-title-row">
-          <div><p class="eyebrow">Ritmo semanal</p><h2>Constancia</h2></div>
-          <span class="performance-goal">Objetivo ${goal}</span>
-        </div>
-        ${weekStripHtml()}
-        <div class="weekly-caption"><span>${weeklyMessage(weekly.length, goal)}</span><strong>${weekly.length}/${goal}</strong></div>
-      </section>
+    <div class="v5-home-bottom"><section class="v5-panel"><div class="v5-card-heading"><div><p class="eyebrow">Día a día</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2></div><span class="v5-pill">${sessionsThisMonth(state.history).length} sesiones</span></div>${homeCalendarHtml(calendar)}</section><section class="v5-panel"><div class="v5-card-heading"><div><p class="eyebrow">Tu evolución</p><h2>Marcas recientes</h2></div>${hudIcon('chart')}</div>${records.length ? `<div class="v5-records">${records.map((record) => `<div><span>${hudIcon('bolt')}</span><div><strong>${esc(record.name)}</strong><small>${formatDate(record.date)}</small></div><b>${record.type === 'weight' ? `${formatWeight(record.value)} kg` : `${record.value} reps`}</b></div>`).join('')}</div>` : '<div class="v5-empty-records"><span>↗</span><strong>Hoy puede ser tu punto de partida</strong><p>Tus primeras marcas aparecerán al registrar series.</p></div>'}</section></div>
 
-      <section class="section premium-dashboard-grid">
-        <article class="premium-panel calendar-panel">
-          <div class="panel-header"><div><p class="eyebrow">Actividad</p><h2>${new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(calendar.year, calendar.month, 1))}</h2></div><span class="panel-count">${sessionsThisMonth(state.history).length}</span></div>
-          ${homeCalendarHtml(calendar)}
-        </article>
-        <article class="premium-panel records-panel">
-          <div class="panel-header"><div><p class="eyebrow">Progreso real</p><h2>Marcas recientes</h2></div><button class="text-link" type="button" data-nav-local="profile">Ver todas</button></div>
-          ${recentRecords.length ? `<div class="premium-records-list">${recentRecords.map((record, idx) => `<div class="premium-record"><span class="record-rank">${String(idx + 1).padStart(2, '0')}</span><span class="record-copy"><strong>${esc(record.name)}</strong><small>${formatDate(record.date)}</small></span><b>${record.type === 'weight' ? `${formatWeight(record.value)} kg` : `${record.value} reps`}</b></div>`).join('')}</div>` : '<div class="empty-premium-state"><span>↗</span><p>Tus mejores marcas aparecerán aquí al repetir ejercicios.</p></div>'}
-        </article>
-      </section>
-
-      ${lastSession ? `<section class="section last-session-premium"><div class="last-session-icon">✓</div><div class="last-session-main"><p class="eyebrow">Última sesión</p><h2>${esc(lastSession.name)}</h2><div class="last-session-meta"><span>${formatDateTime(lastSession.finishedAt)}</span><span>${formatDuration(lastSession.durationSeconds)}</span><span>${lastSession.exercises.length} ejercicios</span></div></div><div class="last-session-volume"><strong>${formatWeight(lastSession.volume || sessionVolume(lastSession))}</strong><small>kg volumen</small></div><button class="round-arrow-button" type="button" data-action="history-detail" data-id="${esc(lastSession.id)}" aria-label="Abrir entrenamiento">›</button></section>` : ''}
-
-      <section class="section quick-launch-grid">
-        <button class="quick-launch-card" type="button" data-action="quick-weight"><span class="quick-launch-icon">⚖</span><span><strong>Registrar peso</strong><small>Actualiza tu evolución</small></span><b>＋</b></button>
-        <button class="quick-launch-card" type="button" data-action="body-progress-home"><span class="quick-launch-icon">◫</span><span><strong>Progreso físico</strong><small>Fotos, medidas y comparación</small></span><b>→</b></button>
-        <button class="quick-launch-card" type="button" data-nav-local="library"><span class="quick-launch-icon">⌕</span><span><strong>Buscar ejercicio</strong><small>Más de 280 opciones</small></span><b>→</b></button>
-        <button class="quick-launch-card" type="button" data-nav-local="plan"><span class="quick-launch-icon">▤</span><span><strong>Editar mi plan</strong><small>Series, reps y orden</small></span><b>→</b></button>
-        <button class="quick-launch-card" type="button" data-nav-local="calendar"><span class="quick-launch-icon">▦</span><span><strong>Planificar semana</strong><small>Calendario y sesiones pendientes</small></span><b>→</b></button>
-        <button class="quick-launch-card" type="button" data-action="go-history"><span class="quick-launch-icon">◷</span><span><strong>Ver historial</strong><small>Sesiones y récords</small></span><b>→</b></button>
-      </section>
-    </section>`;
+    ${lastSession ? `<button class="v5-last-session" type="button" data-action="history-detail" data-id="${esc(lastSession.id)}"><span class="v5-shortcut-icon">${hudIcon('check')}</span><span><small>Último entrenamiento · ${formatDate(lastSession.finishedAt)}</small><strong>${esc(lastSession.name)}</strong></span><span>${formatDuration(lastSession.durationSeconds)}</span>${hudIcon('arrow')}</button>` : ''}
+    ${premiumUnlocked() ? `<details class="v5-coach-details"><summary>${hudIcon('spark')}Tu análisis de entrenamiento<span>${esc(coach.headline)}</span>${hudIcon('arrow')}</summary><div><p>${esc(coach.description)}</p><div class="hero-actions"><button class="button button-secondary" type="button" data-action="coach-details">Ver análisis</button><button class="button button-secondary" type="button" data-action="progression-dashboard">Ver progresión</button></div></div></details>` : ''}
+  </section>`;
 }
+
 
 function weekStripHtml() {
   const trained = new Set(state.history.map((session) => isoDay(session.finishedAt || session.startedAt)));
@@ -1302,34 +1230,15 @@ function renderWelcome() {
   setOnboardingMode(true);
   onboardingStep = 1;
   onboardingDraft = onboardingDraftFromState();
-  app.innerHTML = `
-    <section class="onboarding-shell onboarding-intro">
-      <div class="onboarding-brand-lockup">
-        <span class="onboarding-logo" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span><strong>MY FIT PLAN</strong><small>BUILD · TRAIN · PROGRESS</small></span>
-      </div>
-      <div class="onboarding-hero-panel">
-        <span class="onboarding-kicker">Una experiencia creada para ti</span>
-        <h1>Entrena con un sistema que se adapta a tu forma de hacerlo.</h1>
-        <p>Recibe una recomendación profesional, parte de una plantilla o crea tus propias carpetas y rutinas desde cero.</p>
-        <div class="onboarding-proof-grid">
-          <article><b>01</b><span>Rutinas recomendadas con divisiones claras</span></article>
-          <article><b>02</b><span>Constructor libre para organizar tu entrenamiento</span></article>
-          <article><b>03</b><span>Progreso, técnica y registro serie a serie</span></article>
-        </div>
-        <button class="button button-primary onboarding-main-button" type="button" data-action="onboarding-start">Configurar My Fit Plan <b>→</b></button>
-        <button class="button button-ghost" type="button" data-action="demo-plan">Explorar una demo</button>
-        <div class="cloud-welcome-divider"><span>o guarda tu progreso en la nube</span></div>
-        <div class="cloud-welcome-actions">
-          <button class="button button-secondary" type="button" data-action="cloud-signup">Crear cuenta</button>
-          <button class="button button-ghost" type="button" data-action="cloud-signin">Iniciar sesión</button>
-        </div>
-        <p class="muted small cloud-local-note">Puedes seguir sin cuenta. Tus datos permanecen en este dispositivo hasta que decidas sincronizarlos.</p>
-      </div>
-      <p class="onboarding-legal">Para mayores de 18 años. La aplicación ofrece orientación general y no sustituye a profesionales sanitarios o del entrenamiento.</p>
-    </section>`;
+  app.innerHTML = `<section class="v5-welcome">
+    <header class="v5-welcome-nav"><div class="v5-wordmark"><span class="v5-logomark">${hudIcon('chart')}</span><strong>my fit plan<span>ENTRENA. AVANZA.</span></strong></div><button class="button button-secondary" type="button" data-action="cloud-signin">Iniciar sesión ${hudIcon('arrow')}</button></header>
+    <div class="v5-welcome-grid"><div class="v5-welcome-copy"><span class="v5-kicker"><i></i>TU ENTRENAMIENTO, A TU MANERA</span><h1>Un plan.<br>Tu ritmo.<br><em>Más progreso.</em></h1><p>Organiza tus rutinas, registra cada serie y ve hasta dónde puedes llegar. Todo tu entrenamiento en un mismo lugar.</p><div class="v5-welcome-actions"><button class="button button-primary" type="button" data-action="onboarding-start">Crear mi plan ${hudIcon('arrow')}</button><button class="v5-text-button" type="button" data-action="demo-plan">Explorar una demo ${hudIcon('play')}</button></div><p class="v5-welcome-note">Empieza sin cuenta. Conecta la nube cuando quieras.</p><div class="v5-welcome-features"><span>${hudIcon('plan')}Rutinas a tu medida</span><span>${hudIcon('chart')}Progreso visible</span><span>${hudIcon('timer')}Registro sencillo</span></div></div>
+    <div class="v5-welcome-visual" aria-label="Ejemplo visual de un entrenamiento"><span class="v5-preview-label">ASÍ SE VE TU PRÓXIMO PASO</span><div class="v5-preview-card"><div class="v5-preview-top"><span>${hudIcon('train')}MI ENTRENAMIENTO</span><span>01</span></div><h2>Una sesión.<br>Un poco más lejos.</h2><p>Tu rutina, organizada serie a serie.</p><div class="v5-preview-exercise"><span>01</span><div><strong>Press de banca</strong><small>Pecho · 3 series</small></div>${hudIcon('check')}</div><div class="v5-preview-exercise"><span>02</span><div><strong>Remo con mancuerna</strong><small>Espalda · 3 series</small></div>${hudIcon('check')}</div><div class="v5-preview-exercise"><span>03</span><div><strong>Sentadilla goblet</strong><small>Piernas · 3 series</small></div>${hudIcon('arrow')}</div><div class="v5-preview-progress"><span>Hazlo a tu ritmo</span><i><b></b></i></div></div><div class="v5-preview-floating">${hudIcon('bolt')}<span><strong>Cada sesión cuenta</strong><small>Construye tu propia constancia</small></span></div><span class="v5-visual-footnote">Vista ilustrativa · tu plan se adapta a tus preferencias</span></div></div>
+    <footer class="v5-welcome-footer"><span>MY FIT PLAN · 5.0</span><p>Para mayores de 18 años. Orientación general de entrenamiento.</p><div><button type="button" data-action="legal-privacy">Privacidad</button><button type="button" data-action="legal-terms">Términos</button><button type="button" data-action="cloud-signup">Crear cuenta</button></div></footer>
+  </section>`;
   updateHud();
 }
+
 
 function renderOnboardingUpgrade() {
   setOnboardingMode(true);
@@ -2355,8 +2264,8 @@ function renderWorkoutSelector() {
 
   app.innerHTML = `<section class="page workout-selector-page">
     <header class="workout-selector-hero">
-      <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Elige cómo quieres entrenar hoy</strong></span></div>
-      <h1>Tres formas, tres funciones distintas.</h1>
+      <div class="workout-selector-brand"><span class="coach-mark">MFP</span><span><small>ENTRENAR</small><strong>Tu espacio de entrenamiento</strong></span></div>
+      <h1>¿Cómo entrenamos hoy?</h1>
       <p>Tu rutina empieza directamente. My Fit Plan prepara una sesión según cómo llegas hoy. El personalizado lo construyes tú y también empieza directamente.</p>
     </header>
 
@@ -2369,7 +2278,7 @@ function renderWorkoutSelector() {
         <div class="training-option-copy">
           <p class="eyebrow">${esc(state.plan?.name || 'Rutina activa')}</p>
           <h2>${esc(routineDay.name)}</h2>
-          <p>Sigue la planificación que ya tienes creada. Esta opción avanza normalmente al siguiente día cuando terminas.</p>
+          <p>Sigue la planificación que ya tienes creada. Al terminar, tendrás listo el siguiente día.</p>
         </div>
         ${workoutOptionPreview(routineDay)}
         <div class="training-option-footer">
@@ -2422,13 +2331,13 @@ function renderWorkoutSelector() {
         <div class="custom-option-icon">＋</div>
         <div class="training-option-copy">
           <p class="eyebrow">CREADO POR TI</p>
-          <h2>Entrenamiento personalizado</h2>
+          <h2>Una sesión a tu manera</h2>
           <p>Elige los ejercicios, ordénalos y configura sus series. Al terminar el constructor, el entrenamiento empieza directamente.</p>
         </div>
         <ul class="custom-option-list">
           <li>Ejercicios elegidos manualmente</li>
           <li>Series, repeticiones y descansos propios</li>
-          <li>Sin check-in ni adaptación automática</li>
+          <li>Control total sobre cada ejercicio</li>
         </ul>
         <button class="button button-secondary button-block" type="button" data-action="training-custom">Crear mi personalizado</button>
       </article>
@@ -2436,7 +2345,7 @@ function renderWorkoutSelector() {
 
     <section class="training-selector-note">
       <span>i</span>
-      <p><strong>Separación clara:</strong> rutina y personalizado empiezan directamente; el cuestionario de tiempo, energía, sueño y molestias pertenece exclusivamente al entrenamiento creado por My Fit Plan.</p>
+      <p><strong>Separación clara:</strong> tu rutina y tus sesiones personalizadas empiezan directamente; el cuestionario de tiempo, energía, sueño y molestias pertenece exclusivamente al entrenamiento creado por My Fit Plan.</p>
     </section>
   </section>`;
 }
@@ -3198,7 +3107,7 @@ function renderLibrary() {
   const suggestions = [...new Set([...(state.searchHistory || []).slice(0, 4), ...suggestedSearches(libraryFilters.query)])].slice(0, 6);
   app.innerHTML = `
     <section class="page library-page library-pro-page">
-      <div class="section-title-row"><div><p class="eyebrow">BIBLIOTECA PRO · ${quality.total} EJERCICIOS</p><h1>Técnica y sustituciones</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
+      <div class="section-title-row"><div><p class="eyebrow">${quality.total} EJERCICIOS PARA TU PLAN</p><h1>Encuentra tu próximo ejercicio</h1></div><button class="button button-primary button-small" type="button" data-action="custom-new">＋ Crear</button></div>
 
       <section class="library-quality-strip">
         <span><strong>${quality.complete}</strong><small>fichas completas</small></span>
@@ -3214,15 +3123,16 @@ function renderLibrary() {
       </button>
 
       <section class="card library-controls library-controls-pro">
-        <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" type="search" placeholder="Ej. tirón vertical con polea, glúteos sin máquina…" value="${esc(libraryFilters.query)}"></div>
+        <div class="search-shell"><span>⌕</span><input class="search-input" id="librarySearch" aria-label="Buscar ejercicios" type="search" placeholder="Busca un ejercicio, músculo o material…" value="${esc(libraryFilters.query)}"></div>
         ${suggestions.length ? `<div class="search-suggestions">${suggestions.map((value) => `<button type="button" data-action="library-query" data-query="${esc(value)}">${esc(value)}</button>`).join('')}</div>` : ''}
-        <div class="filter-row library-filter-grid">
+        <div class="v5-library-tools"><details><summary>Filtrar por músculo, material y nivel</summary><div class="filter-row library-filter-grid">
           <label><span>Músculo</span><select id="libraryMuscle" class="filter-select">${muscles.map((value) => `<option ${value === libraryFilters.muscle ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
           <label><span>Material</span><select id="libraryEquipment" class="filter-select">${equipment.map((value) => `<option ${value === libraryFilters.equipment ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
           <label><span>Nivel</span><select id="libraryLevel" class="filter-select">${levels.map((value) => `<option ${value === libraryFilters.level ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
           <label><span>Patrón</span><select id="libraryMovement" class="filter-select">${movements.map((value) => `<option ${value === libraryFilters.movement ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
           <label><span>Disponibilidad</span><select id="libraryAvailability" class="filter-select">${availability.map((value) => `<option ${value === libraryFilters.availability ? 'selected' : ''}>${esc(value)}</option>`).join('')}</select></label>
         </div>
+        </details><button class="text-link" type="button" data-action="library-reset">Restablecer filtros</button></div>
         <div class="segmented-control library-mode-control">
           ${[['all','Todos'],['media','Animados'],['favorites','Favoritos'],['recent','Recientes'],['custom','Creados']].map(([value,label]) => `<button type="button" data-action="library-mode" data-mode="${value}" class="${libraryFilters.mode === value ? 'active' : ''}">${label}</button>`).join('')}
         </div>
@@ -3254,7 +3164,7 @@ function libraryResultsHtml() {
   entries = query
     ? searchExerciseEntries(entries, query, searchableExerciseText)
     : entries.sort((a, b) => a[1].name.localeCompare(b[1].name, 'es'));
-  if (!entries.length) return emptyState('No hay coincidencias', 'Prueba otro músculo, material o patrón de movimiento.', '<button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
+  if (!entries.length) return emptyState('No hay coincidencias', 'Prueba otro músculo, material o patrón de movimiento.', '<button class="button button-secondary" type="button" data-action="library-reset">Restablecer filtros</button><button class="button button-primary" type="button" data-action="custom-new">Crear ejercicio</button>');
 
   const visible = entries.slice(0, libraryPageSize);
   return `<div class="results-header"><p class="results-count"><strong>${entries.length}</strong> resultados${entries.length > visible.length ? ` · mostrando ${visible.length}` : ''}</p>${query ? `<button class="button button-ghost button-small" type="button" data-action="remember-search" data-query="${esc(query)}">Guardar búsqueda</button>` : ''}</div><div class="exercise-grid exercise-grid-pro">${visible.map(([id, exercise]) => {
@@ -3271,7 +3181,7 @@ function libraryResultsHtml() {
             <div class="exercise-meta"><span>${esc(exercise.muscle)}</span><span>${esc(exercise.level)}</span></div>
             <h3>${esc(exercise.name)}</h3>
           </button>
-          <button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="Favorito">★</button>
+          <button class="favorite-button ${favorite ? 'active' : ''}" type="button" data-action="toggle-favorite" data-id="${esc(id)}" aria-label="${favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}" aria-pressed="${favorite}">★</button>
         </div>
         <p class="muted small clamp-2 library-card-summary">${esc(exercise.summary)}</p>
         <div class="library-professional-tags">
@@ -4018,8 +3928,8 @@ function profileSettingsHtml() {
     </form>
     <section class="section card beta-ready-card">
       <div class="beta-ready-head">
-        <div><p class="eyebrow">BETA EXTERNA · My Fit Plan v4.7</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
-        <span class="beta-version-pill">v4.7</span>
+        <div><p class="eyebrow">BETA EXTERNA · My Fit Plan v5.0</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
+        <span class="beta-version-pill">v5.0</span>
       </div>
       ${betaPilotConfig?.pilotOpen ? betaPilotProgressHtml({ compact: true }) : '<div class="notice"><strong>Piloto no iniciado.</strong> La configuración remota todavía no ha abierto esta cohorte.</div>'}
       <div class="beta-action-grid">
@@ -4725,6 +4635,7 @@ function renderLocked(title, description) {
 }
 
 async function handleAppClick(event) {
+  delayedSaveField.flush();
   const globalNav = event.target.closest('[data-nav]');
   if (globalNav) return setView(globalNav.dataset.nav);
   const nav = event.target.closest('[data-nav-local]');
@@ -4812,12 +4723,14 @@ async function handleAppClick(event) {
     'picker-workout-add': () => openExercisePicker({ mode: 'workout-add' }),
     'picker-workout-replace': () => openExercisePicker({ mode: 'workout-replace', exerciseIndex: Number(target.dataset.exercise) }),
     'remove-workout-exercise': () => removeWorkoutExercise(Number(target.dataset.exercise)),
-    'save-exit-workout': () => { save(); showToast('Entrenamiento guardado.'); setView('home'); },
+    'save-exit-workout': () => { if (!save()) return; showToast('Entrenamiento guardado.'); setView('home'); },
     'cancel-workout': cancelWorkout,
     'finish-workout': finishWorkout,
     'library-mode': () => { libraryFilters.mode = target.dataset.mode; libraryPageSize = 36; renderLibrary(); },
     'library-query': () => applyLibraryQuery(target.dataset.query),
     'remember-search': () => rememberSearch(target.dataset.query),
+    'library-reset': () => { libraryFilters = { query: '', muscle: 'Todos', equipment: 'Todos', level: 'Todos', movement: 'Todos', availability: 'Todos', mode: 'all' }; libraryPageSize = 36; renderLibrary(); },
+    'theme-toggle': () => { state.settings.appearance = resolvedAppearance() === 'dark' ? 'light' : 'dark'; save(); },
     'library-more': () => { libraryPageSize += 36; refreshLibraryResults(); },
     'calendar-day': () => openCalendarDay(target.dataset.date),
     'go-history': () => { setView('profile'); showProfileTab('history'); },
@@ -4876,6 +4789,7 @@ async function handleAppClick(event) {
 }
 
 function handleAppChange(event) {
+  delayedSaveField.flush();
   const target = event.target;
   if (target.name === 'obPriority' && target.checked) {
     const checked = [...document.querySelectorAll('input[name="obPriority"]:checked')];
@@ -4900,7 +4814,7 @@ function handleAppChange(event) {
   if (target.matches('[data-profile-tab]')) showProfileTab(target.dataset.profileTab);
 }
 
-const delayedSaveField = debounce((target) => {
+const delayedSaveField = createPendingInputWriter((target) => {
   if (target.dataset.action === 'set-field') updateSetField(target, false);
   if (target.dataset.action === 'workout-notes' && state.activeWorkout) {
     state.activeWorkout.notes = target.value;
@@ -4964,6 +4878,7 @@ function refreshLibraryResults() {
 }
 
 function handleAppSubmit(event) {
+  delayedSaveField.flush();
   event.preventDefault();
   if (event.target.id === 'planForm') submitPlanForm(event.target);
   if (event.target.id === 'profileForm') submitProfileForm(event.target);
@@ -5574,8 +5489,14 @@ function updateSetField(target, rerender = false) {
 }
 
 function toggleSet(exerciseIndex, setIndex) {
-  const exercise = state.activeWorkout.exercises[exerciseIndex];
-  const set = exercise.sets[setIndex];
+  delayedSaveField.flush();
+  const exercise = state.activeWorkout?.exercises?.[exerciseIndex];
+  const set = exercise?.sets?.[setIndex];
+  if (!set) return;
+  if (!set.completed && numberValue(set.reps) <= 0) {
+    showToast(exercise.unit === 'sec' ? 'Indica los segundos realizados antes de completar la serie.' : 'Indica las repeticiones realizadas antes de completar la serie.', 'danger');
+    return;
+  }
   set.completed = !set.completed;
   set.completedAt = set.completed ? new Date().toISOString() : null;
   save();
@@ -5688,7 +5609,7 @@ function openProgressionDashboard() {
     state.customExercises
   );
 
-  openModal(`<div class="modal-header"><div><p class="eyebrow">PROGRESIÓN AUTOMÁTICA</p><h2>Estado de tu rutina</h2><p class="muted">Cada recomendación utiliza las últimas sesiones comparables del ejercicio.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">PROGRESIÓN AUTOMÁTICA</p><h2>Estado de tu rutina</h2><p class="muted">Cada recomendación utiliza las últimas sesiones comparables del ejercicio.</p></div><button class="modal-close" type="button" data-close-modal>×</button></div>
     <section class="progression-dashboard-summary"><span class="ready"><strong>${dashboard.ready}</strong><small>listos para subir</small></span><span><strong>${dashboard.improving}</strong><small>mejorando</small></span><span class="${dashboard.attention ? 'attention' : ''}"><strong>${dashboard.attention}</strong><small>a revisar</small></span><span><strong>${dashboard.baseline}</strong><small>sin referencia</small></span></section>
     <div class="progression-dashboard-list">${dashboard.top.length ? dashboard.top.map((item) => `<article class="progression-dashboard-item progression-${item.tone}"><span>${item.icon}</span><div><small>${esc(item.exerciseName)} · ${item.confidence}% confianza</small><strong>${esc(item.title)}</strong><p>${esc(item.nextGoal)}</p></div><button type="button" data-open-exercise="${esc(item.exerciseId)}">Ficha</button></article>`).join('') : '<p class="muted">Añade ejercicios a una rutina para empezar el análisis.</p>'}</div>`, { wide: true });
   wrapper.querySelectorAll('[data-open-exercise]').forEach((button) => button.addEventListener('click', () => {
@@ -5812,7 +5733,10 @@ function cancelWorkout() {
 }
 
 function finishWorkout() {
+  delayedSaveField.flush();
   const workout = state.activeWorkout;
+  if (!workout) return;
+  const previousState = clone(state);
   const exercises = workout.exercises.map((exercise) => ({
     ...exercise,
     exerciseName: getExercise(exercise.exerciseId, state.customExercises).name,
@@ -5863,8 +5787,12 @@ function finishWorkout() {
   state.activeWorkout = null;
   pendingWorkoutSelection = null;
   customWorkoutDraft = null;
+  if (!save()) {
+    state = previousState;
+    renderWorkout();
+    return;
+  }
   clearRestTimer();
-  save();
   const message = session.prs.length ? `Sesión guardada con ${session.prs.length} nuevo récord.` : 'Entrenamiento registrado. Buen trabajo.';
   showToast(message, 'success');
   openSessionCompleted(session);
@@ -5980,6 +5908,7 @@ function openCustomExerciseForm(id = null) {
 }
 
 function showProfileTab(tab, filterExerciseId = null) {
+  delayedSaveField.flush();
   if (tab === 'account' && cloudAccountSummary().signedIn && navigator.onLine) {
     cloudRefreshAccount()
       .then(() => refreshBillingAccount({ quiet: true }))
@@ -6428,7 +6357,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=47', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=50', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
@@ -6436,7 +6365,12 @@ async function registerServiceWorker() {
         if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(worker);
       });
     });
-    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+    let hasController = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hasController) { hasController = true; return; }
+      persistPendingInputs();
+      window.location.reload();
+    });
     setInterval(() => registration.update(), 60 * 60 * 1000);
   } catch (error) {
     console.warn('No se pudo registrar la aplicación sin conexión:', error);
@@ -6451,6 +6385,7 @@ function showUpdateBanner(worker = null, version = '') {
 }
 
 async function handleUpdateClick() {
+  persistPendingInputs();
   if (waitingServiceWorker) {
     waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
     return;
@@ -6471,3 +6406,6 @@ async function handleUpdateClick() {
   url.searchParams.set('fresh', Date.now().toString());
   window.location.replace(url.toString());
 }
+
+// Start after all bindings, including pending input writers, are initialized.
+init();

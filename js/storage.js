@@ -1,16 +1,16 @@
-import { clone, isoDay, numberValue, uid } from './utils.js?v=47';
-import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=47';
-import { normalizePlanner } from './calendar-planner.js?v=47';
+import { clone, isoDay, numberValue, uid } from './utils.js?v=50';
+import { buildPlan, normalizePlan, trainingRules } from './plans.js?v=50';
+import { normalizePlanner } from './calendar-planner.js?v=50';
 
 export const STORAGE_KEY = 'myFitPlanStateV46';
 export const LEGACY_KEYS = ['myFitPlanStateV46', 'myFitPlanStateV45', 'myFitPlanStateV44', 'myFitPlanStateV43', 'myFitPlanStateV421', 'myFitPlanStateV42', 'myFitPlanStateV41', 'myFitPlanStateV402', 'myFitPlanStateV401', 'myFitPlanStateV40', 'myFitPlanStateV39', 'myFitPlanStateV381', 'myFitPlanStateV38', 'myFitPlanStateV37', 'myFitPlanStateV36', 'myFitPlanStateV35', 'myFitPlanStateV34D', 'myFitPlanStateV34C7', 'myFitPlanStateV34C6', 'myFitPlanStateV34C5', 'myFitPlanStateV34C4', 'myFitPlanStateV34C3', 'myFitPlanStateV34C2', 'myFitPlanStateV34C', 'myFitPlanStateV34B', 'myFitPlanStateV34', 'myFitPlanStateV33', 'myFitPlanStateV322', 'myFitPlanStateV32', 'myFitPlanStateV312', 'myFitPlanStateV311', 'myFitPlanStateV31', 'myFitPlanStateV30B1', 'myFitPlanStateV30A2', 'myFitPlanStateV30A1', 'myFitPlanStateV30A', 'myFitPlanStateV22', 'myFitPlanStateV21', 'myFitPlanStateV2', 'myFitPlanStateV1'];
-export const APP_VERSION = '4.7 External Beta Candidate';
+export const APP_VERSION = '5.0 Rediseño';
 
 export const defaultSettings = {
   accent: 'custom',
-  accentHex: '#f97316',
-  appearance: 'dark',
-  compact: true,
+  accentHex: '#c8ed90',
+  appearance: 'light',
+  compact: false,
   showTips: true,
   reduceMotion: false,
   restSound: true,
@@ -220,7 +220,11 @@ export function normalizeState(saved = {}) {
   );
   normalized.activeWorkout = normalizeActiveWorkout(saved.activeWorkout, normalized.plan, profile || {});
 
-  if (normalized.plan?.days?.length) normalized.nextWorkoutIndex %= normalized.plan.days.length;
+  if (normalized.plan?.days?.length) {
+    const length = normalized.plan.days.length;
+    const index = Number.isFinite(normalized.nextWorkoutIndex) ? Math.floor(normalized.nextWorkoutIndex) : 0;
+    normalized.nextWorkoutIndex = ((index % length) + length) % length;
+  }
   else normalized.nextWorkoutIndex = 0;
   return normalized;
 }

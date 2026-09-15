@@ -31,8 +31,14 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function localDate(value) {
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T12:00:00`);
+  return new Date(value);
+}
+
 export function formatDate(value, options = {}) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = localDate(value);
   if (Number.isNaN(date.getTime())) return 'Sin fecha';
   return new Intl.DateTimeFormat('es-ES', {
     day: '2-digit',
@@ -79,7 +85,7 @@ export function startOfWeek(date = new Date()) {
 }
 
 export function isoDay(value = new Date()) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = localDate(value);
   if (Number.isNaN(date.getTime())) return '';
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
