@@ -1,7 +1,7 @@
 'use strict';
 
-import { getAllExercises, getExercise } from './exercises.js?v=50';
-import { normalizeText } from './utils.js?v=50';
+import { getAllExercises, getExercise } from './exercises.js?v=51';
+import { normalizeText } from './utils.js?v=51';
 
 const MOVEMENT_LABELS = {
   press_horizontal: 'Empuje horizontal',

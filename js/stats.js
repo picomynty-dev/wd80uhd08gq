@@ -1,5 +1,5 @@
-import { isoDay, numberValue, startOfWeek } from './utils.js?v=50';
-import { getExercise } from './exercises.js?v=50';
+import { isoDay, numberValue, startOfWeek } from './utils.js?v=51';
+import { getExercise } from './exercises.js?v=51';
 
 export function completedSets(exercise) {
   return (exercise?.sets || []).filter((set) => set.completed);
@@ -108,11 +108,13 @@ export function personalRecords(history = [], customExercises = []) {
         exerciseId: exercise.exerciseId,
         name: exercise.exerciseName || exerciseData.name,
         bestWeight: Math.max(numberValue(previous.bestWeight), numberValue(maxWeightSet.weight)),
-        bestRepsAtWeight: numberValue(maxWeightSet.weight) >= numberValue(previous.bestWeight)
-          ? Math.max(numberValue(previous.bestRepsAtWeight), numberValue(maxWeightSet.reps))
-          : numberValue(previous.bestRepsAtWeight),
+        bestRepsAtWeight: numberValue(maxWeightSet.weight) > numberValue(previous.bestWeight)
+          ? numberValue(maxWeightSet.reps)
+          : numberValue(maxWeightSet.weight) === numberValue(previous.bestWeight)
+            ? Math.max(numberValue(previous.bestRepsAtWeight), numberValue(maxWeightSet.reps))
+            : numberValue(previous.bestRepsAtWeight),
         bestVolume: Math.max(numberValue(previous.bestVolume), totalVolume),
-        lastDate: session.finishedAt || session.startedAt
+        lastDate: [previous.lastDate, session.finishedAt || session.startedAt].filter(Boolean).sort().at(-1)
       });
     }
   }

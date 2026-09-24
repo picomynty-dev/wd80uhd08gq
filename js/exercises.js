@@ -1,5 +1,5 @@
-import { extraExerciseLibrary } from './exercises-extra.js?v=50';
-import { premiumExerciseData } from './premium-data.js?v=50';
+import { extraExerciseLibrary } from './exercises-extra.js?v=51';
+import { premiumExerciseData } from './premium-data.js?v=51';
 
 'use strict';
 
@@ -77,6 +77,17 @@ export const baseExerciseLibrary = {
       back: './assets/anatomy/bench-press-back.svg'
     },
     premium: true
+  },
+  smith_incline_press: {
+    name: 'Press inclinado en Smith', englishName: 'Smith machine incline press', muscle: 'Pecho', equipment: 'Máquina',
+    summary: 'Press inclinado con trayectoria guiada en Smith o multipower.',
+    steps: ['Ajusta el banco inclinado y los topes de seguridad; comprueba el recorrido sin carga.', 'Mantén la espalda apoyada y baja la barra de forma controlada hacia la parte superior del pecho.', 'Empuja con control y vuelve a asegurar la barra antes de salir.'],
+    mistakes: ['Usar una inclinación demasiado vertical.', 'Rebotar la barra o perder el apoyo de la espalda.'],
+    alternatives: ['incline_dumbbell_press', 'chest_press', 'barbell_bench_press'],
+    synonyms: ['press inclinado multipower', 'incline smith', 'smith incline bench press'],
+    level: 'Intermedio', movement: 'press_horizontal', visualType: 'press_horizontal',
+    primaryMuscles: ['Pectoral superior'], secondaryMuscles: ['Tríceps', 'Deltoides anterior'],
+    realMotion: true, media: {video:'./assets/videos/smith-incline-press.mp4', poster:'./assets/posters/smith-incline-press.jpg'}
   },
   incline_dumbbell_press: ex('Press inclinado con mancuernas', 'Pecho', 'Mancuernas', 'Variante inclinada con mayor participación de la zona superior del pecho.', ['Ajusta el banco con una inclinación moderada.', 'Baja las mancuernas cerca del pecho superior.', 'Empuja manteniendo hombros estables.'], ['Usar una inclinación demasiado vertical.', 'Chocar las mancuernas.'], ['dumbbell_press', 'chest_press']),
   pec_deck: ex('Aperturas en peck deck', 'Pecho', 'Máquina', 'Aducción de brazos guiada para trabajar el pecho.', ['Ajusta el asiento para que los brazos queden a la altura del pecho.', 'Junta los apoyos sin encoger hombros.', 'Regresa lentamente.'], ['Forzar demasiado el estiramiento.', 'Dar impulso.'], ['cable_fly', 'chest_press']),

@@ -1,8 +1,8 @@
 'use strict';
 
-import { getAllExercises, getExercise } from './exercises.js?v=50';
-import { createPlanExercise, trainingRules } from './plans.js?v=50';
-import { numberValue } from './utils.js?v=50';
+import { getAllExercises, getExercise } from './exercises.js?v=51';
+import { createPlanExercise, trainingRules } from './plans.js?v=51';
+import { numberValue } from './utils.js?v=51';
 
 const FOCUS_PROFILES = [
   {
@@ -315,8 +315,7 @@ function buildPool({
   const equipmentOnly = base.filter(([id, exercise]) => equipmentAllowed(exercise, profile));
   if (equipmentOnly.length >= desiredCount * 4) return equipmentOnly;
 
-  const withoutMemory = base.filter(([id]) => !memoryExcludedIds.has(id));
-  return withoutMemory.length >= desiredCount * 3 ? withoutMemory : base;
+  return equipmentOnly;
 }
 
 function selectExercises({

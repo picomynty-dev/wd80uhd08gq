@@ -1,11 +1,12 @@
 'use strict';
 
-import { readableAccentColor } from './theme.js?v=50';
-import { createPendingInputWriter } from './pending-input.js?v=50';
+import { renderWeightChart } from './weight-chart.js?v=51';
+import { readableAccentColor } from './theme.js?v=51';
+import { createPendingInputWriter } from './pending-input.js?v=51';
 
-import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=50';
-import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=50';
-import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=50';
+import { getAllExercises, getExercise, searchableExerciseText } from './exercises.js?v=51';
+import { buildPlan, buildPlanFromTemplate, createBlankPlan, createPlanExercise, experienceLabel, objectiveLabel, programTemplates, templatesForProfile, trainingRules, isTimedExercise } from './plans.js?v=51';
+import { APP_VERSION, createEmptyState, findLegacyStateCandidates, loadState, saveState as persistState, validateImportedState } from './storage.js?v=51';
 import {
   buildCalendar,
   calculateStreak,
@@ -20,18 +21,18 @@ import {
   sessionsThisMonth,
   sessionsThisWeek,
   weightSummary
-} from './stats.js?v=50';
+} from './stats.js?v=51';
 import {
   analyzeCompletedSession,
   analyzeExerciseTrend,
   buildCoachDashboard
-} from './coach.js?v=50';
+} from './coach.js?v=51';
 import {
   buildAdaptiveSession,
   estimatePlanMinutes,
   readinessSummary
-} from './adaptive.js?v=50';
-import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=50';
+} from './adaptive.js?v=51';
+import { buildRecommendedSession, evaluateTrainingChoice } from './session-selector.js?v=51';
 import {
   WEEKDAY_LABELS,
   buildPlannerSummary,
@@ -46,15 +47,15 @@ import {
   skipPlannerOccurrence,
   smartReplanMissed,
   updatePlannerSchedule
-} from './calendar-planner.js?v=50';
-import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=50';
+} from './calendar-planner.js?v=51';
+import { coachingProfile, deduplicateExerciseEntries, equipmentAvailable, exerciseQuality, libraryQualitySummary, movementCategory, movementOptions, rankExerciseSubstitutes } from './exercise-intelligence.js?v=51';
 import {
   applyDeloadToWorkout,
   buildDeloadRecommendation,
   buildExerciseProgression,
   buildExerciseProgressionHistory,
   buildProgressionDashboard
-} from './progression-engine.js?v=50';
+} from './progression-engine.js?v=51';
 import {
   clamp,
   clone,
@@ -70,11 +71,11 @@ import {
   numberValue,
   readJsonFile,
   uid
-} from './utils.js?v=50';
-import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=50';
-import { searchExerciseEntries, suggestedSearches } from './search.js?v=50';
-import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=50';
-import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=50';
+} from './utils.js?v=51';
+import { closeModal, confirmAction, emptyState, openModal, showToast } from './ui.js?v=51';
+import { searchExerciseEntries, suggestedSearches } from './search.js?v=51';
+import { exerciseCardVisual, exerciseVisual, premiumExerciseVisual } from './visuals.js?v=51';
+import { decorateInteractiveElements, getHudLayoutSnapshot, hudIcon, initAdaptiveHud, pageHudMeta, syncAdaptiveHudMode } from './hud.js?v=51';
 import {
   clearProgressPhotoStore,
   compressProgressImage,
@@ -86,7 +87,7 @@ import {
   hydrateProgressImages,
   listProgressPhotoIds,
   saveProgressPhoto
-} from './photo-progress.js?v=50';
+} from './photo-progress.js?v=51';
 import {
   cloudAccountSummary,
   cloudDeleteAccount,
@@ -106,12 +107,12 @@ import {
   getCloudStatus,
   initCloud,
   notifyCloudStateChanged
-} from './cloud.js?v=50';
-import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=50';
-import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=50';
-import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=50';
-import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=50';
-import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=50';
+} from './cloud.js?v=51';
+import { hasPremiumAccess, planLabel, premiumFeature, premiumFeatureForAction } from './premium.js?v=51';
+import { billingSummary, initBilling, openPremiumCheckout, previewPremiumPrices, setBillingEventHandler } from './billing.js?v=51';
+import { billingManagementCachedSummary, clearBillingManagementCache, fetchBillingSummary, openBillingPortal } from './billing-management.js?v=51';
+import { fetchLatestVersion, betaFeedbackSnapshot, submitBetaFeedback } from './beta.js?v=51';
+import { LEGAL_CONFIG, legalLaunchStatus, privacySections, termsSections } from './legal.js?v=51';
 import {
   betaPilotChecklist,
   betaPilotNeedsUpdate,
@@ -122,7 +123,7 @@ import {
   markBetaPilotFeedbackSent,
   markBetaPilotGuideOpened,
   markBetaPilotWelcomeSeen
-} from './beta-pilot.js?v=50';
+} from './beta-pilot.js?v=51';
 
 const app = document.querySelector('#app');
 const installButton = document.querySelector('#installButton');
@@ -1234,7 +1235,7 @@ function renderWelcome() {
     <header class="v5-welcome-nav"><div class="v5-wordmark"><span class="v5-logomark">${hudIcon('chart')}</span><strong>my fit plan<span>ENTRENA. AVANZA.</span></strong></div><button class="button button-secondary" type="button" data-action="cloud-signin">Iniciar sesión ${hudIcon('arrow')}</button></header>
     <div class="v5-welcome-grid"><div class="v5-welcome-copy"><span class="v5-kicker"><i></i>TU ENTRENAMIENTO, A TU MANERA</span><h1>Un plan.<br>Tu ritmo.<br><em>Más progreso.</em></h1><p>Organiza tus rutinas, registra cada serie y ve hasta dónde puedes llegar. Todo tu entrenamiento en un mismo lugar.</p><div class="v5-welcome-actions"><button class="button button-primary" type="button" data-action="onboarding-start">Crear mi plan ${hudIcon('arrow')}</button><button class="v5-text-button" type="button" data-action="demo-plan">Explorar una demo ${hudIcon('play')}</button></div><p class="v5-welcome-note">Empieza sin cuenta. Conecta la nube cuando quieras.</p><div class="v5-welcome-features"><span>${hudIcon('plan')}Rutinas a tu medida</span><span>${hudIcon('chart')}Progreso visible</span><span>${hudIcon('timer')}Registro sencillo</span></div></div>
     <div class="v5-welcome-visual" aria-label="Ejemplo visual de un entrenamiento"><span class="v5-preview-label">ASÍ SE VE TU PRÓXIMO PASO</span><div class="v5-preview-card"><div class="v5-preview-top"><span>${hudIcon('train')}MI ENTRENAMIENTO</span><span>01</span></div><h2>Una sesión.<br>Un poco más lejos.</h2><p>Tu rutina, organizada serie a serie.</p><div class="v5-preview-exercise"><span>01</span><div><strong>Press de banca</strong><small>Pecho · 3 series</small></div>${hudIcon('check')}</div><div class="v5-preview-exercise"><span>02</span><div><strong>Remo con mancuerna</strong><small>Espalda · 3 series</small></div>${hudIcon('check')}</div><div class="v5-preview-exercise"><span>03</span><div><strong>Sentadilla goblet</strong><small>Piernas · 3 series</small></div>${hudIcon('arrow')}</div><div class="v5-preview-progress"><span>Hazlo a tu ritmo</span><i><b></b></i></div></div><div class="v5-preview-floating">${hudIcon('bolt')}<span><strong>Cada sesión cuenta</strong><small>Construye tu propia constancia</small></span></div><span class="v5-visual-footnote">Vista ilustrativa · tu plan se adapta a tus preferencias</span></div></div>
-    <footer class="v5-welcome-footer"><span>MY FIT PLAN · 5.0</span><p>Para mayores de 18 años. Orientación general de entrenamiento.</p><div><button type="button" data-action="legal-privacy">Privacidad</button><button type="button" data-action="legal-terms">Términos</button><button type="button" data-action="cloud-signup">Crear cuenta</button></div></footer>
+    <footer class="v5-welcome-footer"><span>MY FIT PLAN · 5.1</span><p>Para mayores de 18 años. Orientación general de entrenamiento.</p><div><button type="button" data-action="legal-privacy">Privacidad</button><button type="button" data-action="legal-terms">Términos</button><button type="button" data-action="cloud-signup">Crear cuenta</button></div></footer>
   </section>`;
   updateHud();
 }
@@ -1757,15 +1758,7 @@ function ensureWorkoutAccordionState(workout) {
   workoutAccordionSessionId = workout.id;
 }
 
-function planDayDuration(day) {
-  const exerciseSeconds = (day.exercises || []).reduce((sum, item) => {
-    const sets = Math.max(1, Number(item.targetSets) || 1);
-    const work = sets * 45;
-    const rest = Math.max(0, sets - 1) * (Number(item.restSeconds) || 75);
-    return sum + work + rest;
-  }, 0);
-  return Math.max(10, Math.round(exerciseSeconds / 60));
-}
+function planDayDuration(day) { return estimatePlanMinutes(day); }
 
 
 function plannerMiniWeekHtml(week) {
@@ -1867,9 +1860,9 @@ function plannerOccurrenceHtml(item) {
     <strong>${esc(item.name)}</strong>
     <small>${item.status === 'moved' ? `Movida al ${formatPlannerDate(item.movedTo, { weekday: 'short', day: 'numeric', month: 'short' })}` : esc(item.focus || 'Rutina')}</small>
     ${['today', 'planned', 'missed'].includes(item.status) ? `<div class="planner-event-actions">
-      <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Entrenar</button>
-      <button type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
-      <button type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
+      <button class="planner-action planner-action-primary" type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Entrenar</button>
+      <button class="planner-action" type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
+      <button class="planner-action planner-action-skip" type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
     </div>` : ''}
   </div>`;
 }
@@ -1879,9 +1872,9 @@ function plannerMissedHtml(item) {
     <span class="planner-missed-date"><strong>${new Date(`${item.date}T12:00:00`).getDate()}</strong><small>${new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(new Date(`${item.date}T12:00:00`))}</small></span>
     <div><strong>${esc(item.name)}</strong><small>${formatPlannerDate(item.date)}</small></div>
     <div class="planner-missed-actions">
-      <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Hacer ahora</button>
-      <button type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
-      <button type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
+      <button class="planner-action planner-action-primary" type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Hacer ahora</button>
+      <button class="planner-action" type="button" data-action="planner-move" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Mover</button>
+      <button class="planner-action planner-action-skip" type="button" data-action="planner-skip" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Omitir</button>
     </div>
   </article>`;
 }
@@ -1899,7 +1892,7 @@ function plannerUpcomingHtml() {
   return items.length ? `<div class="planner-upcoming-list">${items.map((item, index) => `<article>
     <span>${String(index + 1).padStart(2, '0')}</span>
     <div><strong>${esc(item.name)}</strong><small>${formatPlannerDate(item.date)} · ${esc(item.preferredTime)}</small></div>
-    <button type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Preparar</button>
+    <button class="planner-action planner-action-primary" type="button" data-action="planner-start" data-date="${item.date}" data-original-date="${item.originalDate}" data-day="${item.planDayIndex}" data-id="${esc(item.id)}">Preparar</button>
   </article>`).join('')}</div>` : emptyState('Sin próximas sesiones', 'Configura tus días de entrenamiento para crear la agenda.');
 }
 
@@ -2180,9 +2173,11 @@ function recommendedSelection({ force = false } = {}) {
     return currentRecommendation;
   }
 
-  const excludeExerciseIds = recommendationPreviewHistory.flatMap((item) => item.exerciseIds || []);
+  const excludeExerciseIds = recommendationPreviewHistory.slice(-2).flatMap((item) => item.exerciseIds || []);
   const excludeFocusIds = recommendationPreviewHistory.map((item) => item.focusId).filter(Boolean);
 
+  const seenSignatures = new Set(recommendationPreviewHistory.map(item => item.signature));
+  for (let attempt = 0; attempt < 16; attempt++) {
   currentRecommendation = buildRecommendedSession(
     state.plan,
     state.history,
@@ -2190,12 +2185,15 @@ function recommendedSelection({ force = false } = {}) {
     state.customExercises,
     state.profile,
     {
-      variant: recommendationVariant,
+      variant: recommendationVariant + attempt,
       excludeExerciseIds,
       excludeFocusIds,
       recommendationHistory: state.recommendationHistory || []
     }
   );
+  if (!currentRecommendation || !seenSignatures.has(currentRecommendation.signature)) break;
+  currentRecommendation = null;
+  }
   recommendationCacheKey = cacheKey;
   return currentRecommendation;
 }
@@ -2214,8 +2212,11 @@ function rotateRecommendedSession() {
   currentRecommendation = null;
   recommendationCacheKey = '';
   showOptionalAlternative = true;
+  const next = recommendedSelection();
+  if (!next) { currentRecommendation = current; showToast('No hay otra combinación compatible disponible. Conservamos la propuesta actual.'); }
   renderWorkoutSelector();
-  showToast('Nueva alternativa preparada.', 'success');
+  if (!next) return;
+  showToast(currentRecommendation ? 'Propuesta actualizada: ' + currentRecommendation.day.name : 'No hay otra propuesta compatible con tu material.', currentRecommendation ? 'success' : 'warning');
 }
 
 function showAlternativeOption() {
@@ -2257,7 +2258,7 @@ function renderWorkoutSelector() {
     weeklyGoal: state.profile?.days || state.plan?.days?.length || 3
   });
   const routineDay = routine?.day;
-  const mfpBase = coachChoice.mode === 'alternative' && alternative?.day?.exercises?.length
+  const mfpBase = (showOptionalAlternative || coachChoice.mode === 'alternative') && alternative?.day?.exercises?.length
     ? alternative
     : routine;
   const mfpDay = mfpBase?.day;
@@ -2306,7 +2307,7 @@ function renderWorkoutSelector() {
         <div class="training-option-copy">
           <span class="coach-choice-state alternative">MY FIT PLAN</span>
           <h2>${mfpDay ? esc(mfpDay.name) : 'Prepara una sesión para hoy'}</h2>
-          <p>${esc(coachChoice.reason || 'Responde unas preguntas y My Fit Plan ajustará la sesión al tiempo, energía, sueño y molestias de hoy.')}</p>
+          <p>${esc((showOptionalAlternative ? alternative?.reason : coachChoice.reason) || 'Responde unas preguntas y My Fit Plan ajustará la sesión al tiempo, energía, sueño y molestias de hoy.')}</p>
         </div>
 
         <div class="mfp-checkin-features">
@@ -2318,7 +2319,7 @@ function renderWorkoutSelector() {
         ${mfpDay ? `<div class="mfp-base-session">
           <small>Base que utilizará My Fit Plan</small>
           <strong>${esc(mfpDay.name)}</strong>
-          <span>${mfpDay.exercises.length} ejercicios · ${estimatePlanMinutes(mfpDay)} min aprox.</span>
+          <span>${mfpDay.exercises.length} ejercicios · ${estimatePlanMinutes(mfpDay)} min aprox.</span>${workoutOptionPreview(mfpDay, true)}
         </div>` : ''}
 
         <div class="coach-choice-actions">
@@ -2398,7 +2399,7 @@ function startMfpWorkoutCheckin() {
     weeklyGoal: state.profile?.days || state.plan?.days?.length || 3
   });
 
-  const base = coachChoice.mode === 'alternative' && alternative?.day?.exercises?.length
+  const base = (showOptionalAlternative || coachChoice.mode === 'alternative') && alternative?.day?.exercises?.length
     ? alternative
     : routine;
 
@@ -2415,7 +2416,7 @@ function startMfpWorkoutCheckin() {
     planDayIndex: null,
     sourcePlanDayIndex: routine?.planDayIndex ?? null,
     day: clone(base.day),
-    reason: coachChoice.reason || 'My Fit Plan ajustará esta sesión según tu check-in.',
+    reason: (showOptionalAlternative ? base.reason : coachChoice.reason) || 'My Fit Plan ajustará esta sesión según tu check-in.',
     confidence: coachChoice.confidence || base.confidence || 70
   };
   customWorkoutDraft = null;
@@ -2710,12 +2711,13 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
             ['25','25 min','Esencial'],
             ['40','40 min','Equilibrada'],
             ['60','60 min','Amplia'],
-            ['full','Completa',`${estimated} min aprox.`]
+            ['full','Completa',`${estimated} min aprox.`], ['custom','A tu medida','Elige tus minutos']
           ].map(([value,label,description]) => `<label class="readiness-choice">
             <input type="radio" name="timeMode" value="${value}" ${value === (estimated <= 45 ? 'full' : '40') ? 'checked' : ''}>
             <span><strong>${label}</strong><small>${description}</small></span>
           </label>`).join('')}
         </div>
+        <label class="v51-custom-time">Tiempo personalizado <input id="customTimeMinutes" name="customMinutes" type="number" min="15" max="120" step="1" value="45"> min <small>Se aplica al elegir «A tu medida».</small></label>
       </section>
 
       <section class="readiness-section">
@@ -2746,7 +2748,7 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
         <div id="readinessSafetyNotice" class="readiness-safety-notice" hidden></div>
       </section>
 
-      <section id="readinessPreview" class="readiness-preview"></section>
+      <section id="readinessPreview" class="readiness-preview" aria-live="polite"></section>
 
       <div class="readiness-actions">
         <button class="button button-secondary" type="button" data-action="workout-selector-back">Cambiar sesión</button>
@@ -2764,9 +2766,11 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
   const readValues = () => {
     const data = new FormData(form);
     const timeMode = String(data.get('timeMode') || 'full');
+    const customInput = document.querySelector('#customTimeMinutes');
+    if (customInput) customInput.disabled = timeMode !== 'custom';
     return {
       timeMode: timeMode === 'full' ? 'full' : 'limited',
-      minutes: timeMode === 'full' ? estimated : numberValue(timeMode, estimated),
+      minutes: timeMode === 'full' ? estimated : timeMode === 'custom' ? clamp(numberValue(customInput?.value,45),15,120) : numberValue(timeMode, estimated),
       energy: String(data.get('energy') || 'normal'),
       sleep: String(data.get('sleep') || 'normal'),
       discomfort: String(data.get('discomfort') || 'none'),
@@ -2783,9 +2787,10 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
       safety.hidden = false;
       safety.className = 'readiness-safety-notice important';
       safety.innerHTML = `<strong>No se generará una sesión adaptada</strong><p>Si el dolor es intenso, repentino o cambia tu forma de moverte, pospón el entrenamiento y valora consultar con un profesional sanitario.</p>`;
+      if (adaptation.blockReason !== 'discomfort') safety.innerHTML = '<strong>Esta base no cabe en el tiempo disponible</strong><p>Amplía el tiempo o vuelve para elegir otra sesión.</p>';
       submitButton.disabled = true;
       originalButton.disabled = true;
-      preview.innerHTML = `<div class="readiness-blocked-preview"><span>!</span><div><strong>Prioriza la seguridad</strong><p>Puedes volver al selector y retomar el entrenamiento cuando las molestias importantes hayan desaparecido o hayan sido valoradas.</p></div></div>`;
+      preview.innerHTML = adaptation.blockReason !== 'discomfort' ? '<p>Elige otra duración o una base más corta para continuar.</p>' : `<div class="readiness-blocked-preview"><span>!</span><div><strong>Prioriza la seguridad</strong><p>Puedes volver al selector y retomar el entrenamiento cuando las molestias importantes hayan desaparecido o hayan sido valoradas.</p></div></div>`;
       return;
     }
 
@@ -2817,6 +2822,7 @@ function renderPreWorkoutCheckin(selection = pendingWorkoutSelection) {
   );
 
   form.addEventListener('change', updatePreview);
+  form.addEventListener('input', (event) => { if (event.target.id === 'customTimeMinutes') updatePreview(); });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const readiness = readValues();
@@ -2854,10 +2860,13 @@ function readinessPreviewHtml(day, readiness, adaptation) {
     </div>
     <div class="readiness-preview-metrics">
       <span><strong>${adaptation.adaptedExerciseCount}</strong><small>de ${adaptation.originalExerciseCount} ejercicios</small></span>
-      <span><strong>${adaptation.adaptedSetCount}</strong><small>de ${adaptation.originalSetCount} series</small></span>
+      <span><strong>${adaptation.adaptedSetCount}</strong><small>series · base ${adaptation.originalSetCount}</small></span>
       <span><strong>${summary.energy}</strong><small>energía</small></span>
       <span><strong>${summary.sleep}</strong><small>sueño</small></span>
     </div>
+    <p class="v51-time-budget">${readiness.timeMode === 'full' ? 'Propuesta completa' : `Disponibles: ${adaptation.targetMinutes} min · Estimados: ${adaptation.adaptedMinutes} min`}</p>
+    <div class="v51-time-breakdown">${[['Preparación',adaptation.timing.warmup],['Trabajo',adaptation.timing.work],['Descansos',adaptation.timing.rest],['Cambios',adaptation.timing.transitions]].map(([label,seconds]) => `<span><small>${label}</small><strong>${Math.round(seconds / 60 * 10) / 10} min</strong></span>`).join('')}</div>
+    <details class="v51-session-detail" open><summary>Tu sesión · ${adaptation.adaptedSetCount} series</summary><ol>${adaptation.items.map(item => `<li><strong>${esc(getExercise(item.exerciseId,state.customExercises).name)}</strong><span>${item.targetSets} × ${item.repMin}–${item.repMax} ${item.unit === 'sec' ? 's' : 'reps'} · ${item.restSeconds} s descanso</span></li>`).join('')}</ol></details>
     ${removedNames.length ? `<div class="readiness-removed"><small>Se omiten solo hoy</small><strong>${removedNames.map(esc).join(' · ')}</strong></div>` : ''}
     <div class="readiness-guidance-list">
       ${adaptation.guidance.map((note) => `<p><span>✓</span>${esc(note)}</p>`).join('')}
@@ -3247,17 +3256,17 @@ function profileProgressHtml(summary, bmi, bmiData, records, calendar) {
       <article class="card metric-card"><div class="metric">${formatWeight(totalVolume)}</div><div class="metric-label">Volumen total kg</div></article>
       <article class="card metric-card"><div class="metric metric-name">${mostUsed ? esc(mostUsed.name) : '—'}</div><div class="metric-label">Más realizado</div></article>
     </section>
-    <div class="grid grid-2">
+    <div class="grid grid-2 v51-progress-grid">
       <article class="card">
         <div class="section-title-row"><div><p class="eyebrow">Peso corporal</p><h2>${summary ? `${formatWeight(summary.latest.weight)} kg` : 'Sin registros'}</h2></div><button class="button button-primary button-small" type="button" data-action="quick-weight">＋ Registrar</button></div>
-        ${summary ? `<p class="muted small">Cambio total: ${signedNumber(summary.changeTotal)} kg · Últimos 30 días: ${signedNumber(summary.change30)} kg</p>${weightChartHtml(state.weightHistory)}` : '<p class="muted">Añade tu primera medición para ver la evolución.</p>'}
+        ${summary ? `${weightChartHtml(state.weightHistory)}` : '<p class="muted">Añade tu primera medición para ver la evolución.</p>'}
       </article>
       <article class="card">
         <p class="eyebrow">IMC orientativo</p><h2>${bmi ? bmi.toFixed(1) : 'Sin calcular'}</h2>
         ${bmiData ? `<span class="pill pill-${bmiData.tone}">${esc(bmiData.label)}</span><p class="muted small">${esc(bmiData.text)}</p>` : '<p class="muted">Añade peso y estatura en la pestaña Datos.</p>'}
       </article>
     </div>
-    <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Récords personales</p><h2>Tus mejores marcas</h2></div><span class="pill">${records.length}</span></div>${records.length ? `<div class="records-list">${records.slice(0, 12).map((record) => `<button type="button" class="record-row" data-action="filter-history-exercise" data-id="${esc(record.exerciseId)}"><span><strong>${esc(record.name)}</strong><small>Mejor volumen: ${formatWeight(record.bestVolume)} kg</small></span><strong>${record.bestWeight ? `${formatWeight(record.bestWeight)} kg` : '—'}</strong></button>`).join('')}</div>` : emptyState('Todavía no hay récords', 'Completa series con peso y repeticiones para crear tus primeras marcas.')}</section>
+    <section class="section card"><div class="section-title-row"><div><p class="eyebrow">Récords personales</p><h2>Tus 5 marcas destacadas</h2><p class="muted small">Ordenadas por carga máxima registrada; los ejercicios no son comparables entre sí.</p></div><span class="pill">${Math.min(5,records.length)} / ${records.length}</span></div>${records.length ? `<div class="records-list">${records.slice(0, 5).map((record) => `<button type="button" class="record-row" data-action="filter-history-exercise" data-id="${esc(record.exerciseId)}"><span><strong>${esc(record.name)}</strong><small>Mejor volumen: ${formatWeight(record.bestVolume)} kg</small></span><strong>${record.bestWeight ? `${formatWeight(record.bestWeight)} kg` : '—'}</strong></button>`).join('')}</div><button class="button button-secondary button-block" type="button" data-action="all-records">Ver todos los récords y su historial (${records.length})</button>` : emptyState('Todavía no hay récords', 'Completa series con peso y repeticiones para crear tus primeras marcas.')}</section>
   </section>`;
 }
 
@@ -3928,8 +3937,8 @@ function profileSettingsHtml() {
     </form>
     <section class="section card beta-ready-card">
       <div class="beta-ready-head">
-        <div><p class="eyebrow">BETA EXTERNA · My Fit Plan v5.0</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
-        <span class="beta-version-pill">v5.0</span>
+        <div><p class="eyebrow">BETA EXTERNA · My Fit Plan v5.1</p><h2>Centro del tester</h2><p class="muted small">Sigue tu progreso en el piloto, envía feedback y comprueba el estado de esta cohorte.</p></div>
+        <span class="beta-version-pill">v5.1</span>
       </div>
       ${betaPilotConfig?.pilotOpen ? betaPilotProgressHtml({ compact: true }) : '<div class="notice"><strong>Piloto no iniciado.</strong> La configuración remota todavía no ha abierto esta cohorte.</div>'}
       <div class="beta-action-grid">
@@ -4592,19 +4601,20 @@ function settingSwitch(name, title, subtitle, checked) {
   return `<label class="setting-switch"><span><strong>${esc(title)}</strong><small>${esc(subtitle)}</small></span><input type="checkbox" name="${esc(name)}" ${checked ? 'checked' : ''}><i></i></label>`;
 }
 
-function weightChartHtml(history) {
-  const values = [...history].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-20);
-  if (values.length < 2) return '<p class="muted small">Añade otra medición para dibujar la evolución.</p>';
-  const weights = values.map((item) => numberValue(item.weight));
-  const min = Math.min(...weights);
-  const max = Math.max(...weights);
-  const range = Math.max(1, max - min);
-  const points = values.map((item, index) => {
-    const x = 8 + (index / (values.length - 1)) * 284;
-    const y = 92 - ((item.weight - min) / range) * 72;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  return `<svg class="weight-chart" viewBox="0 0 300 105" role="img" aria-label="Evolución del peso"><line x1="8" y1="92" x2="292" y2="92"></line><polyline points="${points}"></polyline>${points.split(' ').map((point) => { const [x,y]=point.split(','); return `<circle cx="${x}" cy="${y}" r="3"></circle>`; }).join('')}</svg>`;
+let weightChartRange = '90';
+function weightChartHtml(history) { return renderWeightChart(history, weightChartRange); }
+
+function openAllRecords() {
+  const records = personalRecords(state.history, state.customExercises);
+  const wrapper = openModal(`<div class="modal-header"><div><p class="eyebrow">Tu trayectoria</p><h2>Todos tus récords</h2><p>${records.length} ejercicios · Toca uno para ver sus sesiones.</p></div><button class="modal-close" type="button" data-close-modal aria-label="Cerrar">×</button></div><label class="v51-record-search">Buscar ejercicio<input type="search" id="recordSearch" placeholder="Nombre del ejercicio" autocomplete="off"></label><div id="allRecordsList"></div>`, {wide:true});
+  const draw = () => {
+    const query = normalizeText(wrapper.querySelector('#recordSearch')?.value || '');
+    const visible = records.filter(item => normalizeText(item.name).includes(query));
+    const list = wrapper.querySelector('#allRecordsList');
+    if (list) list.innerHTML = visible.length ? `<div class="records-list">${visible.map(item => `<button class="record-row" type="button" data-record-history="${esc(item.exerciseId)}"><span><strong>${esc(item.name)}</strong><small>${item.bestRepsAtWeight} reps a la mejor carga · Mejor volumen ${formatWeight(item.bestVolume)} kg</small></span><strong>${formatWeight(item.bestWeight)} kg →</strong></button>`).join('')}</div>` : '<p>No hay récords que coincidan.</p>';
+  };
+  draw(); wrapper.querySelector('#recordSearch')?.addEventListener('input',draw);
+  wrapper.addEventListener('click',event => { const target = event.target.closest('[data-record-history]'); if(target) { closeModal(); showProfileTab('history',target.dataset.recordHistory); } });
 }
 
 function calendarHtml(calendar) {
@@ -4662,6 +4672,8 @@ async function handleAppClick(event) {
     'home-workout': () => setView('workout'),
     'training-routine-direct': startRoutineWorkoutDirect,
     'training-mfp': startMfpWorkoutCheckin,
+    'all-records': openAllRecords,
+    'weight-range': () => { weightChartRange = target.dataset.range; renderProfile(); },
     'training-refresh-recommended': rotateRecommendedSession,
     'training-custom': startCustomWorkoutBuilder,
     'workout-selector-back': backToWorkoutSelector,
@@ -6357,7 +6369,7 @@ async function forceApplicationUpdate() {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./service-worker.js?v=50', { updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register('./service-worker.js?v=51', { updateViaCache: 'none' });
     if (registration.waiting && navigator.serviceWorker.controller) showUpdateBanner(registration.waiting);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;

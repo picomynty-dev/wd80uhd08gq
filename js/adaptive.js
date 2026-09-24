@@ -1,7 +1,7 @@
 'use strict';
 
-import { getExercise } from './exercises.js?v=50';
-import { clamp, numberValue } from './utils.js?v=50';
+import { getExercise } from './exercises.js?v=51';
+import { clamp, numberValue } from './utils.js?v=51';
 
 const ENERGY_LABELS = {
   low: 'Baja',
@@ -25,54 +25,23 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function workSeconds(item) {
-  const sets = Math.max(1, numberValue(item.targetSets, 3));
-  const isTimed = item.unit === 'sec';
-  const work = isTimed
-    ? Math.max(20, numberValue(item.repMax, item.repMin || 30))
-    : 38;
-  const rest = Math.max(15, numberValue(item.restSeconds, 75));
-  return sets * work + Math.max(0, sets - 1) * rest + 55;
+export function sessionTiming(day) {
+  const items = day?.exercises || [];
+  if (!items.length) return { warmup: 0, work: 0, rest: 0, transitions: 0, totalSeconds: 0, minutes: 0 };
+  let work = 0, rest = 0;
+  for (const item of items) {
+    const sets = Math.max(1, Math.round(numberValue(item.targetSets, 3)));
+    const repetitions = Math.max(1, numberValue(item.repMax, numberValue(item.repMin, 12)));
+    work += sets * (item.unit === 'sec' ? repetitions : repetitions * 3);
+    rest += Math.max(0, sets - 1) * Math.max(15, numberValue(item.restSeconds, 75));
+  }
+  const warmup = 300;
+  const transitions = items.length * 60;
+  const totalSeconds = warmup + work + rest + transitions;
+  return { warmup, work, rest, transitions, totalSeconds, minutes: Math.ceil(totalSeconds / 60) };
 }
 
-export function estimatePlanMinutes(day) {
-  const exercises = day?.exercises || [];
-  if (!exercises.length) return 0;
-  const seconds = exercises.reduce((sum, item) => sum + workSeconds(item), 0) + 180;
-  return Math.max(5, Math.round(seconds / 60));
-}
-
-function isCompoundExercise(exercise, index) {
-  const movement = `${exercise.movementType || ''} ${exercise.visualType || ''} ${exercise.movement || ''}`.toLowerCase();
-  const name = String(exercise.name || '').toLowerCase();
-  const muscle = String(exercise.muscle || '').toLowerCase();
-
-  if (index <= 1) return true;
-  if (/(press|remo|jalón|dominada|sentadilla|prensa|peso muerto|hip thrust|zancada|fondos)/.test(name)) return true;
-  if (/(empuje|tirón|dominante|sentadilla|bisagra|extensión de cadera)/.test(movement)) return true;
-  if (/(espalda|pecho|pierna completa|cuádriceps|glúteos)/.test(muscle) && index <= 3) return true;
-  return false;
-}
-
-function adaptedRest(item, isCompound, timeLimit) {
-  const original = Math.max(15, numberValue(item.restSeconds, 75));
-  if (!timeLimit) return original;
-  if (isCompound) return Math.max(60, Math.min(original, timeLimit <= 25 ? 90 : original));
-  return Math.max(40, Math.min(original, timeLimit <= 25 ? 50 : 65));
-}
-
-function adaptedSets(item, isCompound, readiness, timeLimit) {
-  const original = Math.max(1, numberValue(item.targetSets, 3));
-  let target = original;
-
-  if (timeLimit && timeLimit <= 25) target = isCompound ? Math.min(original, 3) : Math.min(original, 2);
-  else if (timeLimit && timeLimit <= 40) target = isCompound ? Math.min(original, 3) : Math.min(original, 2);
-
-  if (readiness.energy === 'low') target -= isCompound ? 0 : 1;
-  if (readiness.sleep === 'poor') target -= isCompound ? (original >= 4 ? 1 : 0) : 1;
-
-  return clamp(target, 1, original);
-}
+export function estimatePlanMinutes(day) { return sessionTiming(day).minutes; }
 
 function adaptationReason(readiness, targetMinutes, originalMinutes) {
   const reasons = [];
@@ -86,119 +55,50 @@ function adaptationReason(readiness, targetMinutes, originalMinutes) {
 export function buildAdaptiveSession(day, readiness = {}, customExercises = []) {
   const originalItems = clone(day?.exercises || []);
   const originalMinutes = estimatePlanMinutes(day);
-  const requested = readiness.timeMode === 'full'
-    ? null
-    : Math.max(15, numberValue(readiness.minutes, originalMinutes || 45));
-  const targetMinutes = requested ? Math.min(requested, originalMinutes || requested) : originalMinutes;
-  const blocked = readiness.discomfort === 'important';
-
-  if (blocked) {
-    return {
-      blocked: true,
-      originalMinutes,
-      targetMinutes,
-      items: [],
-      notes: [
-        'La app no adapta automáticamente una sesión cuando se indican molestias importantes.',
-        'Pospón el entrenamiento si el dolor es intenso, repentino o altera el movimiento.'
-      ]
-    };
+  const requested = readiness.timeMode === 'full' ? null : clamp(Math.round(numberValue(readiness.minutes, 45)), 15, 120);
+  const targetMinutes = requested || originalMinutes;
+  if (readiness.discomfort === 'important') return { blocked: true, blockReason: 'discomfort', originalMinutes, targetMinutes, items: [] };
+  if (!originalItems.length) return { blocked: true, blockReason: 'empty', originalMinutes, targetMinutes, items: [] };
+  const fatigued = readiness.energy === 'low' || readiness.sleep === 'poor';
+  let items = originalItems.map((item, index) => ({ ...item,
+    targetSets: Math.max(1, Math.round(numberValue(item.targetSets, 3)) - (fatigued && index > 1 ? 1 : 0))
+  }));
+  const seconds = () => sessionTiming({ exercises: items }).totalSeconds;
+  const budget = requested ? requested * 60 : Infinity;
+  // Reduce volume before removing movements. Rest periods are never shortened to fit a label.
+  while (seconds() > budget) {
+    let index = -1;
+    for (let i = items.length - 1; i >= 0; i--) if (items[i].targetSets > 2) { index = i; break; }
+    if (index >= 0) { items[index].targetSets--; continue; }
+    if (items.length > 2) { items.pop(); continue; }
+    index = items.findLastIndex(item => item.targetSets > 1);
+    if (index >= 0) { items[index].targetSets--; continue; }
+    if (items.length > 1) { items.pop(); continue; }
+    return { blocked: true, blockReason: 'time', originalMinutes, targetMinutes, items: [] };
   }
-
-  const candidates = originalItems.map((item, index) => {
-    const exercise = getExercise(item.exerciseId, customExercises);
-    const compound = isCompoundExercise(exercise, index);
-    const adapted = {
-      ...clone(item),
-      targetSets: adaptedSets(item, compound, readiness, requested),
-      restSeconds: adaptedRest(item, compound, requested)
-    };
-    return {
-      index,
-      exercise,
-      compound,
-      original: item,
-      adapted,
-      seconds: workSeconds(adapted),
-      priority: (compound ? 100 : 50) - index * 3
-    };
-  });
-
-  // Mantener el orden original y priorizar siempre los dos primeros movimientos.
-  let selected = [];
-  let runningSeconds = 180;
-  const targetSeconds = Math.max(15, targetMinutes || originalMinutes || 45) * 60;
-
-  for (const candidate of candidates) {
-    const mandatory = candidate.index <= 1;
-    if (mandatory || !requested || runningSeconds + candidate.seconds <= targetSeconds) {
-      selected.push(candidate);
-      runningSeconds += candidate.seconds;
+  // Modest extra volume only when time and readiness permit; never pad with idle time.
+  if (requested && !fatigued && readiness.discomfort !== 'mild' && requested > originalMinutes) {
+    for (let i = 0; i < items.length && seconds() < budget * 0.92; i++) {
+      if (items[i].targetSets >= 4 || items.reduce((sum,x) => sum + x.targetSets, 0) >= 24) continue;
+      items[i].targetSets++;
+      if (seconds() > budget) items[i].targetSets--;
     }
   }
-
-  // Una sesión reducida conserva al menos dos ejercicios siempre que existan.
-  if (selected.length < Math.min(2, candidates.length)) {
-    selected = candidates.slice(0, Math.min(2, candidates.length));
-  }
-
-  // En sesiones de 60 min o cuando el cálculo está muy cerca, evitar eliminar un único ejercicio pequeño.
-  if (requested && requested >= 60 && candidates.length - selected.length === 1) {
-    const last = candidates.at(-1);
-    const projected = runningSeconds + last.seconds;
-    if (projected <= targetSeconds + 8 * 60) selected.push(last);
-  }
-
-  const items = selected
-    .sort((a, b) => a.index - b.index)
-    .map((candidate) => candidate.adapted);
-
-  const adaptedMinutes = Math.max(5, Math.round((
-    items.reduce((sum, item) => sum + workSeconds(item), 0) + 180
-  ) / 60));
-
-  const removed = candidates
-    .filter((candidate) => !selected.some((item) => item.index === candidate.index))
-    .map((candidate) => ({
-      exerciseId: candidate.original.exerciseId,
-      name: candidate.exercise.name
-    }));
-
-  const originalSets = originalItems.reduce((sum, item) => sum + numberValue(item.targetSets, 3), 0);
-  const adaptedSetsTotal = items.reduce((sum, item) => sum + numberValue(item.targetSets, 3), 0);
-  const removedSets = Math.max(0, originalSets - adaptedSetsTotal);
-
-  const guidance = [];
-  if (readiness.energy === 'low' || readiness.sleep === 'poor') {
-    guidance.push('Trabaja con 2–3 repeticiones posibles en reserva y evita buscar récords hoy.');
-  } else if (readiness.energy === 'high' && readiness.sleep === 'good') {
-    guidance.push('La preparación es favorable, pero mantén las progresiones propuestas y no fuerces aumentos improvisados.');
-  } else {
-    guidance.push('Mantén el esfuerzo habitual y prioriza repeticiones técnicamente iguales.');
-  }
-  if (readiness.discomfort === 'mild') {
-    guidance.push('No aumentes la carga en movimientos molestos y detén el ejercicio si la molestia aumenta o modifica la técnica.');
-  }
-  if (requested && adaptedMinutes > requested + 5) {
-    guidance.push('La estimación puede variar según los descansos reales. Usa el temporizador para acercarte al objetivo.');
-  }
-
-  return {
-    blocked: false,
-    mode: requested ? 'adaptive' : 'original',
-    originalMinutes,
-    targetMinutes: requested || originalMinutes,
-    adaptedMinutes,
-    items,
-    removed,
-    removedSets,
-    reasons: adaptationReason(readiness, requested, originalMinutes),
-    guidance,
-    originalExerciseCount: originalItems.length,
-    adaptedExerciseCount: items.length,
-    originalSetCount: originalSets,
-    adaptedSetCount: adaptedSetsTotal
-  };
+  const timing = sessionTiming({ exercises: items });
+  const kept = new Set(items.map(item => item.slotId || item.exerciseId));
+  const removed = originalItems.filter(item => !kept.has(item.slotId || item.exerciseId))
+    .map(item => ({ exerciseId: item.exerciseId, name: getExercise(item.exerciseId, customExercises).name }));
+  const originalSets = originalItems.reduce((sum,x) => sum + numberValue(x.targetSets,3),0);
+  const adaptedSets = items.reduce((sum,x) => sum + x.targetSets,0);
+  const guidance = ['Estimación: 5 min de preparación, 3 s por repetición (o duración de la serie), descansos y 1 min de preparación por ejercicio.'];
+  if (fatigued) guidance.push('Volumen reducido por la energía o el sueño indicados.');
+  if (requested && timing.minutes < requested - 3) guidance.push(`La sesión ocupa unos ${timing.minutes} de tus ${requested} min disponibles. No añadimos volumen ilimitado para rellenar el tiempo.`);
+  if (adaptedSets > originalSets) guidance.push(`Se añaden ${adaptedSets - originalSets} series repartidas entre los ejercicios; no se modifica tu rutina guardada.`);
+  if (readiness.discomfort === 'mild') guidance.push('Detén un movimiento si la molestia aumenta o cambia tu técnica.');
+  return { blocked: false, mode: requested || fatigued ? 'adaptive' : 'original', originalMinutes, targetMinutes,
+    adaptedMinutes: timing.minutes, timing, items, removed, removedSets: Math.max(0,originalSets-adaptedSets),
+    addedSets: Math.max(0,adaptedSets-originalSets), reasons: adaptationReason(readiness,requested,originalMinutes), guidance,
+    originalExerciseCount: originalItems.length, adaptedExerciseCount: items.length, originalSetCount: originalSets, adaptedSetCount: adaptedSets };
 }
 
 export function readinessSummary(readiness = {}) {

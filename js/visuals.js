@@ -1,6 +1,6 @@
 'use strict';
 
-import { esc, normalizeText } from './utils.js?v=50';
+import { esc, normalizeText } from './utils.js?v=51';
 
 const PRIMARY = '#ef4444';
 const SECONDARY = '#fb923c';
@@ -194,9 +194,9 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
     const stepB = exercise.steps?.[1] || 'Mantén una trayectoria estable.';
     const stepC = exercise.steps?.[exercise.steps.length - 1] || 'Completa el recorrido con control.';
 
-    return `<section class="premium-exercise-visual real-motion-unified" data-premium-visual="${esc(exerciseId)}">
+    return `<section class="premium-exercise-visual real-motion-unified ${exerciseId === 'smith_incline_press' ? 'v51-smith-video' : ''}" data-premium-visual="${esc(exerciseId)}">
       <div class="real-motion-stage">
-        <video data-motion-video muted loop playsinline preload="auto"
+        <video data-motion-video muted loop playsinline preload="metadata"
           poster="${esc(media.poster || '')}" ${reduceMotion ? '' : 'autoplay'}
           aria-label="Demostración anatómica Real Motion de ${esc(exercise.name)}">
           <source src="${esc(media.video)}" type="video/mp4">
@@ -205,7 +205,7 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
           <strong>No se pudo cargar Real Motion</strong>
           <small>Recarga la ficha y vuelve a intentarlo.</small>
         </div>
-        <span class="real-motion-watermark">REAL MOTION · PILOTO</span>
+        <span class="real-motion-watermark">DEMOSTRACIÓN ANIMADA</span>
         <button type="button" class="motion-fullscreen" data-motion-fullscreen aria-label="Ver a pantalla completa">⛶</button>
       </div>
 
@@ -215,7 +215,7 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
       </div>
 
       <div class="motion-controls premium-motion-controls" aria-label="Controles de demostración">
-        <button type="button" data-motion-toggle>❚❚ <span>Pausar</span></button>
+        <button type="button" data-motion-toggle>${reduceMotion ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>'}</button>
         <button type="button" data-motion-replay>↺ <span>Repetir</span></button>
         <div class="motion-speed" role="group" aria-label="Velocidad">
           <button type="button" data-motion-speed="0.75">0,75×</button>
@@ -260,7 +260,7 @@ export function premiumExerciseVisual(exercise, exerciseId = '', options = {}) {
         <button type="button" class="motion-fullscreen" data-motion-fullscreen aria-label="Ver demostración a pantalla completa">⛶</button>
       </div>
       <div class="motion-controls premium-motion-controls" aria-label="Controles de demostración">
-        <button type="button" data-motion-toggle>❚❚ <span>Pausar</span></button>
+        <button type="button" data-motion-toggle>${reduceMotion ? '▶ <span>Reproducir</span>' : '❚❚ <span>Pausar</span>'}</button>
         <button type="button" data-motion-replay>↺ <span>Repetir</span></button>
         <div class="motion-speed" role="group" aria-label="Velocidad"><button type="button" data-motion-speed="0.75">0,75×</button><button type="button" class="active" data-motion-speed="1">1×</button><button type="button" data-motion-speed="1.25">1,25×</button></div>
       </div>
