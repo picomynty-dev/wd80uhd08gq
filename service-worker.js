@@ -1,10 +1,10 @@
 // Each installation owns its full module graph and its own path-scoped cache.
 const CACHE_PREFIX = `my-fit-plan-${encodeURIComponent(new URL(self.registration.scope).pathname)}-`;
-const CACHE_NAME = `${CACHE_PREFIX}v50-20260914`;
+const CACHE_NAME = `${CACHE_PREFIX}v51-20260923`;
 const CORE_SHELL = [
   './', './index.html', './styles.css', './design-v5.css', './manifest.webmanifest',
   './js/app.js', './js/hud.js', './js/storage.js', './js/utils.js', './js/ui.js',
-  './js/theme.js', './js/pending-input.js', './js/cloud.js', './js/cloud-config.js',
+  './js/theme.js', './js/weight-chart.js', './js/pending-input.js', './js/cloud.js', './js/cloud-config.js',
   './js/exercises.js', './js/exercises-extra.js', './js/premium-data.js',
   './js/real-motion-bundle-v323a.js', './js/media-bundle-pro-v3222.js', './js/search.js', './js/visuals.js',
   './js/photo-progress.js', './js/plans.js', './js/stats.js', './js/coach.js', './js/adaptive.js',
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
   if (request.destination === 'video' || request.headers.has('range')) return;
   if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('/beta-config.json') || request.mode === 'navigate') {
     event.respondWith(networkFirst(request));
-  } else if (['script', 'style'].includes(request.destination) && url.searchParams.get('v') && url.searchParams.get('v') !== '50') {
+  } else if (['script', 'style'].includes(request.destination) && url.searchParams.get('v') && url.searchParams.get('v') !== '51') {
     // A newer index must not receive modules from this worker's older build.
     event.respondWith(fetch(request));
   } else {

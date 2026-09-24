@@ -1,7 +1,7 @@
 {
   "name": "My Fit Plan",
   "short_name": "My Fit Plan",
-  "description": "Organiza tus rutinas, registra cada serie y sigue tu progreso con My Fit Plan 5.0.",
+  "description": "Organiza tus rutinas, registra cada serie y sigue tu progreso con My Fit Plan 5.1.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

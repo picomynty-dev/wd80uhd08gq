@@ -1,8 +1,8 @@
 {
   "app": "My Fit Plan",
-  "version": "5.0",
-  "label": "Rediseño",
+  "version": "5.1",
+  "label": "Entrena a tu ritmo",
   "channel": "owner-review",
-  "releasedAt": "2026-09-15T00:00:00Z",
+  "releasedAt": "2026-09-23T00:00:00Z",
   "minimumSupported": "4.7"
 }

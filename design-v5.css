@@ -477,3 +477,75 @@ html[data-design="v5"] .v5-theme-toggle { width: 42px; height: 42px; border: 1px
   html[data-design="v5"][data-hud-mode="mobile"] .bottom-nav.premium-nav :is(.nav-icon,.train-icon) { width:21px !important; height:21px !important; margin:0 !important; background:transparent !important; color:inherit !important; border:0 !important; box-shadow:none !important; }
   html[data-design="v5"][data-hud-mode="mobile"] .rest-timer-dock { bottom:calc(75px + env(safe-area-inset-bottom)) !important; }
 }
+
+/* 5.1 — calendar actions, session budget and progress */
+html[data-design="v5"] :is(.planner-event-actions,.planner-missed-actions) { gap: 8px; }
+html[data-design="v5"] .planner-action {
+  appearance: none; font-family: inherit; font-weight:600; font-size:.8rem; line-height:1.3;
+  min-height: 40px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--ink); cursor: pointer; box-shadow: none;
+  display: inline-flex; align-items: center; justify-content: center; transition: background .15s ease;
+}
+html[data-design="v5"] .planner-action:hover { background: var(--surface-2); border-color: var(--accent); }
+html[data-design="v5"] .planner-action-primary { background: var(--accent); border-color: transparent; color: var(--accent-contrast); }
+html[data-design="v5"] .planner-action-primary:hover { background: var(--accent); filter: brightness(.95); }
+html[data-design="v5"] .planner-action-skip { background: transparent; color: var(--muted); border-color: transparent; }
+html[data-design="v5"] .planner-action-skip:hover { color: var(--danger); border-color: var(--line); }
+html[data-design="v5"] .planner-event-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:14px; }
+html[data-design="v5"] .planner-event-actions .planner-action-primary { grid-column:1/-1; }
+html[data-design="v5"] .planner-event { padding:12px; border-radius:14px; background:var(--surface); }
+html[data-design="v5"] .planner-event > strong { font-size:.87rem; line-height:1.4; }
+html[data-design="v5"] .planner-missed-actions { display:flex; flex-wrap:wrap; }
+html[data-design="v5"] .planner-week-grid { grid-template-columns:repeat(7,minmax(150px,1fr)); overflow-x:auto; padding-bottom:10px; }
+html[data-design="v5"] .mfp-base-session .training-exercise-preview { display:flex; flex-wrap:wrap; margin-top:12px; gap:8px; }
+html[data-design="v5"] .readiness-time-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+html[data-design="v5"] .v51-custom-time { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:18px; font-size:.88rem; }
+html[data-design="v5"] .v51-custom-time input { width:95px; padding:8px 12px; }
+html[data-design="v5"] .v51-custom-time small { color:var(--muted); }
+html[data-design="v5"] .v51-time-budget { font-size:1rem; font-weight:650; margin:20px 0 12px; }
+html[data-design="v5"] .v51-time-breakdown { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+html[data-design="v5"] .v51-time-breakdown > span { padding:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+html[data-design="v5"] .v51-time-breakdown :is(small,strong) { display:block; }
+html[data-design="v5"] .v51-time-breakdown small { color:var(--muted); font-size:.78rem; }
+html[data-design="v5"] .v51-session-detail { margin:18px 0; border-top:1px solid var(--line); padding-top:14px; }
+html[data-design="v5"] :is(.v51-session-detail,.v51-chart-table) summary { cursor:pointer; min-height:44px; font-weight:600; }
+html[data-design="v5"] .v51-session-detail ol { padding-left:24px; }
+html[data-design="v5"] .v51-session-detail li { padding:10px 4px; border-bottom:1px solid var(--line); }
+html[data-design="v5"] .v51-session-detail li span { display:block; color:var(--muted); font-size:.85rem; }
+html[data-design="v5"] .v51-chart-tabs { display:flex; padding:4px; background:var(--surface-2); border-radius:12px; gap:4px; width:fit-content; margin:16px 0; }
+html[data-design="v5"] .v51-chart-tabs button { min-height:40px; padding:8px 16px; border:0; background:transparent; color:var(--muted); border-radius:9px; font:600 .85rem system-ui; cursor:pointer; }
+html[data-design="v5"] .v51-chart-tabs button[aria-pressed="true"] { color:var(--accent-contrast); background:var(--accent); }
+html[data-design="v5"] .v51-weight-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+html[data-design="v5"] .v51-weight-metrics small { color:var(--muted); display:block; font-size:.76rem; line-height:1.4; min-height:2.8em; }
+html[data-design="v5"] .v51-weight-metrics strong { font-size:clamp(1.1rem,2vw,1.5rem); display:block; margin-top:6px; }
+html[data-design="v5"] .v51-weight-chart { display:block; width:100%; height:auto; margin-top:16px; overflow:visible; }
+html[data-design="v5"] .v51-chart-grid line { stroke:var(--line); stroke-width:1; }
+html[data-design="v5"] .v51-chart-grid text { fill:var(--muted); font:14px system-ui; }
+html[data-design="v5"] .v51-chart-area { fill:var(--accent); opacity:.09; }
+html[data-design="v5"] .v51-chart-line { stroke:var(--accent-dark); fill:none; stroke-width:3; stroke-linejoin:round; }
+html[data-design="v5"] .v51-chart-point { fill:var(--surface); stroke:var(--accent-dark); stroke-width:2.5; }
+html[data-design="v5"] .v51-chart-mean { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:5 5; }
+html[data-design="v5"] .v51-chart-end { fill:var(--ink); font:600 15px system-ui; }
+html[data-design="v5"] .v51-chart-legend { font-size:.8rem; display:flex; align-items:center; gap:8px; color:var(--muted); }
+html[data-design="v5"] .v51-chart-legend i { width:10px; height:10px; border-radius:50%; background:var(--accent-dark); }
+html[data-design="v5"] .v51-chart-legend b { width:18px; border-top:2px dashed var(--muted); margin-left:8px; }
+html[data-design="v5"] .v51-chart-table > div { max-height:280px; overflow:auto; }
+html[data-design="v5"] .v51-chart-table table { width:100%; border-collapse:collapse; font-size:.85rem; }
+html[data-design="v5"] .v51-chart-table :is(th,td) { padding:10px 6px; text-align:left; border-bottom:1px solid var(--line); }
+html[data-design="v5"] .v51-record-search { display:grid; gap:8px; margin-bottom:18px; }
+html[data-design="v5"] .v51-record-search input { padding:12px; width:100%; }
+html[data-design="v5"] .record-row { min-height:68px; gap:16px; }
+html[data-design="v5"] .v51-smith-video .real-motion-stage { aspect-ratio:16/9; max-height:none; background:#222; }
+html[data-design="v5"] .v51-smith-video .real-motion-stage video { display:block; width:100%; height:100%; object-fit:contain; aspect-ratio:16/9; }
+@media(max-width:700px) {
+ html[data-design="v5"] .readiness-time-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ html[data-design="v5"] .v51-time-breakdown { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ html[data-design="v5"] .planner-missed-actions { width:100%; display:grid; grid-template-columns:1.5fr 1fr 1fr; }
+ html[data-design="v5"] .planner-action { min-height:44px; }
+ html[data-design="v5"] .v51-weight-metrics { gap:8px; }
+ html[data-design="v5"] .v51-chart-tabs button { min-height:44px; }
+}
+
+html[data-design="v5"] .v51-progress-grid { grid-template-columns:minmax(0,3fr) minmax(180px,1fr); align-items:start; }
+@media(max-width:900px) { html[data-design="v5"] .v51-progress-grid { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:500px) { html[data-design="v5"] .v51-chart-grid text { font-size:22px; } html[data-design="v5"] .v51-chart-end { font-size:23px; } }
